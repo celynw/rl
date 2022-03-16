@@ -1,9 +1,13 @@
 {
 	// Included if imported by other files
 	"exclude": [
+		".mypy_cache/",
+		"venv*/",
+		"submodules/"
 	],
 	// Always excluded
 	"ignore": [
+		".mypy_cache/",
 		"venv*/",
 		"submodules/"
 	],
