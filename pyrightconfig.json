@@ -1,0 +1,10 @@
+{
+	// Included if imported by other files
+	"exclude": [
+	],
+	// Always excluded
+	"ignore": [
+		"venv*/",
+		"submodules/"
+	],
+}
