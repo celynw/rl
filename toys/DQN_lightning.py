@@ -51,8 +51,11 @@ def main(hparams) -> None:
 class ModelCheckpointBest(ModelCheckpoint):
 	# ----------------------------------------------------------------------------------------------
 	def on_save_checkpoint(self, *args, **kwargs) -> dict[str, Any]:
-		os.symlink(self.best_model_path, Path(self.best_model_path).parent / "best_")
-		os.replace(Path(self.best_model_path).parent / "best_", Path(self.best_model_path).parent / "best")
+		try:
+			os.symlink(self.best_model_path, Path(self.best_model_path).parent / "best_")
+			os.replace(Path(self.best_model_path).parent / "best_", Path(self.best_model_path).parent / "best")
+		except FileNotFoundError:
+			pass
 		return super().on_save_checkpoint(*args, **kwargs)
 
 
