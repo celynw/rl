@@ -5,6 +5,7 @@ with suppress(ImportError): import colored_traceback.auto
 from pathlib import Path
 from typing import Optional
 
+import torch
 import pytorch_lightning as pl
 import optuna
 from kellog import info, warning, error, debug
@@ -12,7 +13,6 @@ from rich import print, inspect
 
 import rl
 from rl import utils
-from rl.utils import Step
 
 # ==================================================================================================
 class Objective():
@@ -58,13 +58,11 @@ class Objective():
 		trainer.fit(model)
 		# trainer.test(ckpt_path="best")
 
-		return trainer.callback_metrics[f"loss/{Step.VAL}"].item()
-		# return trainer.callback_metrics[f"loss/{Step.TRAIN}"].item()
+		return trainer.callback_metrics[Model.monitor].item()
 
 
 # ==================================================================================================
 if __name__ == "__main__":
-	import torch
 	torch.set_printoptions(precision=16, sci_mode=False)
 	args = utils.parse_args()
 	if args.seed is not None:
