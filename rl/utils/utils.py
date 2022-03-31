@@ -128,7 +128,7 @@ def get_checkpoint(logger: loggers.TensorBoardLogger, checkpoint: Union[str, Pat
 
 
 # ==================================================================================================
-def setup_logger(args) -> Optional[loggers.TensorBoardLogger]:
+def setup_logger(args, suppress_output: bool = False) -> Optional[loggers.TensorBoardLogger]:
 	if args.output_directory is None:
 		warning("No output directory specified, will not log!")
 		return None
@@ -141,10 +141,11 @@ def setup_logger(args) -> Optional[loggers.TensorBoardLogger]:
 			version=args.version,
 			default_hp_metric=False,
 		)
-		# Would be created later, but we need it now for kellog logs
-		Path(logger.log_dir).mkdir(parents=True, exist_ok=True)
-		kellog.setup_logger(Path(logger.log_dir) / "log.txt")
-		kellog.log_args(args, Path(logger.log_dir) / "args.json")
+		if not suppress_output:
+			# Would be created later, but we need it now for kellog logs
+			Path(logger.log_dir).mkdir(parents=True, exist_ok=True)
+			kellog.setup_logger(Path(logger.log_dir) / "log.txt")
+			kellog.log_args(args, Path(logger.log_dir) / "args.json")
 
 		return logger
 
@@ -159,7 +160,8 @@ def setup_callbacks(logger: Optional[loggers.TensorBoardLogger], monitor: str, t
 		# auto_insert_metric_name=False,
 		# filename=f"epoch={{epoch:02d}} {monitor}={{{monitor}:.2f}}",
 		save_top_k=3,
-		save_last=True
+		save_last=True,
+		# every_n_train_steps=20, # TODO for RL?
 	)
 	lr_callback = LearningRateMonitor(logging_interval="epoch")
 	if logger is not None:
