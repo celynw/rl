@@ -41,8 +41,7 @@ class Objective():
 			overfit_batches=args.overfit,
 			resume_from_checkpoint=utils.get_checkpoint(self.logger, args.checkpoint),
 			enable_checkpointing=self.logger is not None,
-			max_epochs=1 if args.profile else None,
-			# max_epochs=30,
+			max_epochs=1 if args.profile else args.max_epochs,
 			profiler="pytorch" if args.profile else None,
 			num_sanity_val_steps=0 if args.optuna is not None else 2,
 			enable_model_summary=False, # This is done manually in the callbacks
