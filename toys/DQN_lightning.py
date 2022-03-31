@@ -39,12 +39,12 @@ def main(hparams) -> None:
 		# val_check_interval=20, # WARNING: increments only within an epoch and resets for new ones! Use ModelCheckpoint's every_n_train_steps instead
 		callbacks=[checkpointCallback],
 	)
-	# trainer.fit(model)
+	trainer.fit(model)
 	# trainer.test(ckpt_path="best")
 
 	# checkpointCallback._ModelCheckpoint__resolve_ckpt_dir(trainer) # Name mangling...
 	# trainer.test(model=model, ckpt_path=Path(checkpointCallback.dirpath) / "best")
-	trainer.test(model=model, ckpt_path="/home/celyn/Work/dev/pytorch/rl/lightning_logs/version_0/checkpoints/best")
+	# trainer.test(model=model, ckpt_path="/home/celyn/Work/dev/pytorch/rl/lightning_logs/version_0/checkpoints/best")
 
 
 # ==================================================================================================
@@ -154,7 +154,7 @@ class RLDataset(IterableDataset):
 # ==================================================================================================
 class Agent:
 	"""
-	Base Agent class handeling the interaction with the environment
+	Base Agent class handling the interaction with the environment
 
 	Args:
 		env: training environment
