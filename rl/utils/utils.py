@@ -48,7 +48,7 @@ def parse_args() -> argparse.Namespace:
 	group.add_argument("--val_lim", type=str, help="Use this val proportion (float) or batches (int) each epoch (still randomised over entire dataset)", default="1.0")
 	group.add_argument("--test_lim", type=str, help="Use this test proportion (float) or batches (int) each epoch (still randomised over entire dataset)", default="1.0")
 	group.add_argument("--overfit", type=str, help="Overfit to this proportion (float) or batches (int), use train set for val", default="0.0")
-	group.add_argument("-C", "--checkpoint", type=Path, help="Path to checkpoint file. Can be relative to specific model log directory", default="last.ckpt")
+	group.add_argument("-C", "--checkpoint", type=Path, help="Path to checkpoint file. Can be relative to specific model log directory", default="best")
 	group.add_argument("-A", "--autoLR", action="store_true", help="First run the auto learning rate finder")
 	import __main__
 	group.add_argument("--proctitle", type=str, help="Process title", default=Path(__main__.__file__).name)

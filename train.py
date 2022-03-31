@@ -57,6 +57,7 @@ class Objective():
 			model.hparams.lr = lr_finder.suggestion()
 			model.args.lr = model.hparams.lr
 		trainer.fit(model)
+		# trainer.test(ckpt_path="best")
 
 		return trainer.callback_metrics[f"loss/{Step.VAL}"].item()
 		# return trainer.callback_metrics[f"loss/{Step.TRAIN}"].item()
