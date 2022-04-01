@@ -43,3 +43,7 @@ class RL(IterableDataset):
 		states, actions, rewards, dones, new_states = self.buffer.sample(self.sample_size)
 		for i in range(len(dones)):
 			yield states[i], actions[i], rewards[i], dones[i], new_states[i]
+
+	# ----------------------------------------------------------------------------------------------
+	def __len__(self) -> int:
+		return len(self.sample_size)
