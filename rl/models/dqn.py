@@ -1,5 +1,6 @@
 import argparse
 from typing import Optional
+from collections import deque
 
 import torch
 from torch.utils.data import DataLoader
@@ -39,7 +40,7 @@ class DQN_net(torch.nn.Module):
 # ==================================================================================================
 class DQN(Base):
 	"""Basic DQN Model."""
-	monitor = f"{Step.TRAIN}/total_reward" # TODO
+	monitor = f"{Step.TRAIN}/mean_reward" # TODO
 	monitor_dir = Dir.MAX
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, args: argparse.Namespace, trial: Optional[optuna.trial.Trial] = None) -> None:
@@ -56,6 +57,7 @@ class DQN(Base):
 
 		self.total_reward = 0.0
 		self.episode_reward = 0.0
+		self.rewards = deque(maxlen=self.hparams.episode_length)
 
 		self.populate(self.hparams.warm_start_steps)
 
@@ -166,6 +168,7 @@ class DQN(Base):
 		loss = loss.unsqueeze(0)
 
 		if done:
+			self.rewards.append(self.episode_reward)
 			self.total_reward = self.episode_reward
 			self.episode_reward = 0
 
@@ -173,8 +176,8 @@ class DQN(Base):
 		if self.global_step % self.hparams.sync_rate == 0:
 			self.target_net.load_state_dict(self.net.state_dict())
 
-		self.log(f"{step}/total_reward", torch.tensor(self.total_reward).to(device))
-		self.log(f"{step}/reward", torch.tensor(reward).to(device))
+		self.log(f"{step}/total_reward", self.total_reward)
+		self.log(f"{step}/mean_reward", sum(self.rewards) / len(self.rewards) if len(self.rewards) else 0.0)
 
 		return loss
 
