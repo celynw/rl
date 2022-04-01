@@ -28,8 +28,7 @@ class Agent:
 	# ----------------------------------------------------------------------------------------------
 	def get_action(self, net: torch.nn.Module, epsilon: float, device: str) -> int:
 		"""
-		Using the given network, decide what action to carry out
-		using an epsilon-greedy policy
+		Using the given network, decide what action to carry out using an epsilon-greedy policy
 
 		Args:
 			net: DQN network

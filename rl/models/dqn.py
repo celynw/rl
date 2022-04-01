@@ -118,7 +118,7 @@ class DQN(Base):
 		return self.net(x)
 
 	# ----------------------------------------------------------------------------------------------
-	def dqn_mse_loss(self, batch: tuple[torch.Tensor, torch.Tensor]) -> torch.Tensor:
+	def dqn_mse_loss(self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> torch.Tensor:
 		"""
 		Calculates the mse loss using a mini batch from the replay buffer
 
@@ -142,10 +142,10 @@ class DQN(Base):
 		return torch.nn.MSELoss()(state_action_values, expected_state_action_values)
 
 	# ----------------------------------------------------------------------------------------------
-	def step(self, step, batch: tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> dict:
+	def step(self, step, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int) -> dict:
 		"""
 		Carries out a single step through the environment to update the replay buffer.
-		Then calculates loss based on the minibatch recieved
+		Then calculates loss based on the minibatch recieved.
 
 		Args:
 			batch: current mini batch of replay data
@@ -157,11 +157,11 @@ class DQN(Base):
 		device = self.get_device(batch)
 		epsilon = max(self.hparams.eps_end, self.hparams.eps_start - self.global_step + 1 / self.hparams.eps_last_frame)
 
-		# step through environment with agent
-		reward, done = self.agent.play_step(self.net, epsilon, device)
+		# Step through environment with agent
+		reward, done = self.agent.play_step(self.net, epsilon, self.device)
 		self.episode_reward += reward
 
-		# calculates training loss
+		# Calculate training loss
 		loss = self.dqn_mse_loss(batch)
 		loss = loss.unsqueeze(0)
 
@@ -179,7 +179,7 @@ class DQN(Base):
 		return loss
 
 	# ----------------------------------------------------------------------------------------------
-	def training_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> dict:
+	def training_step(self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int) -> dict:
 		return self.step("train", batch, batch_idx)
 
 	# ----------------------------------------------------------------------------------------------
@@ -189,7 +189,7 @@ class DQN(Base):
 	# 	return self.step("val", batch, batch_idx)
 
 	# ----------------------------------------------------------------------------------------------
-	def test_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> dict:
+	def test_step(self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int) -> dict:
 		# states, actions, rewards, dones, next_states = batch
 		for _ in range(20):
 			self.agent.reset()
