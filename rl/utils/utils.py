@@ -18,7 +18,7 @@ from kellog import info, warning, error, debug
 from rich import inspect as rinspect
 
 import rl
-from rl.utils import ArgumentParser, Step, ModelCheckpointBest
+from rl.utils import ArgumentParser, Dir, ModelCheckpointBest
 
 eps = 1e-15
 # eps = torch.finfo(tensor.dtype).eps
@@ -151,7 +151,7 @@ def setup_logger(args, suppress_output: bool = False) -> Optional[loggers.Tensor
 
 
 # ==================================================================================================
-def setup_callbacks(logger: Optional[loggers.TensorBoardLogger], monitor: str, trial: Optional[Trial] = None) -> list:
+def setup_callbacks(logger: Optional[loggers.TensorBoardLogger], monitor: str, monitor_dir: Dir, trial: Optional[Trial] = None) -> list:
 	callbacks = [RichProgressBar()]
 	if trial is None:
 		callbacks += [RichModelSummary(max_depth=-1)]
@@ -162,6 +162,7 @@ def setup_callbacks(logger: Optional[loggers.TensorBoardLogger], monitor: str, t
 		save_top_k=3,
 		save_last=True,
 		# every_n_train_steps=20, # TODO for RL?
+		mode=str(monitor_dir),
 	)
 	lr_callback = LearningRateMonitor(logging_interval="epoch")
 	if logger is not None:

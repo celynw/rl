@@ -1,5 +1,6 @@
 """Useful functions."""
 from .step import Step
+from .dir import Dir
 from .datamodule import DataModule
 from .argument_parser import ArgumentParser
 from .model_checkpoint_best import ModelCheckpointBest

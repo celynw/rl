@@ -10,7 +10,7 @@ from rl.models import Base
 from rl.models.utils import Agent
 from rl.datasets.utils import ReplayBuffer
 from rl.datasets import RL
-from rl.utils import Step
+from rl.utils import Step, Dir
 
 # ==================================================================================================
 class DQN_net(torch.nn.Module):
@@ -40,6 +40,7 @@ class DQN_net(torch.nn.Module):
 class DQN(Base):
 	"""Basic DQN Model."""
 	monitor = f"{Step.TRAIN}/total_reward" # TODO
+	monitor_dir = Dir.MAX
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, args: argparse.Namespace, trial: Optional[optuna.trial.Trial] = None) -> None:
 		super().__init__(args, trial)

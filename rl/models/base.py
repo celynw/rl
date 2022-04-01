@@ -13,11 +13,12 @@ import optuna
 import rl
 from rl import utils
 from rl import metrics
-from rl.utils import Step
+from rl.utils import Step, Dir
 
 # ==================================================================================================
 class Base(pl.LightningModule):
 	monitor = f"loss/{Step.VAL}"
+	monitor_dir = Dir.MIN
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, args: argparse.Namespace, trial: Optional[optuna.trial.Trial] = None):
 		super().__init__()
@@ -111,7 +112,7 @@ class Base(pl.LightningModule):
 		optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr, amsgrad=True)
 		lr_scheduler = {
 			"scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, verbose=True),
-			"monitor": f"loss/{Step.VAL}",
+			"monitor": self.monitor,
 		}
 
 		return [optimizer], [lr_scheduler]

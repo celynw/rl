@@ -36,7 +36,7 @@ class Objective():
 			logger=self.logger,
 			gpus=0 if self.args.cpu else -1,
 			# resume_from_checkpoint=Path(),
-			callbacks=utils.setup_callbacks(self.logger, Model.monitor, trial),
+			callbacks=utils.setup_callbacks(self.logger, Model.monitor, Model.monitor_dir, trial),
 			accumulate_grad_batches=self.args.batch_accumulation,
 			overfit_batches=args.overfit,
 			resume_from_checkpoint=utils.get_checkpoint(self.logger, args.checkpoint),
