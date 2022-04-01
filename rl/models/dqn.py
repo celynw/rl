@@ -208,9 +208,21 @@ class DQN(Base):
 		return self.step("train", batch, batch_idx)
 
 	# ----------------------------------------------------------------------------------------------
-	def configure_optimizers(self) -> list[torch.optim.Optimizer]:
-		"""Initialize Adam optimizer"""
-		return [torch.optim.Adam(self.net.parameters(), lr=self.hparams.lr)]
+	def configure_optimizers(self):
+		"""
+		Set up optimisers.
+
+		Returns:
+			Tuple[list[torch.optim.Optimizer], list[object]]: Optimiser(s) and learning rate scheduler(s)
+		"""
+		# optimizer = torch.optim.Adam(self.parameters(), lr=self.args.lr, amsgrad=True)
+		optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr, amsgrad=True)
+		lr_scheduler = {
+			"scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, verbose=True, patience=100, mode=str(self.monitor_dir)),
+			"monitor": self.monitor,
+		}
+
+		return [optimizer], [lr_scheduler]
 
 	# ----------------------------------------------------------------------------------------------
 	def train_dataloader(self) -> DataLoader:
