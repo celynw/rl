@@ -17,7 +17,7 @@ def main(args: argparse.Namespace):
 	Model = getattr(rl.models, args.model)
 	model = Model(args, trial=None)
 	trainer = pl.Trainer(
-		# logger=logger,
+		logger=logger,
 		gpus=0 if args.cpu else -1,
 	)
 	path = utils.get_checkpoint(logger, args.checkpoint)
