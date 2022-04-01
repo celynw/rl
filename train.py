@@ -32,6 +32,13 @@ class Objective():
 			trial.set_user_attr("cmd", utils.get_called_command())
 
 		Model = getattr(rl.models, self.args.model)
+		checkpointPath = utils.get_checkpoint(self.logger, self.args.checkpoint)
+		if checkpointPath is not None and checkpointPath.exists():
+			# Neded for loading the original args/hparams as opposed to default argparse args again
+			model = Model.load_from_checkpoint(checkpointPath)
+			model.hparams.max_epochs = self.args.max_epochs
+		else:
+			model = Model(self.args, trial)
 		trainer = pl.Trainer(
 			logger=self.logger,
 			gpus=0 if self.args.cpu else -1,
@@ -39,7 +46,6 @@ class Objective():
 			callbacks=utils.setup_callbacks(self.logger, Model.monitor, Model.monitor_dir, trial),
 			accumulate_grad_batches=self.args.batch_accumulation,
 			overfit_batches=self.args.overfit,
-			resume_from_checkpoint=utils.get_checkpoint(self.logger, args.checkpoint),
 			enable_checkpointing=self.logger is not None,
 			max_epochs=1 if self.args.profile else self.args.max_epochs,
 			profiler="pytorch" if self.args.profile else None,
@@ -47,15 +53,16 @@ class Objective():
 			enable_model_summary=False, # This is done manually in the callbacks
 			auto_lr_find=self.args.autoLR,
 			# progress_bar_refresh_rate=0 if self.args.optuna is not None else None,
+			# val_check_interval=20, # WARNING: increments only within an epoch and resets for new ones! Use ModelCheckpoint's every_n_train_steps instead
+			# val_check_interval=self.args.episode_length,
 		)
-		model = Model(self.args, trial)
 		if self.args.autoLR:
 			# trainer.tune(model)
 			lr_finder = trainer.tuner.lr_find(model, num_training=20)
 			lr_finder.plot(suggest=True).savefig(Path(self.logger.log_dir) / "autoLR.png")
 			model.hparams.lr = lr_finder.suggestion()
 			model.args.lr = model.hparams.lr
-		trainer.fit(model)
+		trainer.fit(model, ckpt_path=checkpointPath) # Needed for continuing from the right epoch
 		# trainer.test(ckpt_path="best")
 
 		return trainer.callback_metrics[Model.monitor].item()
