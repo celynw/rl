@@ -195,11 +195,11 @@ class DQN(Base):
 	# ----------------------------------------------------------------------------------------------
 	def test_step(self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int) -> dict:
 		# states, actions, rewards, dones, next_states = batch
-		for _ in range(20):
+		for _ in range(40):
 			self.agent.reset()
 			while True:
 				self.env.render()
-				_, _, done, _ = self.env.step(self.env.action_space.sample()) # take a random action
+				_, done = self.agent.play_step(self.net, 0, self.device)
 				if done:
 					break
 		self.env.close()
