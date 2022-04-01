@@ -14,16 +14,15 @@ from rl import utils
 # ==================================================================================================
 def main(args: argparse.Namespace):
 	logger = utils.setup_logger(args, suppress_output=True)
+	checkpointPath = utils.get_checkpoint(logger, args.checkpoint)
 	Model = getattr(rl.models, args.model)
-	model = Model(args, trial=None)
+	model = Model.load_from_checkpoint(checkpointPath)
 	trainer = pl.Trainer(
 		logger=logger,
 		gpus=0 if args.cpu else -1,
 	)
-	path = utils.get_checkpoint(logger, args.checkpoint)
-	if path is not None and path.exists():
-		model = Model.load_from_checkpoint(path)
-		trainer.test(model=model) # ckpt_path doesn't get hyperparameters/args from the checkpoint
+	if checkpointPath is not None and checkpointPath.exists():
+		trainer.test(model, ckpt_path=checkpointPath) # ckpt_path doesn't get hyperparameters/args from the checkpoint
 
 
 # ==================================================================================================
