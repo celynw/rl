@@ -176,6 +176,7 @@ class DQN(Base):
 		if self.global_step % self.hparams.sync_rate == 0:
 			self.target_net.load_state_dict(self.net.state_dict())
 
+		self.log(f"{step}/loss", loss)
 		self.log(f"{step}/total_reward", self.total_reward)
 		self.log(f"{step}/mean_reward", sum(self.rewards) / len(self.rewards) if len(self.rewards) else 0.0)
 
