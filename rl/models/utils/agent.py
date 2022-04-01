@@ -41,10 +41,7 @@ class Agent:
 		if np.random.random() < epsilon:
 			action = self.env.action_space.sample()
 		else:
-			state = torch.tensor(np.array([self.state]))
-
-			if device not in ["cpu"]:
-				state = state.cuda(device)
+			state = torch.tensor(np.array([self.state]), device=device)
 
 			q_values = net(state)
 			_, action = torch.max(q_values, dim=1)

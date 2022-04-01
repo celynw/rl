@@ -154,7 +154,6 @@ class DQN(Base):
 		Returns:
 			Training loss and log metrics
 		"""
-		device = self.get_device(batch)
 		epsilon = max(self.hparams.eps_end, self.hparams.eps_start - self.global_step + 1 / self.hparams.eps_last_frame)
 
 		# Step through environment with agent
@@ -232,8 +231,3 @@ class DQN(Base):
 			batch_size=self.hparams.batch_size,
 			# num_workers=8,
 		)
-
-	# ----------------------------------------------------------------------------------------------
-	def get_device(self, batch) -> str:
-		"""Retrieve device currently being used by minibatch."""
-		return batch[0].device.index if self.on_gpu else "cpu"
