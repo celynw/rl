@@ -17,6 +17,7 @@ def main(args: argparse.Namespace):
 	checkpointPath = utils.get_checkpoint(logger, args.checkpoint)
 	Model = getattr(rl.models, args.model)
 	model = Model.load_from_checkpoint(checkpointPath)
+	model.hparams.epoch_length = args.epoch_length
 	trainer = pl.Trainer(
 		logger=logger,
 		gpus=0 if args.cpu else -1,
