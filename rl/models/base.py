@@ -108,7 +108,6 @@ class Base(pl.LightningModule):
 		Returns:
 			Tuple[list[torch.optim.Optimizer], list[object]]: Optimiser(s) and learning rate scheduler(s)
 		"""
-		# optimizer = torch.optim.Adam(self.parameters(), lr=self.args.lr, amsgrad=True)
 		optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr, amsgrad=True)
 		lr_scheduler = {
 			"scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, verbose=True),
