@@ -46,4 +46,4 @@ class RL(IterableDataset):
 
 	# ----------------------------------------------------------------------------------------------
 	def __len__(self) -> int:
-		return len(self.sample_size)
+		return self.sample_size
