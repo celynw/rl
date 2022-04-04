@@ -163,7 +163,6 @@ class DQN(Base):
 		reward, done = self.agent.play_step(self.net, epsilon, self.device)
 		self.episode_reward += reward
 
-		# Calculate training loss
 		loss = self.dqn_mse_loss(batch)
 		loss = loss.unsqueeze(0)
 
@@ -205,12 +204,18 @@ class DQN(Base):
 			if i == 0:
 				self.trainer.progress_bar_callback.progress.reset(self.epoch_bar_id)
 			self.trainer.progress_bar_callback._update(self.epoch_bar_id, current=i, total=self.env._max_episode_steps)
-			_, done = self.agent.play_step(self.net, 0, self.device)
+			reward, done = self.agent.play_step(self.net, 0, self.device)
+			self.episode_reward += reward
+			if done:
+				self.rewards.append(self.episode_reward)
+				self.total_reward = self.episode_reward
+				self.episode_reward = 0
+
 			self.env.render()
 			if done:
 				break
 
-		return self.step(Step.TEST, batch, batch_idx)
+		self.log(f"{Step.TEST}/mean_reward", sum(self.rewards) / len(self.rewards), on_step=True, on_epoch=False)
 
 	# ----------------------------------------------------------------------------------------------
 	def on_test_end(self) -> None:
