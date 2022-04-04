@@ -54,7 +54,7 @@ class Objective():
 			auto_lr_find=self.args.autoLR,
 			# progress_bar_refresh_rate=0 if self.args.optuna is not None else None,
 			# val_check_interval=20, # WARNING: increments only within an epoch and resets for new ones! Use ModelCheckpoint's every_n_train_steps instead
-			# val_check_interval=self.args.episode_length,
+			# val_check_interval=self.args.epoch_length,
 		)
 		if self.args.autoLR:
 			# trainer.tune(model)

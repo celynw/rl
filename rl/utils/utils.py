@@ -158,21 +158,21 @@ def setup_logger(args, suppress_output: bool = False) -> Optional[loggers.Tensor
 def setup_callbacks(logger: Optional[loggers.TensorBoardLogger], monitor: str, monitor_dir: Dir, trial: Optional[Trial] = None) -> list:
 	callbacks = [RichProgressBar()]
 	if trial is None:
-		callbacks += [RichModelSummary(max_depth=-1)]
-	checkpoint_callback = ModelCheckpointBest(
-		monitor=monitor,
-		# auto_insert_metric_name=False,
-		# filename=f"epoch={{epoch:02d}} {monitor}={{{monitor}:.2f}}",
-		save_top_k=3,
-		save_last=True,
-		# every_n_train_steps=20, # TODO for RL?
-		mode=str(monitor_dir),
-	)
+		callbacks.append(RichModelSummary(max_depth=-1)) # type: ignore
 	lr_callback = LearningRateMonitor(logging_interval="epoch")
 	if logger is not None:
-		callbacks += [checkpoint_callback, lr_callback]
+		callbacks.append(ModelCheckpointBest(
+			monitor=monitor,
+			# auto_insert_metric_name=False,
+			# filename=f"epoch={{epoch:02d}} {monitor}={{{monitor}:.2f}}",
+			save_top_k=3,
+			save_last=True,
+			# every_n_train_steps=20, # TODO for RL?
+			mode=str(monitor_dir),
+		)) # type: ignore
+		callbacks.append(lr_callback) # type: ignore
 	if trial is not None:
-		callbacks.append(PyTorchLightningPruningCallback(trial, monitor=monitor))
+		callbacks.append(PyTorchLightningPruningCallback(trial, monitor=monitor)) # type: ignore
 
 	return callbacks
 

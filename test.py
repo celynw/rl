@@ -20,6 +20,7 @@ def main(args: argparse.Namespace):
 	trainer = pl.Trainer(
 		logger=logger,
 		gpus=0 if args.cpu else -1,
+		callbacks=utils.setup_callbacks(None, Model.monitor, Model.monitor_dir),
 		max_epochs=args.max_epochs,
 	)
 	if checkpointPath is not None and checkpointPath.exists():

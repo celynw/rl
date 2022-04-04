@@ -184,7 +184,7 @@ class DQN(Base):
 
 	# ----------------------------------------------------------------------------------------------
 	def training_step(self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int) -> dict:
-		return self.step("train", batch, batch_idx)
+		return self.step(Step.TRAIN, batch, batch_idx)
 
 	# ----------------------------------------------------------------------------------------------
 	# def validation_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> dict:
@@ -193,19 +193,29 @@ class DQN(Base):
 	# 	return self.step("val", batch, batch_idx)
 
 	# ----------------------------------------------------------------------------------------------
-	def test_step(self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int) -> dict:
-		# states, actions, rewards, dones, next_states = batch
-		for _ in range(40):
-			self.agent.reset()
-			while True:
-				self.env.render()
-				_, done = self.agent.play_step(self.net, 0, self.device)
-				if done:
-					break
-		self.env.close()
-		quit(0)
+	def on_test_start(self) -> None:
+		self.epoch_bar_id = self.trainer.progress_bar_callback._add_task(self.env._max_episode_steps, description="episode")
+		return super().on_test_start()
 
-		return self.step("train", batch, batch_idx)
+	# ----------------------------------------------------------------------------------------------
+	def test_step(self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int) -> dict:
+		# Ignoring batch TODO don't even provide it to save time and GPU memory
+		self.agent.reset()
+		for i in range(self.env._max_episode_steps):
+			if i == 0:
+				self.trainer.progress_bar_callback.progress.reset(self.epoch_bar_id)
+			self.trainer.progress_bar_callback._update(self.epoch_bar_id, current=i, total=self.env._max_episode_steps)
+			_, done = self.agent.play_step(self.net, 0, self.device)
+			self.env.render()
+			if done:
+				break
+
+		return self.step(Step.TEST, batch, batch_idx)
+
+	# ----------------------------------------------------------------------------------------------
+	def on_test_end(self) -> None:
+		self.env.close()
+		return super().on_test_end()
 
 	# ----------------------------------------------------------------------------------------------
 	def configure_optimizers(self):
@@ -238,7 +248,7 @@ class DQN(Base):
 	# 	return DataLoader(
 	# 		RL(self.buffer, self.hparams.epoch_length),
 	# 		batch_size=self.hparams.batch_size,
-	# 		# num_workers=8,
+	#		num_workers=self.hparams.workers,
 	# 	)
 	# ----------------------------------------------------------------------------------------------
 	def test_dataloader(self) -> DataLoader:
