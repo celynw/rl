@@ -133,8 +133,12 @@ def setup_logger(args, suppress_output: bool = False) -> Optional[loggers.Tensor
 		warning("No output directory specified, will not log!")
 		return None
 	else:
+		try:
+			name = f"{args.model}/{args.env}"
+		except:
+			name = args.model
 		logger = loggers.TensorBoardLogger(
-			name=args.model,
+			name=name,
 			save_dir=args.output_directory,
 			# sub_dir=getattr(rl.models, args.model).datasetType.__name__,
 			log_graph=not args.no_graph,
