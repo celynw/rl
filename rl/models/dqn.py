@@ -48,6 +48,7 @@ class DQN(Base):
 		self.env = gym.make(self.hparams.env)
 		obs_size = self.env.observation_space.shape[0]
 		n_actions = self.env.action_space.n
+		self.example_input_array = torch.zeros(obs_size)
 
 		self.net = DQN_net(obs_size, n_actions)
 		self.target_net = DQN_net(obs_size, n_actions)
