@@ -20,6 +20,7 @@ def main(args: argparse.Namespace):
 	trainer = pl.Trainer(
 		logger=logger,
 		gpus=0 if args.cpu else -1,
+		max_epochs=args.max_epochs,
 	)
 	if checkpointPath is not None and checkpointPath.exists():
 		trainer.test(model, ckpt_path=checkpointPath) # ckpt_path doesn't get hyperparameters/args from the checkpoint

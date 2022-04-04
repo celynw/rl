@@ -58,9 +58,9 @@ class DQN(Base):
 
 		self.total_reward = 0.0
 		self.episode_reward = 0.0
-		self.rewards = deque(maxlen=self.hparams.episode_length)
+		self.rewards = deque(maxlen=self.hparams.epoch_length)
 
-		self.populate(self.hparams.warm_start_steps)
+		self.populate()
 
 	# ----------------------------------------------------------------------------------------------
 	@staticmethod
@@ -82,22 +82,21 @@ class DQN(Base):
 			parser.add_argument("-h", "--help", action="help", default=argparse.SUPPRESS, help="Show this help message and exit.")
 
 		group.add_argument("--gamma", type=float, default=0.99, help="Discount factor")
+		group.add_argument("--epoch_length", type=int, default=200, help="How many experiences to sample per pytorch epoch")
 		group.add_argument("--replay_size", type=int, default=1000, help="Capacity of the replay buffer")
-		group.add_argument("--warm_start_size", type=int, default=1000, help="How many samples do we use to fill the buffer at the start of training")
-		group.add_argument("--warm_start_steps", type=int, default=1000, help="Max episode reward in the environment")
+		# group.add_argument("--warm_start_steps", type=int, default=1000, help="Number of iterations for linear warmup") # TODO pl_bolts.optimizers.lr_scheduler.LinearWarmupCosineAnnealingLR
 		group.add_argument("--sync_rate", type=int, default=10, help="How many frames used to update the target network")
+		# TODO refactor EPS here
 		group.add_argument("--eps_start", type=float, default=1.0, help="Epsilon starting value")
 		group.add_argument("--eps_end", type=float, default=0.01, help="Epsilon final value")
 		group.add_argument("--eps_last_frame", type=int, default=1000, help="Which frame epsilon should stop decaying at")
-		group.add_argument("--episode_length", type=int, default=200, help="Max length of an episode")
-		group.add_argument("--max_episode_reward", type=int, default=200, help="Max episode reward in the environment")
 
 		parser = RL.add_argparse_args(parser)
 
 		return parser
 
 	# ----------------------------------------------------------------------------------------------
-	def populate(self, steps: int = 1000) -> None:
+	def populate(self) -> None:
 		"""
 		Carries out several random steps through the environment to initially fill
 		up the replay buffer with experiences
@@ -105,7 +104,7 @@ class DQN(Base):
 		Args:
 			steps: number of random steps to populate the buffer with
 		"""
-		for i in range(steps):
+		for i in range(self.hparams.replay_size):
 			self.agent.play_step(self.net, epsilon=1.0)
 
 	# ----------------------------------------------------------------------------------------------
@@ -229,15 +228,15 @@ class DQN(Base):
 	def train_dataloader(self) -> DataLoader:
 		"""Initialize the Replay Buffer dataset used for retrieving experiences"""
 		return DataLoader(
-			RL(self.buffer, self.hparams.episode_length),
+			RL(self.buffer, self.hparams.epoch_length),
 			batch_size=self.hparams.batch_size,
-			# num_workers=8,
+			num_workers=self.hparams.workers,
 		)
 	# ----------------------------------------------------------------------------------------------
 	# def val_dataloader(self) -> DataLoader:
 	# 	"""Initialize the Replay Buffer dataset used for retrieving experiences"""
 	# 	return DataLoader(
-	# 		RL(self.buffer, self.hparams.episode_length),
+	# 		RL(self.buffer, self.hparams.epoch_length),
 	# 		batch_size=self.hparams.batch_size,
 	# 		# num_workers=8,
 	# 	)
@@ -245,7 +244,7 @@ class DQN(Base):
 	def test_dataloader(self) -> DataLoader:
 		"""Initialize the Replay Buffer dataset used for retrieving experiences"""
 		return DataLoader(
-			RL(self.buffer, self.hparams.episode_length),
-			batch_size=self.hparams.batch_size,
-			# num_workers=8,
+			RL(self.buffer, self.hparams.epoch_length),
+			batch_size=1,
+			num_workers=self.hparams.workers,
 		)
