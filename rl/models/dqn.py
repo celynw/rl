@@ -225,14 +225,9 @@ class DQN(Base):
 		Returns:
 			Tuple[list[torch.optim.Optimizer], list[object]]: Optimiser(s) and learning rate scheduler(s)
 		"""
-		# optimizer = torch.optim.Adam(self.parameters(), lr=self.args.lr, amsgrad=True)
 		optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr, amsgrad=True)
-		lr_scheduler = {
-			"scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, verbose=True, patience=100, mode=str(self.monitor_dir)),
-			"monitor": self.monitor,
-		}
 
-		return [optimizer], [lr_scheduler]
+		return [optimizer]
 
 	# ----------------------------------------------------------------------------------------------
 	def train_dataloader(self) -> DataLoader:
