@@ -177,7 +177,8 @@ class DQN(Base):
 
 		self.log(f"{step}/loss", loss)
 		self.log(f"{step}/total_reward", self.total_reward)
-		self.log(f"{step}/mean_reward", sum(self.rewards) / len(self.rewards) if len(self.rewards) else 0.0)
+		if len(self.rewards):
+			self.log(f"{step}/mean_reward", sum(self.rewards) / len(self.rewards))
 
 		return loss
 
