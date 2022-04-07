@@ -8,7 +8,6 @@ from typing import Union, Optional
 import torch
 from git import Repo
 import setproctitle
-from kellog import info, warning, error, debug
 from pytorch_lightning import loggers
 from pytorch_lightning.callbacks import RichModelSummary, LearningRateMonitor, RichProgressBar
 from optuna.integration.pytorch_lightning import PyTorchLightningPruningCallback
@@ -124,7 +123,7 @@ def get_checkpoint(logger: loggers.TensorBoardLogger, checkpoint: Union[str, Pat
 				warning(f"Specified checkpoint not found at '{checkpointPath}'!")
 			checkpointPath = None
 
-		return checkpointPath
+	return checkpointPath
 
 
 # ==================================================================================================
@@ -159,7 +158,7 @@ def setup_callbacks(logger: Optional[loggers.TensorBoardLogger], monitor: str, m
 	callbacks = [RichProgressBar()]
 	if trial is None:
 		callbacks.append(RichModelSummary(max_depth=-1)) # type: ignore
-	lr_callback = LearningRateMonitor(logging_interval="epoch")
+	callbacks.append(LearningRateMonitor(logging_interval="epoch")) # type: ignore
 	if logger is not None:
 		callbacks.append(ModelCheckpointBest(
 			monitor=monitor,
@@ -170,7 +169,6 @@ def setup_callbacks(logger: Optional[loggers.TensorBoardLogger], monitor: str, m
 			# every_n_train_steps=20, # TODO for RL?
 			mode=str(monitor_dir),
 		)) # type: ignore
-		callbacks.append(lr_callback) # type: ignore
 	if trial is not None:
 		callbacks.append(PyTorchLightningPruningCallback(trial, monitor=monitor)) # type: ignore
 

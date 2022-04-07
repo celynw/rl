@@ -20,7 +20,12 @@ optuna \
 rich \
 kellog \
 gitpython \
-setproctitle
+setproctitle \
+opencv-python \
+# h5py \
+gym \
+gym[atari] \
+gym[box2d]
 ```
 
 (For Stable Baselines):
