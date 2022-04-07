@@ -216,6 +216,7 @@ class DQN(Base):
 			if done:
 				break
 
+		self.log(f"{Step.TEST}/total_reward", self.total_reward, on_step=True, on_epoch=False)
 		self.log(f"{Step.TEST}/mean_reward", sum(self.rewards) / len(self.rewards), on_step=True, on_epoch=False)
 
 	# ----------------------------------------------------------------------------------------------
