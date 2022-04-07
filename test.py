@@ -32,6 +32,5 @@ def main(args: argparse.Namespace):
 if __name__ == "__main__":
 	torch.set_printoptions(precision=16, sci_mode=False)
 	args = utils.parse_args()
-	if args.seed is not None:
-		pl.utilities.seed.seed_everything(seed=args.seed, workers=True)
+	pl.utilities.seed.seed_everything(seed=args.seed if args.seed is not None else 0, workers=True)
 	main(args)
