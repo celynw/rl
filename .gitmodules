@@ -1,0 +1,3 @@
+[submodule "catkin_ws/src/rpg_esim"]
+	path = catkin_ws/src/rpg_esim
+	url = git@github.com:celynw/rpg_esim.git
