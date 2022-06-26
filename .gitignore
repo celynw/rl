@@ -6,3 +6,8 @@ lightning_logs/
 runs/
 # **.pyc
 # **/.mypy_cache/
+catkin_ws/logs
+catkin_ws/build
+catkin_ws/devel
+catkin_ws/.catkin_tools
+HC ROMS/
