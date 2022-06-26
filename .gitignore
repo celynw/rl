@@ -1,7 +1,8 @@
-venv/
+venv*/
 **/__pycache__/
 **.egg-info/
 logs/
 lightning_logs/
+runs/
 # **.pyc
 # **/.mypy_cache/
