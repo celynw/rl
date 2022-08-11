@@ -6,6 +6,7 @@ from typing import Optional, Any
 
 import torch
 import pytorch_lightning as pl
+import gym
 from kellog import info, warning, error, debug
 import numpy as np
 import optuna
@@ -14,6 +15,8 @@ import rl
 from rl import utils
 from rl import metrics
 from rl.utils import Step, Dir
+from .utils import ModelType, choose_model
+from .utils.visual import MaxAndSkipEnv, FireResetEnv, WarpFrame, ImageToPyTorch, FrameStack, ScaledFloatFrame
 
 # ==================================================================================================
 class Base(pl.LightningModule):
@@ -23,12 +26,28 @@ class Base(pl.LightningModule):
 	def __init__(self, args: argparse.Namespace, trial: Optional[optuna.trial.Trial] = None):
 		super().__init__()
 		self.save_hyperparameters(args)
-		# self.args = args
 		self.trial = trial
 		self.metric_inference_time_train = metrics.InferenceTime()
 		self.metric_inference_time_val = metrics.InferenceTime()
 		self.metric_inference_time_test = metrics.InferenceTime()
 		np.set_printoptions(precision=3, linewidth=os.get_terminal_size().columns)
+
+		self.model_type = choose_model(self.hparams.env)
+
+	# ----------------------------------------------------------------------------------------------
+	def create_env(self) -> gym.Env:
+		env = gym.make(self.hparams.env)
+		if self.model_type is ModelType.VISUAL:
+			fire = True
+			env = MaxAndSkipEnv(env) # Return only every `skip`-th frame
+			if fire:
+				env = FireResetEnv(env) # Fire at the beginning
+			env = WarpFrame(env) # Reshape image
+			env = ImageToPyTorch(env) # Invert shape
+			env = FrameStack(env, 4) # Stack last 4 frames
+			env = ScaledFloatFrame(env) # Scale frames
+
+		return env
 
 	# ----------------------------------------------------------------------------------------------
 	@staticmethod
@@ -74,20 +93,20 @@ class Base(pl.LightningModule):
 				string += " None"
 			tensorboard.add_text("System info", string)
 
-	# ----------------------------------------------------------------------------------------------
-	def on_train_batch_start(self, batch: Any, batch_idx: int):
-		# For attaching logged loss to hparams in tensorboard
-		# Make sure first entry is not zero
-		# When this is called, it might also affect the real logged losses, so makes sure to not overwrite those
-		# Only the first call works, so we need as many loss types as we can before we call this
-		# hparams tab in tensorboard is a separate
-		if self.logger and self.current_epoch == 1:
-			hyperparams = {}
-			for hparam in [f"loss/{Step.TRAIN}", f"loss/{Step.VAL}", f"loss/{Step.TEST}"]:
-				if hparam in self.trainer.callback_metrics:
-					hyperparams[hparam] = self.trainer.callback_metrics[hparam]
-			# self.logger.log_hyperparams(self.args, hyperparams)
-			# self.logger.log_hyperparams()
+	# # ----------------------------------------------------------------------------------------------
+	# def on_train_batch_start(self, batch: Any, batch_idx: int):
+	# 	# For attaching logged loss to hparams in tensorboard
+	# 	# Make sure first entry is not zero
+	# 	# When this is called, it might also affect the real logged losses, so makes sure to not overwrite those
+	# 	# Only the first call works, so we need as many loss types as we can before we call this
+	# 	# hparams tab in tensorboard is a separate
+	# 	if self.logger and self.current_epoch == 1:
+	# 		hyperparams = {}
+	# 		for hparam in [f"loss/{Step.TRAIN}", f"loss/{Step.VAL}", f"loss/{Step.TEST}"]:
+	# 			if hparam in self.trainer.callback_metrics:
+	# 				hyperparams[hparam] = self.trainer.callback_metrics[hparam]
+	# 		# self.logger.log_hyperparams(self.args, hyperparams)
+	# 		# self.logger.log_hyperparams()
 
 	# ----------------------------------------------------------------------------------------------
 	def is_training(self):
