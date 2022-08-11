@@ -18,6 +18,7 @@ def main(args: argparse.Namespace):
 	Model = getattr(rl.models, args.model)
 	model = Model.load_from_checkpoint(checkpointPath)
 	model.hparams.epoch_length = args.epoch_length
+	model.hparams.vis = args.vis
 	trainer = pl.Trainer(
 		logger=logger,
 		gpus=0 if args.cpu else -1,
@@ -32,5 +33,5 @@ def main(args: argparse.Namespace):
 if __name__ == "__main__":
 	torch.set_printoptions(precision=16, sci_mode=False)
 	args = utils.parse_args()
-	pl.utilities.seed.seed_everything(seed=args.seed if args.seed is not None else 0, workers=True)
+	# pl.utilities.seed.seed_everything(seed=args.seed if args.seed is not None else 0, workers=True)
 	main(args)
