@@ -1,0 +1,14 @@
+pydocstyle
+mypy
+pycodestyle
+colored_traceback
+pytorch-lightning
+optuna
+rich
+kellog
+gitpython
+setproctitle
+opencv-python
+gym[all]
+stable_baselines3
+msgpack
