@@ -9,7 +9,8 @@ sudo apt install ffmpeg freeglut3-dev xvfb
 ```bash
 conda create -p venv python=3.10 pip
 conda activate ./venv/
-conda install pytorch torchvision cudatoolkit=11.3 -c pytorch
+conda install -y pytorch torchvision cudatoolkit=11.3 -c pytorch
+conda install -y swig
 pip install \
 pydocstyle \
 mypy \
@@ -23,9 +24,10 @@ gitpython \
 setproctitle \
 opencv-python \
 # h5py \
-gym \
-gym[atari] \
-gym[box2d]
+gym[all]
+stable-baselines3 \
+msgpack \
+rospkg
 ```
 
 (For Stable Baselines):
