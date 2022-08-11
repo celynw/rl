@@ -8,7 +8,8 @@ from typing import Union, Optional
 import torch
 from git import Repo
 import setproctitle
-from pytorch_lightning import loggers
+from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_lightning.loggers.base import DummyLogger
 from pytorch_lightning.callbacks import RichModelSummary, LearningRateMonitor, RichProgressBar
 from optuna.integration.pytorch_lightning import PyTorchLightningPruningCallback
 from optuna.trial import Trial
@@ -50,6 +51,7 @@ def parse_args() -> argparse.Namespace:
 	group.add_argument("-C", "--checkpoint", type=Path, help="Path to checkpoint file. Can be relative to specific model log directory", default="best")
 	group.add_argument("--max_epochs", type=int, help="Number of epochs to train for", default=-1)
 	group.add_argument("-A", "--autoLR", action="store_true", help="First run the auto learning rate finder")
+	group.add_argument("-V", "--vis", action="store_true", help="Visualise and render the test environment")
 	import __main__
 	group.add_argument("--proctitle", type=str, help="Process title", default=Path(__main__.__file__).name)
 
@@ -110,8 +112,9 @@ def get_git_rev(cwd=Path(inspect.stack()[1][1]).parent) -> str: # Uses parent of
 
 
 # ==================================================================================================
-def get_checkpoint(logger: loggers.TensorBoardLogger, checkpoint: Union[str, Path]) -> Optional[Path]:
-	if logger is None:
+# def get_checkpoint(logger: Union[DummyLogger, TensorBoardLogger], checkpoint: Union[str, Path]) -> Optional[Path]:
+def get_checkpoint(logger: Optional[TensorBoardLogger], checkpoint: Union[str, Path]) -> Optional[Path]:
+	if logger is None or isinstance(logger, DummyLogger) or logger is False:
 		checkpointPath = None
 	else:
 		ckptDir = Path(logger.log_dir) / "checkpoints"
@@ -127,16 +130,19 @@ def get_checkpoint(logger: loggers.TensorBoardLogger, checkpoint: Union[str, Pat
 
 
 # ==================================================================================================
-def setup_logger(args, suppress_output: bool = False) -> Optional[loggers.TensorBoardLogger]:
+# def setup_logger(args, suppress_output: bool = False) -> Union[DummyLogger, TensorBoardLogger]:
+def setup_logger(args, suppress_output: bool = False) -> Optional[TensorBoardLogger]:
 	if args.output_directory is None:
 		warning("No output directory specified, will not log!")
-		return None
+		logger = None
+		# logger = DummyLogger() # Isn't None because that breaks some things like LearningRateMonitor
+		# logger = False # Isn't None because that breaks some things like LearningRateMonitor
 	else:
 		try:
 			name = f"{args.model}/{args.env}"
 		except:
 			name = args.model
-		logger = loggers.TensorBoardLogger(
+		logger = TensorBoardLogger(
 			name=name,
 			save_dir=args.output_directory,
 			# sub_dir=getattr(rl.models, args.model).datasetType.__name__,
@@ -150,16 +156,19 @@ def setup_logger(args, suppress_output: bool = False) -> Optional[loggers.Tensor
 			kellog.setup_logger(Path(logger.log_dir) / "log.txt")
 			kellog.log_args(args, Path(logger.log_dir) / "args.json")
 
-		return logger
+	return logger
 
 
 # ==================================================================================================
-def setup_callbacks(logger: Optional[loggers.TensorBoardLogger], monitor: str, monitor_dir: Dir, trial: Optional[Trial] = None) -> list:
+# def setup_callbacks(logger: Union[DummyLogger, TensorBoardLogger], monitor: str, monitor_dir: Dir, trial: Optional[Trial] = None) -> list:
+def setup_callbacks(logger: Optional[TensorBoardLogger], monitor: str, monitor_dir: Dir, trial: Optional[Trial] = None) -> list:
 	callbacks = [RichProgressBar()]
 	if trial is None:
 		callbacks.append(RichModelSummary(max_depth=-1)) # type: ignore
-	callbacks.append(LearningRateMonitor(logging_interval="epoch")) # type: ignore
-	if logger is not None:
+	# callbacks.append(LearningRateMonitor(logging_interval="epoch")) # type: ignore
+	# if logger is not None:
+	if logger is not None and not isinstance(logger, DummyLogger) and logger is not False:
+		callbacks.append(LearningRateMonitor(logging_interval="epoch")) # type: ignore
 		callbacks.append(ModelCheckpointBest(
 			monitor=monitor,
 			# auto_insert_metric_name=False,
@@ -168,6 +177,7 @@ def setup_callbacks(logger: Optional[loggers.TensorBoardLogger], monitor: str, m
 			save_last=True,
 			# every_n_train_steps=20, # TODO for RL?
 			mode=str(monitor_dir),
+			# dirpath=Path(logger.experiment.dir) / "checkpoints",
 		)) # type: ignore
 	if trial is not None:
 		callbacks.append(PyTorchLightningPruningCallback(trial, monitor=monitor)) # type: ignore
