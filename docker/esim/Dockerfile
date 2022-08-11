@@ -3,7 +3,6 @@ FROM ros:noetic-perception-focal as ros
 # ROS
 # Create a user
 ARG USERNAME=docker
-ARG USERID=1000
 RUN mkdir -p /home/$USERNAME
 WORKDIR /home/$USERNAME
 # ESIM
@@ -50,7 +49,6 @@ RUN catkin build esim_ros
 RUN apt-get autoremove -y && \
 	apt-get autoclean -y
 RUN rm -rf /var/lib/apt/lists/*
-RUN mkdir -p /var/run/sshd
 
 # NVIDIA
 FROM nvidia/cuda:11.6.2-cudnn8-runtime-ubuntu20.04
@@ -81,9 +79,9 @@ RUN /bin/bash /tmp/miniconda.sh -b -p $CONDA_DIR && \
 RUN apt-get autoremove -y && \
 	apt-get autoclean -y
 RUN rm -rf /var/lib/apt/lists/*
-RUN mkdir -p /var/run/sshd
 
 # Onboarding
+RUN mkdir -p /var/run/sshd
 USER $USERNAME
 RUN echo ". /opt/ros/noetic/setup.bash" >> /home/$USERNAME/.bashrc
 RUN echo ". /opt/conda/etc/profile.d/conda.sh" >> /home/$USERNAME/.bashrc
