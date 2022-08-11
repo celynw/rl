@@ -22,7 +22,7 @@ class Agent:
 
 	# ----------------------------------------------------------------------------------------------
 	def reset(self) -> None:
-		"""Resents the environment and updates the state."""
+		"""Resets the environment and updates the state."""
 		self.state = self.env.reset()
 
 	# ----------------------------------------------------------------------------------------------
@@ -38,9 +38,9 @@ class Agent:
 		Returns:
 			action
 		"""
-		if np.random.random() < epsilon:
+		if np.random.random() < epsilon: # Random action
 			action = self.env.action_space.sample()
-		else:
+		else: # Best action
 			state = torch.tensor(np.array([self.state]), device=device)
 
 			q_values = net(state)
@@ -66,8 +66,7 @@ class Agent:
 		action = self.get_action(net, epsilon, device)
 		# Do step in the environment
 		new_state, reward, done, _ = self.env.step(action)
-		exp = Experience(self.state, action, reward, done, new_state)
-		self.buffer.append(exp)
+		self.buffer.append(Experience(self.state, action, reward, done, new_state))
 
 		self.state = new_state
 		if done:
