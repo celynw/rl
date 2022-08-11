@@ -14,10 +14,10 @@ class ReplayBuffer:
 	"""
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, capacity: int) -> None:
-		self.buffer = deque(maxlen=capacity)
+		self.buffer: deque[Experience] = deque(maxlen=capacity)
 
 	# ----------------------------------------------------------------------------------------------
-	def __len__(self) -> None:
+	def __len__(self) -> int:
 		return len(self.buffer)
 
 	# ----------------------------------------------------------------------------------------------
@@ -31,8 +31,8 @@ class ReplayBuffer:
 		self.buffer.append(experience)
 
 	# ----------------------------------------------------------------------------------------------
-	def sample(self, batch_size: int) -> tuple:
-		indices = np.random.choice(len(self.buffer), batch_size, replace=False)
+	def sample(self, sample_size: int) -> tuple:
+		indices = np.random.choice(len(self.buffer), sample_size, replace=False)
 		states, actions, rewards, dones, next_states = zip(*[self.buffer[idx].__dict__.values() for idx in indices])
 
 		return (
