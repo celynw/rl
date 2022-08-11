@@ -13,6 +13,8 @@ from cv_bridge import CvBridge, CvBridgeError
 import gym
 from rich import print, inspect
 
+import rl # Registers custom environments
+
 # ==================================================================================================
 class Node():
 	# ----------------------------------------------------------------------------------------------
@@ -30,8 +32,6 @@ class Node():
 	# ----------------------------------------------------------------------------------------------
 	def parse_params(self):
 		self.params = Munch()
-		self.params.sub_topic = rospy.get_param("~sub_topic", "topic")
-		self.params.root_frame = rospy.get_param("~root_frame", "map")
 		self.params.cam_frame = rospy.get_param("~cam_frame", "cam")
 		self.params.rate = rospy.get_param("~rate", 10.0)
 		self.params.iters = rospy.get_param("~iters", 0)
@@ -48,10 +48,9 @@ class Node():
 	def setup(self):
 		self.bridge = CvBridge()
 
-		self.tfBuffer = tf2_ros.Buffer()
 		self.rate = rospy.Rate(self.params.rate)
 
-		self.env = gym.make("CartPole-v1")
+		self.env = gym.make("CartPole-contrast-v1")
 		self.env.reset()
 
 	# ----------------------------------------------------------------------------------------------
@@ -72,10 +71,10 @@ class Node():
 				self.env.render()
 			out = self.env.render(mode="rgb_array")
 			try:
-				msg = self.bridge.cv2_to_imgmsg(out, encoding="bgr8")
+				msg = self.bridge.cv2_to_imgmsg(out, encoding="rgb8")
 			except CvBridgeError as e:
 				print(e)
-			msg.header.frame_id = self.params.root_frame
+			msg.header.frame_id = self.params.cam_frame
 			msg.header.stamp = rospy.Time.now()
 			self.pub.image.publish(msg)
 			self.rate.sleep()
