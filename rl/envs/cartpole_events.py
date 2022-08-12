@@ -205,6 +205,7 @@ class CartPoleEnvEvents(gym.Env):
 		self.info = {
 			"failReason": None,
 			"updatedPolicy": int(self.updatedPolicy),
+			"physicsState": np.zeros(4),
 		}
 
 		# print(f"action.shape: {action.shape}")
@@ -311,6 +312,8 @@ class CartPoleEnvEvents(gym.Env):
 		if done:
 			# We're not doing setting this to False immediately because the monitor only writes a line when an episode is done
 			self.updatedPolicy = False
+
+		self.info["physicsState"] = self.physics_state
 
 		return event_tensor.numpy(), reward, done, self.info
 
