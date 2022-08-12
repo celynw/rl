@@ -379,14 +379,15 @@ class CartPoleEnvEvents(gym.Env):
 		self.events = None
 		self.pub_image.publish(msg)
 
-		if not self.connected:
+		i = 0
+		while not self.connected:
+			print(f"Waiting for subscriber on '{self.pub_image.name}' topic ({i})")
 			# Check that ESIM is active
 			# FIX this doesn't account for _what_ is listening, it could be just a visualiser or rosbag!
-			time.sleep(3)
-			if self.pub_image.get_num_connections() == 0:
-				raise RuntimeError(f"Nothing is listening to {self.pub_image.name}, aborting...")
-			else:
+			if self.pub_image.get_num_connections() > 0:
 				self.connected = True
+			i += 1
+			time.sleep(1)
 
 		self.time += rospy.Duration(1 / 30)
 
