@@ -30,6 +30,8 @@ from rich import print, inspect
 import rl
 # from rl.models.utils.visual import CartPoleRGBTemp
 
+use_wandb = False
+
 # ==================================================================================================
 class Decay3d(torch.nn.modules.Module):
 	# ----------------------------------------------------------------------------------------------
@@ -754,13 +756,14 @@ def main(args: argparse.Namespace) -> None:
 		"total_timesteps": 25000,
 		"env_name": "CartPole-v1",
 	}
-	run = wandb.init(
-		project="RL_pretrained",
-		config=config,
-		sync_tensorboard=True, # auto-upload sb3's tensorboard metrics
-		monitor_gym=True, # auto-upload the videos of agents playing the game
-		save_code=True, # optional
-	)
+	if use_wandb:
+		run = wandb.init(
+			project="RL_pretrained",
+			config=config,
+			sync_tensorboard=True, # auto-upload sb3's tensorboard metrics
+			monitor_gym=True, # auto-upload the videos of agents playing the game
+			save_code=True, # optional
+		)
 
 	all_rewards = []
 	# env_id = "CartPole-contrast-v1"
@@ -921,14 +924,18 @@ def main(args: argparse.Namespace) -> None:
 		# 	# clip_range=0.0,
 		# 	# max_grad_norm=1.0,
 		# )
-		wandbCallback = WandbCallback(
-			model_save_path=args.log_dir / f"{args.name}",
-			gradient_save_freq=100,
-		)
+		if use_wandb:
+			wandbCallback = WandbCallback(
+				model_save_path=args.log_dir / f"{args.name}",
+				gradient_save_freq=100,
+			)
+			callback = [TqdmCallback(), wandbCallback, PolicyUpdateCallback(env)]
+		else:
+			callback = [TqdmCallback(), PolicyUpdateCallback(env)]
 		model.learn(
 			total_timesteps=max(model.n_steps, args.steps),
 			# callback=[TqdmCallback()],
-			callback=[TqdmCallback(), wandbCallback, PolicyUpdateCallback(env)],
+			callback=callback
 		)
 		all_rewards.append(env.get_episode_rewards())
 
