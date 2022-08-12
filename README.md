@@ -47,3 +47,9 @@ nengo \
 jedi \
 ipykernel
 ```
+
+## ROS setup
+
+Go into a docker container.
+Mount `catkin_ws`
+Build catkin environment from inside (so all the paths work properly) (so we have to most up-to-date devel version of the repo)

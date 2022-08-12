@@ -5,6 +5,9 @@ FROM ros:noetic-perception-focal as ros
 ARG USERNAME=docker
 RUN mkdir -p /home/$USERNAME
 WORKDIR /home/$USERNAME
+# Allow ncurses
+ENV TERM=linux
+ENV TERMINFO=/etc/terminfo
 # ESIM
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
 	git
@@ -25,24 +28,10 @@ RUN catkin init
 RUN catkin config --extend /opt/ros/noetic --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS=-Wno-int-in-bool-context
 WORKDIR src/
 RUN --mount=type=ssh git clone --recursive git@github.com:celynw/rpg_esim.git
+RUN catkin config --skiplist imp_3rdparty_cuda_toolkit imp_app_pangolin_example imp_benchmark_aligned_allocator imp_bridge_pangolin imp_cu_core imp_cu_correspondence imp_cu_imgproc imp_ros_rof_denoising imp_tools_cmd ze_data_provider ze_geometry ze_imu ze_trajectory_analysis
 WORKDIR rpg_esim/
 RUN rm -rf .git
-WORKDIR submodules/ze_oss/
-RUN touch \
-	imp_3rdparty_cuda_toolkit/CATKIN_IGNORE \
-	imp_app_pangolin_example/CATKIN_IGNORE \
-	imp_benchmark_aligned_allocator/CATKIN_IGNORE \
-	imp_bridge_pangolin/CATKIN_IGNORE \
-	imp_cu_core/CATKIN_IGNORE \
-	imp_cu_correspondence/CATKIN_IGNORE \
-	imp_cu_imgproc/CATKIN_IGNORE \
-	imp_ros_rof_denoising/CATKIN_IGNORE \
-	imp_tools_cmd/CATKIN_IGNORE \
-	ze_data_provider/CATKIN_IGNORE \
-	ze_geometry/CATKIN_IGNORE \
-	ze_imu/CATKIN_IGNORE \
-	ze_trajectory_analysis/CATKIN_IGNORE
-WORKDIR ../../../../
+WORKDIR ../../
 RUN catkin build esim_ros
 
 # Cleanup
