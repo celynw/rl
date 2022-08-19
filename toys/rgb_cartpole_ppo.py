@@ -1052,6 +1052,11 @@ class Estimator(BaseFeaturesExtractor):
 
 # ==================================================================================================
 def main(args: argparse.Namespace) -> None:
+	# env_id = "CartPole-contrast-v1"
+	env_id = "CartPole-events-v1"
+	# env_id = "CartPole-events-debug"
+	# env_id = "CartPole-v1"
+
 	name = f"{int(time.time())}" # Epoch
 	if args.name:
 		name = f"{name} {args.name}"
@@ -1061,8 +1066,8 @@ def main(args: argparse.Namespace) -> None:
 
 	config = {
 		"policy_type": "MlpPolicy",
-		"total_timesteps": 25000,
-		"env_name": "CartPole-v1",
+		"total_timesteps": max(args.n_steps, args.steps),
+		"env_name": env_id,
 	}
 	if use_wandb:
 		run = wandb.init(
@@ -1074,10 +1079,6 @@ def main(args: argparse.Namespace) -> None:
 		)
 
 	all_rewards = []
-	# env_id = "CartPole-contrast-v1"
-	env_id = "CartPole-events-v1"
-	# env_id = "CartPole-events-debug"
-	# env_id = "CartPole-v1"
 	# env_ = gym.make(env_id)
 	# env_ = CartPoleRGBTemp(env_)
 	# env_ = DummyVecEnv([lambda: gym.make(env_id)])
