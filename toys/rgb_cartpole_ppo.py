@@ -17,7 +17,7 @@ from gym import spaces
 # from stable_baselines3 import A2C
 from stable_baselines3 import PPO
 from stable_baselines3.common.buffers import DictRolloutBuffer, RolloutBuffer
-from stable_baselines3.ppo.policies import MlpPolicy
+from stable_baselines3.common.policies import ActorCriticPolicy
 from stable_baselines3.common.monitor import Monitor
 # from gym.wrappers.monitoring.video_recorder import VideoRecorder
 from stable_baselines3.common.vec_env import DummyVecEnv, VecVideoRecorder
@@ -38,19 +38,26 @@ import rl
 use_wandb = False
 
 # ==================================================================================================
-class MlpPolicy_mod(MlpPolicy):
+class ActorCriticPolicy_mod(ActorCriticPolicy):
 	# ----------------------------------------------------------------------------------------------
-	def predict_values(self, obs: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+	def evaluate_actions(self, obs: torch.Tensor, actions: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
 		"""
-		Get the estimated values according to the current policy given the observations.
+		Evaluate actions according to the current policy,
+		given the observations.
 
 		:param obs:
-		:return: the estimated values and the features.
+		:param actions:
+		:return: estimated value, log likelihood of taking those actions
+			and entropy of the action distribution.
 		"""
+		# Preprocess the observation if needed
 		features = self.extract_features(obs)
-		latent_vf = self.mlp_extractor.forward_critic(features)
+		latent_pi, latent_vf = self.mlp_extractor(features)
+		distribution = self._get_action_dist_from_latent(latent_pi)
+		log_prob = distribution.log_prob(actions)
+		values = self.value_net(latent_vf)
 
-		return self.value_net(latent_vf), features
+		return values, log_prob, distribution.entropy(), features
 
 
 # ==================================================================================================
@@ -61,20 +68,21 @@ class RolloutBufferSamples_mod(NamedTuple):
 	old_log_prob: torch.Tensor
 	advantages: torch.Tensor
 	returns: torch.Tensor
-	bs_losses: torch.Tensor
+	states: torch.Tensor
 
 
 # ==================================================================================================
 class RolloutBuffer_mod(RolloutBuffer):
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, *args, **kwargs):
+		self.physics_shape = (4, ) # For CartPole-v1
 		super().__init__(*args, **kwargs)
-		self.bs_losses = None
+		self.states = None
 
 	# ----------------------------------------------------------------------------------------------
 	def reset(self) -> None:
 		super().reset()
-		self.bs_losses = torch.empty((self.buffer_size, self.n_envs), dtype=torch.float32, device=self.device)
+		self.states = np.zeros((self.buffer_size, self.n_envs) + self.physics_shape, dtype=np.float32)
 
 	# ----------------------------------------------------------------------------------------------
 	def _get_samples(self, batch_inds: np.ndarray, env: Optional[VecNormalize] = None) -> RolloutBufferSamples_mod:
@@ -85,14 +93,13 @@ class RolloutBuffer_mod(RolloutBuffer):
 			self.log_probs[batch_inds].flatten(),
 			self.advantages[batch_inds].flatten(),
 			self.returns[batch_inds].flatten(),
-			self.bs_losses[batch_inds],
+			self.states[batch_inds],
 		)
 		return RolloutBufferSamples_mod(*tuple(map(self.to_torch, data)))
 
 	# ----------------------------------------------------------------------------------------------
-	# def add(self, obs: np.ndarray, action: np.ndarray, reward: np.ndarray, episode_start: np.ndarray, value: torch.Tensor, log_prob: torch.Tensor, states: np.ndarray) -> None:
-	def add(self, obs: np.ndarray, action: np.ndarray, reward: np.ndarray, episode_start: np.ndarray, value: torch.Tensor, log_prob: torch.Tensor, bs_loss: torch.Tensor) -> None:
-		self.bs_losses[self.pos] = bs_loss
+	def add(self, obs: np.ndarray, action: np.ndarray, reward: np.ndarray, episode_start: np.ndarray, value: torch.Tensor, log_prob: torch.Tensor, states: torch.Tensor) -> None:
+		self.states[self.pos] = states.clone().cpu().numpy()
 		super().add(obs, action, reward, episode_start, value, log_prob)
 
 
@@ -148,7 +155,7 @@ class PPO_mod(PPO):
 				if self.use_sde:
 					self.policy.reset_noise(self.batch_size)
 
-				values, log_prob, entropy = self.policy.evaluate_actions(rollout_data.observations, actions)
+				values, log_prob, entropy, features = self.policy.evaluate_actions(rollout_data.observations, actions)
 				values = values.flatten()
 				# Normalize advantage
 				advantages = rollout_data.advantages
@@ -190,8 +197,10 @@ class PPO_mod(PPO):
 
 				entropy_losses.append(entropy_loss.item())
 
-				loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss + self.bs_coef * rollout_data.bs_losses.mean()
-				bs_losses.append(rollout_data.bs_losses.mean().item())
+				bs_loss = F.l1_loss(features, rollout_data.states.squeeze(1))
+
+				loss = policy_loss + (entropy_loss * self.ent_coef) + (value_loss * self.vf_coef) + (bs_loss * self.bs_coef)
+				bs_losses.append(bs_loss.item())
 
 				# Calculate approximate form of reverse KL Divergence for early stopping
 				# see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417
@@ -292,9 +301,7 @@ class PPO_mod(PPO):
 
 			assert(len(infos) == 1)
 			info = infos[0]
-			features = self.policy.extract_features(obs_tensor)
 			state = torch.tensor(info["physicsState"], device=self.device)[None, ...]
-			bs_loss = F.l1_loss(features, state)
 
 			self.num_timesteps += env.num_envs
 
@@ -331,7 +338,7 @@ class PPO_mod(PPO):
 
 		with torch.no_grad():
 			# Compute value for the last timestep
-			values, _ = self.policy.predict_values(obs_as_tensor(new_obs, self.device))
+			values = self.policy.predict_values(obs_as_tensor(new_obs, self.device))
 
 		rollout_buffer.compute_returns_and_advantage(last_values=values, dones=dones)
 
@@ -1065,7 +1072,7 @@ def main(args: argparse.Namespace) -> None:
 	args.log_dir.mkdir(parents=True, exist_ok=True)
 
 	config = {
-		"policy_type": "MlpPolicy",
+		"policy_type": ActorCriticPolicy_mod,
 		"total_timesteps": max(args.n_steps, args.steps),
 		"env_name": env_id,
 	}
@@ -1116,7 +1123,7 @@ def main(args: argparse.Namespace) -> None:
 			optimizer_class=torch.optim.SGD,
 		)
 		model = PPO_mod(
-			MlpPolicy_mod,
+			ActorCriticPolicy_mod,
 			env,
 			policy_kwargs=policy_kwargs,
 			verbose=1,
@@ -1126,7 +1133,7 @@ def main(args: argparse.Namespace) -> None:
 			tensorboard_log=args.log_dir,
 			# ent_coef=0.0,
 			# vf_coef=0.0,
-			bs_coef=1.0,
+			bs_coef=0.0,
 		) # total_timesteps will be at least n_steps (2048)
 		# model = PPO(MlpPolicy, env, verbose=1, learning_rate=args.lr) # total_timesteps will be at least n_steps (2048)
 		# inspect(model.policy.features_extractor, all=True)
