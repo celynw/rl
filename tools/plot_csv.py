@@ -46,7 +46,8 @@ class Object():
 	def read_data(self, csvPath: Path) -> np.ndarray:
 		data = np.genfromtxt(csvPath, delimiter=",", skip_header=self.args.skiplines)
 		data = data[:, 0] # Rewards
-		data = data[:self.args.head]
+		if self.args.head != 0:
+			data = data[:self.args.head]
 		data = data[-self.args.tail:]
 
 		return data
