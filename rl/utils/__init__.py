@@ -12,3 +12,5 @@ from .utils import get_git_rev
 from .utils import get_checkpoint
 from .utils import setup_logger
 from .utils import setup_callbacks
+from .tqdm_callback import TqdmCallback
+from .policy_update_callback import PolicyUpdateCallback
