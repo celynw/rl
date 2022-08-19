@@ -10,6 +10,7 @@ catkin_ws/logs
 catkin_ws/build
 catkin_ws/devel
 catkin_ws/.catkin_tools
+catkin_ws_local/
 HC ROMS/
 toys/debug_training/dataset/
 train_estimator_RL_estimator/
