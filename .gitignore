@@ -16,3 +16,5 @@ toys/debug_training/dataset/
 train_estimator_RL_estimator/
 *.bag
 *.zip
+*.png
+*.gv
