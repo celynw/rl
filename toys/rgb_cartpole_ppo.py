@@ -106,8 +106,9 @@ class RolloutBuffer_mod(RolloutBuffer):
 # ==================================================================================================
 class PPO_mod(PPO):
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, *args, bs_coef: float = 1.0, **kwargs):
+	def __init__(self, *args, pl_coef: float = 1.0, bs_coef: float = 1.0, **kwargs):
 		super().__init__(*args, **kwargs)
+		self.pl_coef = pl_coef
 		self.bs_coef = bs_coef
 
 		buffer_cls = DictRolloutBuffer if isinstance(self.observation_space, gym.spaces.Dict) else RolloutBuffer_mod
@@ -199,7 +200,7 @@ class PPO_mod(PPO):
 
 				bs_loss = F.l1_loss(features, rollout_data.states.squeeze(1))
 
-				loss = policy_loss + (entropy_loss * self.ent_coef) + (value_loss * self.vf_coef) + (bs_loss * self.bs_coef)
+				loss = (policy_loss * self.pl_coef) + (entropy_loss * self.ent_coef) + (value_loss * self.vf_coef) + (bs_loss * self.bs_coef)
 				bs_losses.append(bs_loss.item())
 
 				# Calculate approximate form of reverse KL Divergence for early stopping
@@ -1131,6 +1132,7 @@ def main(args: argparse.Namespace) -> None:
 			device="cpu" if args.cpu else "auto",
 			n_steps=args.n_steps,
 			tensorboard_log=args.log_dir,
+			# pl_coef=0.0,
 			# ent_coef=0.0,
 			# vf_coef=0.0,
 			bs_coef=0.0,
