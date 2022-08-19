@@ -3,12 +3,16 @@
 	"exclude": [
 		".mypy_cache/",
 		"venv*/",
-		"submodules/"
+		"submodules/",
+		"*/build",
+		"*/devel"
 	],
 	// Always excluded
 	"ignore": [
 		".mypy_cache/",
 		"venv*/",
-		"submodules/"
+		"submodules/",
+		"*/build",
+		"*/devel"
 	],
 }
