@@ -13,10 +13,11 @@ from rl.models.utils import RolloutBuffer_mod
 # ==================================================================================================
 class PPO_mod(PPO):
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, *args, pl_coef: float = 1.0, bs_coef: float = 1.0, **kwargs):
+	def __init__(self, *args, pl_coef: float = 1.0, bs_coef: float = 1.0, save_loss: bool = False, **kwargs):
 		super().__init__(*args, **kwargs)
 		self.pl_coef = pl_coef
 		self.bs_coef = bs_coef
+		self.save_loss = save_loss
 
 		buffer_cls = DictRolloutBuffer if isinstance(self.observation_space, gym.spaces.Dict) else RolloutBuffer_mod
 		self.rollout_buffer = buffer_cls(
@@ -108,7 +109,14 @@ class PPO_mod(PPO):
 				bs_loss = F.l1_loss(features, rollout_data.states.squeeze(1))
 
 				loss = (policy_loss * self.pl_coef) + (entropy_loss * self.ent_coef) + (value_loss * self.vf_coef) + (bs_loss * self.bs_coef)
+				# loss = policy_loss
+				# loss = entropy_loss
+				# loss = value_loss
+				# loss = bs_loss
 				bs_losses.append(bs_loss.item())
+
+				if self.save_loss:
+					self.loss = loss.clone()
 
 				# Calculate approximate form of reverse KL Divergence for early stopping
 				# see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417

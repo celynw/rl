@@ -93,7 +93,7 @@ class CartPoleEnvEvents(gym.Env):
 	metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 50}
 
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self):
+	def __init__(self, init_ros: bool = True):
 		self.gravity = 9.8
 		self.masscart = 1.0
 		self.masspole = 0.1
@@ -135,6 +135,8 @@ class CartPoleEnvEvents(gym.Env):
 		self.tsamples = 10 # TODO
 		# self.tsamples = 1 # TODO
 
+		self.init_ros = init_ros
+
 		self.action_space = spaces.Discrete(2)
 		# NOTE: I should normalise my observation space (well, both), but not sure how to for event tensor
 		# self.observation_space = spaces.Box(-high, high, dtype=np.float32)
@@ -163,13 +165,15 @@ class CartPoleEnvEvents(gym.Env):
 		# ROS
 		name = Path(__file__).stem# if name is None else None
 		debug = False
-		rospy.init_node(name, anonymous=False, log_level=rospy.DEBUG if debug else rospy.INFO)
+		if self.init_ros:
+			rospy.init_node(name, anonymous=False, log_level=rospy.DEBUG if debug else rospy.INFO)
 		self.bridge = CvBridge()
 		self.pub_image = rospy.Publisher("image", Image, queue_size=10)
 		self.sub_events = rospy.Subscriber("/cam0/events", EventArray, self.callback)
 		# self.events_msg = None
 		self.events = None
-		self.time = rospy.Time.now()
+		if self.init_ros:
+			self.time = rospy.Time.now()
 		# self.generator = SpikeRepresentationGenerator(self.screen_height, self.screen_width, self.tsamples)
 		self.generator = SpikeRepresentationGenerator(self.screen_height_, self.screen_width_, self.tsamples)
 
@@ -271,7 +275,8 @@ class CartPoleEnvEvents(gym.Env):
 
 		rgb = self.resize(rgb)
 		# print("publish")
-		self.publish(rgb)
+		if self.init_ros:
+			self.publish(rgb)
 
 		# print("events")
 		events = self.eventify()
@@ -337,7 +342,8 @@ class CartPoleEnvEvents(gym.Env):
 
 		rgb = self.resize(rgb)
 		# print("publish")
-		self.publish(rgb)
+		if self.init_ros:
+			self.publish(rgb)
 
 		if self.model is not None:
 			self.model.reset_env()

@@ -13,10 +13,11 @@ from rl.models.utils import RolloutBuffer_mod
 # ==================================================================================================
 class A2C_mod(A2C):
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, *args, pl_coef: float = 1.0, bs_coef: float = 1.0, **kwargs):
+	def __init__(self, *args, pl_coef: float = 1.0, bs_coef: float = 1.0, save_loss: bool = False, **kwargs):
 		super().__init__(*args, **kwargs)
 		self.pl_coef = pl_coef
 		self.bs_coef = bs_coef
+		self.save_loss = save_loss
 
 		buffer_cls = DictRolloutBuffer if isinstance(self.observation_space, gym.spaces.Dict) else RolloutBuffer_mod
 		self.rollout_buffer = buffer_cls(
@@ -70,6 +71,13 @@ class A2C_mod(A2C):
 			bs_loss = F.l1_loss(features, rollout_data.states.squeeze(1))
 
 			loss = (policy_loss * self.pl_coef) + (entropy_loss * self.ent_coef) + (value_loss * self.vf_coef) + (bs_loss * self.bs_coef)
+			# loss = policy_loss
+			# loss = entropy_loss
+			# loss = value_loss
+			# loss = bs_loss
+
+			if self.save_loss:
+				self.loss = loss.clone()
 
 			# Optimization step
 			self.policy.optimizer.zero_grad()

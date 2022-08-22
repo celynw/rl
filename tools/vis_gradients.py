@@ -2,34 +2,48 @@
 import argparse
 from pathlib import Path
 
-import torch
 import torchviz
 import gym
 
 import rl
-from rl.models import Estimator
+from rl.models import Estimator, PPO_mod, A2C_mod
+from rl.models.utils import ActorCriticPolicy_mod
+
+# ==================================================================================================
+def get_model():
+		env_id = "CartPole-events-sim-v1"
+		env = gym.make(env_id)
+		Estimator(env.observation_space)
+		policy_kwargs = dict(features_extractor_class=Estimator)
+		# model = PPO_mod(
+		model = A2C_mod(
+			ActorCriticPolicy_mod,
+			env,
+			policy_kwargs=policy_kwargs,
+			device="cpu",
+			n_steps=2,
+			tensorboard_log=None,
+			# pl_coef=0.0,
+			# ent_coef=0.0,
+			# vf_coef=0.0,
+			# bs_coef=0.0,
+			save_loss=True,
+		)
+
+		return model
+
 
 # ==================================================================================================
 def main(args: argparse.Namespace) -> None:
-	model = torch.nn.Sequential()
-	model.add_module("W0", torch.nn.Linear(8, 16))
-	model.add_module("tanh", torch.nn.Tanh())
-	model.add_module("W1", torch.nn.Linear(16, 1))
-
-	x = torch.randn(1, 8)
-	y = model(x)
-
-
-	env_id = "CartPole-events-v1"
-	env = gym.make(env_id)
-	model = Estimator(env.observation_space)
-	x = torch.zeros([1, 2, 64, 240])
-	y = model(x)
+	model = get_model()
+	params = model.policy.named_parameters()
+	model.learn(total_timesteps=1)
+	y = model.loss
 
 	if args.verbose:
-		graph = torchviz.make_dot(y.mean(), params=dict(model.named_parameters()), show_attrs=True, show_saved=True)
+		graph = torchviz.make_dot(y.mean(), params=dict(params), show_attrs=True, show_saved=True)
 	else:
-		graph = torchviz.make_dot(y.mean(), params=dict(model.named_parameters()))
+		graph = torchviz.make_dot(y.mean(), params=dict(params))
 	path = Path(__file__).parent / args.name
 	graph.render(path.with_suffix(".gv"), format="png", outfile=path.with_suffix(".png"))
 

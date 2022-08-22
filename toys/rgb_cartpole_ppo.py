@@ -698,8 +698,8 @@ def main(args: argparse.Namespace) -> None:
 			# # features_extractor_kwargs=dict(features_dim=64),
 			# features_extractor_kwargs=dict(features_dim=4),
 			# net_arch: [{'pi': [64, 64], 'vf': [64, 64]}] # DEFAULT
-			# optimizer_class=torch.optim.Adam,
-			optimizer_class=torch.optim.SGD,
+			optimizer_class=torch.optim.Adam,
+			# optimizer_class=torch.optim.SGD,
 		)
 		model = PPO_mod(
 		# model = A2C_mod(
@@ -714,7 +714,7 @@ def main(args: argparse.Namespace) -> None:
 			# pl_coef=0.0,
 			# ent_coef=0.0,
 			# vf_coef=0.0,
-			bs_coef=0.0,
+			# bs_coef=0.0,
 		) # total_timesteps will be at least n_steps (2048)
 		# model = PPO(MlpPolicy, env, verbose=1, learning_rate=args.lr) # total_timesteps will be at least n_steps (2048)
 		# inspect(model.policy.features_extractor, all=True)
@@ -725,7 +725,7 @@ def main(args: argparse.Namespace) -> None:
 		checkpoint = torch.load("/code/train_estimator_RL_estimator/219_1e4b47kx/checkpoints/epoch=59-step=75000.ckpt") # Normal sum(1)
 		# checkpoint = torch.load("/code/train_estimator_RL_estimator/221_k1db1ttd/checkpoints/epoch=36-step=46250.ckpt") # Binary->255 image
 		# model.policy.features_extractor.load_state_dict(checkpoint["state_dict"], strict=False) # Ignore final layer
-		model.policy.features_extractor.load_state_dict(checkpoint["state_dict"])
+		# model.policy.features_extractor.load_state_dict(checkpoint["state_dict"])
 
 		# TRY LOADING OPTIMIZER STATE DICT
 		# load_state_dict(model.policy.optimizer, checkpoint["optimizer_states"][0])
@@ -761,7 +761,7 @@ def main(args: argparse.Namespace) -> None:
 		# del stateDict["action_net.bias"]
 		# del stateDict["value_net.weight"]
 		# del stateDict["value_net.bias"]
-		model.set_parameters({"policy": stateDict}, exact_match=False) # FIX not doing "policy.optimizer" key
+		# model.set_parameters({"policy": stateDict}, exact_match=False) # FIX not doing "policy.optimizer" key
 
 		# Freeze weights?
 		if args.freeze:
