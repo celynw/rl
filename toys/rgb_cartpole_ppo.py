@@ -108,46 +108,48 @@ def main(args: argparse.Namespace) -> None:
 		# checkpoint = torch.load("/code/toys/debug_training/runs/train_estimator/version_10/checkpoints/epoch=58-step=7375.ckpt")
 		# checkpoint = torch.load("/home/cw0071/dev/python/rl/train_estimator_RL_estimator/219_1e4b47kx/checkpoints/epoch=59-step=75000.ckpt")
 
-		checkpoint = torch.load("/code/train_estimator_RL_estimator/219_1e4b47kx/checkpoints/epoch=59-step=75000.ckpt") # Normal sum(1)
-		# checkpoint = torch.load("/code/train_estimator_RL_estimator/221_k1db1ttd/checkpoints/epoch=36-step=46250.ckpt") # Binary->255 image
-		# model.policy.features_extractor.load_state_dict(checkpoint["state_dict"], strict=False) # Ignore final layer
-		# model.policy.features_extractor.load_state_dict(checkpoint["state_dict"])
+		if args.load_feat:
+			assert model.policy.features_extractor is Estimator, "Only use --load_feat with `Estimator` feature extractor"
+			checkpoint = torch.load("/code/train_estimator_RL_estimator/219_1e4b47kx/checkpoints/epoch=59-step=75000.ckpt") # Normal sum(1)
+			# checkpoint = torch.load("/code/train_estimator_RL_estimator/221_k1db1ttd/checkpoints/epoch=36-step=46250.ckpt") # Binary->255 image
+			# model.policy.features_extractor.load_state_dict(checkpoint["state_dict"], strict=False) # Ignore final layer
+			model.policy.features_extractor.load_state_dict(checkpoint["state_dict"])
+			# FIX TRY LOADING OPTIMIZER STATE DICT
+			# load_state_dict(model.policy.optimizer, checkpoint["optimizer_states"][0])
 
-		# TRY LOADING OPTIMIZER STATE DICT
-		# load_state_dict(model.policy.optimizer, checkpoint["optimizer_states"][0])
-
-		# Critic network
-		# Could to `model.load` with `custom_objects` parameter, but this isn't done in-place!
-		# So...
-		import zipfile
-		import io
-		archive = zipfile.ZipFile("/runs/1657548723 vanilla longer/rgb.zip", "r")
-		bytes = archive.read("policy.pth")
-		bytes_io = io.BytesIO(bytes)
-		stateDict = torch.load(bytes_io)
-		# Could load them manually, but it's not that easy
-		# model.policy. .load_state_dict(stateDict)
-		# 	mlp_extractor.policy_net
-		# 	mlp_extractor.value_net
-		# 	action_net
-		# 	value_net
-		# Can't load zip manually with `model.set_parameters`, but can specify a dict
-		# Hide some weights we don't want to load
-		# Everything under `mlp_extractor`, `action_net` and `policy_net` are in both vanilla and mine!
-		# inspect(stateDict, all=True)
-		# del stateDict["mlp_extractor.policy_net.0.weight"]
-		# del stateDict["mlp_extractor.policy_net.0.bias"]
-		# del stateDict["mlp_extractor.policy_net.2.weight"]
-		# del stateDict["mlp_extractor.policy_net.2.bias"]
-		# del stateDict["mlp_extractor.value_net.0.weight"]
-		# del stateDict["mlp_extractor.value_net.0.bias"]
-		# del stateDict["mlp_extractor.value_net.2.weight"]
-		# del stateDict["mlp_extractor.value_net.2.bias"]
-		# del stateDict["action_net.weight"]
-		# del stateDict["action_net.bias"]
-		# del stateDict["value_net.weight"]
-		# del stateDict["value_net.bias"]
-		# model.set_parameters({"policy": stateDict}, exact_match=False) # FIX not doing "policy.optimizer" key
+		if args.load_mlp:
+			# Critic network
+			# Could to `model.load` with `custom_objects` parameter, but this isn't done in-place!
+			# So...
+			import zipfile
+			import io
+			archive = zipfile.ZipFile("/runs/1657548723 vanilla longer/rgb.zip", "r")
+			bytes = archive.read("policy.pth")
+			bytes_io = io.BytesIO(bytes)
+			stateDict = torch.load(bytes_io)
+			# Could load them manually, but it's not that easy
+			# model.policy. .load_state_dict(stateDict)
+			# 	mlp_extractor.policy_net
+			# 	mlp_extractor.value_net
+			# 	action_net
+			# 	value_net
+			# Can't load zip manually with `model.set_parameters`, but can specify a dict
+			# Hide some weights we don't want to load
+			# Everything under `mlp_extractor`, `action_net` and `policy_net` are in both vanilla and mine!
+			# inspect(stateDict, all=True)
+			# del stateDict["mlp_extractor.policy_net.0.weight"]
+			# del stateDict["mlp_extractor.policy_net.0.bias"]
+			# del stateDict["mlp_extractor.policy_net.2.weight"]
+			# del stateDict["mlp_extractor.policy_net.2.bias"]
+			# del stateDict["mlp_extractor.value_net.0.weight"]
+			# del stateDict["mlp_extractor.value_net.0.bias"]
+			# del stateDict["mlp_extractor.value_net.2.weight"]
+			# del stateDict["mlp_extractor.value_net.2.bias"]
+			# del stateDict["action_net.weight"]
+			# del stateDict["action_net.bias"]
+			# del stateDict["value_net.weight"]
+			# del stateDict["value_net.bias"]
+			model.set_parameters({"policy": stateDict}, exact_match=False) # FIX not doing "policy.optimizer" key
 
 		# Freeze weights?
 		if args.freeze:
@@ -341,6 +343,8 @@ def parse_args() -> argparse.Namespace:
 	parser.add_argument("-d", "--log_dir", type=Path, default=Path("/tmp/gym/"), help="Location of log directory")
 	parser.add_argument("--lr", type=float, default=3e-4, help="Learning rate")
 	parser.add_argument("-f", "--freeze", action="store_true", help="Freeze feature extractor weights")
+	parser.add_argument("--load_mlp", action="store_true", help="Load weights for the actor/critic")
+	parser.add_argument("--load_feat", action="store_true", help="Load weights for the feature extractor")
 	parser.add_argument("--cpu", action="store_true", help="Force running on CPU")
 	parser.add_argument("--n_steps", type=int, default=2048, help="Number of steps before each weights update")
 
