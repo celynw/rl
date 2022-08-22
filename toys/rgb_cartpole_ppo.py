@@ -275,13 +275,13 @@ def load_state_dict(self, state_dict):
 	state_dict = deepcopy(state_dict)
 	# Validate the state_dict
 	groups = self.param_groups
-	saved_groups = state_dict['param_groups']
+	saved_groups = state_dict["param_groups"]
 
 	if len(groups) != len(saved_groups):
 		raise ValueError("loaded state dict has a different number of "
 							"parameter groups")
-	param_lens = (len(g['params']) for g in groups)
-	saved_lens = (len(g['params']) for g in saved_groups)
+	param_lens = (len(g["params"]) for g in groups)
+	saved_lens = (len(g["params"]) for g in saved_groups)
 	if any(p_len != s_len for p_len, s_len in zip(param_lens, saved_lens)):
 		print("### SUPPRESSED ValueError ###")
 		print("loaded state dict contains a parameter group "
@@ -291,8 +291,8 @@ def load_state_dict(self, state_dict):
 
 	# Update the state
 	id_map = {old_id: p for old_id, p in
-				zip(chain.from_iterable((g['params'] for g in saved_groups)),
-					chain.from_iterable((g['params'] for g in groups)))}
+				zip(chain.from_iterable((g["params"] for g in saved_groups)),
+					chain.from_iterable((g["params"] for g in groups)))}
 
 	def cast(param, value):
 		r"""Make a deep copy of value, casting all tensors to device of param."""
@@ -314,7 +314,7 @@ def load_state_dict(self, state_dict):
 	# State that is not assigned to params is copied as is (needed for
 	# backward compatibility).
 	state = defaultdict(dict)
-	for k, v in state_dict['state'].items():
+	for k, v in state_dict["state"].items():
 		if k in id_map:
 			param = id_map[k]
 			state[param] = cast(param, v)
