@@ -16,7 +16,8 @@ class ActorCriticPolicy_mod(ActorCriticPolicy):
 		"""
 		# Preprocess the observation if needed
 		features = self.extract_features(obs)
-		latent_pi, latent_vf = self.mlp_extractor(features)
+		features_detached = features.clone().detach()
+		latent_pi, latent_vf = self.mlp_extractor(features_detached)
 		distribution = self._get_action_dist_from_latent(latent_pi)
 		log_prob = distribution.log_prob(actions)
 		values = self.value_net(latent_vf)
