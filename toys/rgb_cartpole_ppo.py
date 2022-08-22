@@ -697,7 +697,7 @@ def main(args: argparse.Namespace) -> None:
 			# # # features_extractor_kwargs=dict(features_dim=18),
 			# # features_extractor_kwargs=dict(features_dim=64),
 			# features_extractor_kwargs=dict(features_dim=4),
-			# net_arch: [{'pi': [64, 64], 'vf': [64, 64]}] # DEFAULT
+			# net_arch: [{"pi": [64, 64], "vf": [64, 64]}] # DEFAULT
 			optimizer_class=torch.optim.Adam,
 			# optimizer_class=torch.optim.SGD,
 		)
@@ -937,11 +937,11 @@ def load_state_dict(self, state_dict):
 
 	# Update parameter groups, setting their 'params' value
 	def update_group(group, new_group):
-		new_group['params'] = group['params']
+		new_group["params"] = group["params"]
 		return new_group
 	param_groups = [
 		update_group(g, ng) for g, ng in zip(groups, saved_groups)]
-	self.__setstate__({'state': state, 'param_groups': param_groups})
+	self.__setstate__({"state": state, "param_groups": param_groups})
 
 
 # ==================================================================================================
