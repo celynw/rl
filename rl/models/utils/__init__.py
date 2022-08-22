@@ -5,3 +5,5 @@ from .utils import choose_model
 from .modelType import ModelType
 from .rollout_buffer_mod import RolloutBuffer_mod
 from .actor_critic_policy_mod import ActorCriticPolicy_mod
+from .decay_3d import Decay3d
+from .decay_3d_partial import Decay3dPartial
