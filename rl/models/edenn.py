@@ -12,7 +12,7 @@ class EDeNN(BaseFeaturesExtractor):
 	:param observation_space: (gym.Space)
 	"""
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 128):
+	def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 4):
 		# `features_dim` should be 128 to match self.mid?
 		super().__init__(observation_space, features_dim)
 		n_input_channels = observation_space.shape[0]
@@ -31,10 +31,10 @@ class EDeNN(BaseFeaturesExtractor):
 			).shape[1]
 
 		self.final = torch.nn.Sequential(
-			torch.nn.Linear(n_flatten, 1024), # 15360 -> ...
+			torch.nn.Linear(n_flatten, 256), # 15360 -> ...
 			torch.nn.ReLU(inplace=True),
 			# torch.nn.Sigmoid(),
-			torch.nn.Linear(1024, self.features_dim), # ... -> 128
+			torch.nn.Linear(256, self.features_dim), # ... -> 128
 			# torch.nn.CELU(inplace=True),
 		)
 

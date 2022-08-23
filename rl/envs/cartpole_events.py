@@ -27,7 +27,8 @@ import gym
 from gym import spaces, logger
 # from gym.envs.classic_control import cartpole
 
-use_4D = True # Use 4D tensor instead of 5D tensor, for debug training only
+# use_4D = True # Use 4D tensor instead of 5D tensor, for debug training only
+use_4D = False
 
 # ==================================================================================================
 # class CartPoleEnvEvents(gym.Env[np.ndarray, Union[int, np.ndarray]]):
