@@ -159,6 +159,28 @@ class Object():
 		return smoothed
 
 
+# Combining multiple runs
+	# all_rewards_ = -np.ones([len(all_rewards), max([len(x) for x in all_rewards])])
+	# for i, sub in enumerate(all_rewards):
+	# 	all_rewards_[i][0:len(sub)] = sub
+	# all_rewards = np.ma.MaskedArray(all_rewards_, mask=all_rewards_ < 0)
+
+	# mean = all_rewards.mean(axis=0)
+	# std = all_rewards.std(axis=0)
+	# ax = plt.gca()
+	# ax.set_ylim([0, 500]) # TODO get env max reward instead of hard coding
+	# ax.fill_between(
+	# 	range(all_rewards.shape[1]), # X
+	# 	# np.clip(mean - std, 0, None), # Max
+	# 	mean - std, # Max
+	# 	mean + std, # Min
+	# 	alpha=.5,
+	# 	linewidth=0
+	# )
+	# ax.plot(mean, linewidth=2)
+	# plt.savefig(str(args.log_dir / f"plot.png"))
+
+
 # ==================================================================================================
 def main():
 	obj = Object()

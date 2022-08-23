@@ -171,31 +171,6 @@ def main(args: argparse.Namespace) -> None:
 		# print(np.unique(obs[0], return_counts=True))
 		# quit(0)
 
-
-
-
-		# visualisation = {}
-
-		# def hook_fn(module, input, output):
-		# 	visualisation[module] = output
-
-		# def get_all_layers(net):
-		# 	for name, layer in net._modules.items():
-		# 		#If it is a sequential, don't register a hook on it
-		# 		# but recursively register hook on all it's module children
-		# 		if isinstance(layer, torch.nn.Sequential):
-		# 			get_all_layers(layer)
-		# 		else:
-		# 			layer.register_forward_hook(hook_fn)
-
-		# get_all_layers(model.policy)
-		# model.policy(torch.randn([1, 2, 64, 240], device="cuda"))
-		# # print(visualisation.keys())
-		# print(visualisation)
-		# quit(0)
-
-
-
 		# model = PPO(
 		# 	MlpPolicy,
 		# 	env,
