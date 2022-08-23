@@ -3,7 +3,7 @@ import colored_traceback.auto
 import argparse
 from pathlib import Path
 import time
-from typing import Union
+from typing import Union, Optional
 
 import torch
 import gym
@@ -11,51 +11,64 @@ from stable_baselines3.common.monitor import Monitor
 # from gym.wrappers.monitoring.video_recorder import VideoRecorder
 import wandb
 from wandb.integration.sb3 import WandbCallback
-from tqdm import tqdm
 from rich import print, inspect
+import optuna
 
 import rl
 # from rl.models.utils.visual import CartPoleRGBTemp
 from rl.models import PPO_mod, A2C_mod, Estimator, EDeNN
 from rl.models.utils import ActorCriticPolicy_mod
-from rl.utils import TqdmCallback, PolicyUpdateCallback
+from rl.utils import TqdmCallback, PolicyUpdateCallback, TrialEvalCallback
 # from rl.utils import load_optimizer_state_dict
 
 use_wandb = False
 
 # ==================================================================================================
-def main(args: argparse.Namespace) -> None:
-	# env_id = "CartPole-contrast-v1"
-	env_id = "CartPole-events-v1"
-	# env_id = "CartPole-events-debug"
-	# env_id = "CartPole-v1"
+class Objective():
+	# ----------------------------------------------------------------------------------------------
+	def __init__(self, args: argparse.Namespace):
+		self.args = args
 
-	name = f"{int(time.time())}" # Epoch
-	if args.name:
-		name = f"{name} {args.name}"
-	args.log_dir /= name
-	print(f"Logging to {args.log_dir}")
-	args.log_dir.mkdir(parents=True, exist_ok=True)
+	# ----------------------------------------------------------------------------------------------
+	def __call__(self, trial: Optional[optuna.trial.Trial] = None):
+		if trial is not None:
+			# raise NotImplementedError("TODO Suggest hparams in arg parsing")
+			self.args.lr = trial.suggest_float("lr", 1e-4, 1e-1, log=True) # Default was 3e-4
 
-	config = {
-		"policy_type": ActorCriticPolicy_mod,
-		"total_timesteps": max(args.n_steps, args.steps),
-		"env_name": env_id,
-	}
-	if use_wandb:
-		run = wandb.init(
-			project="RL_pretrained",
-			config=config,
-			sync_tensorboard=True, # auto-upload sb3's tensorboard metrics
-			monitor_gym=True, # auto-upload the videos of agents playing the game
-			save_code=True, # optional
-		)
+		# env_id = "CartPole-contrast-v1"
+		env_id = "CartPole-events-v1"
+		# env_id = "CartPole-events-debug"
+		# env_id = "CartPole-v1"
 
-	all_rewards = []
-	env_ = gym.make(env_id)
+		name = f"{int(time.time())}" # Epoch
+		if self.args.name:
+			name = f"{name} {self.args.name}"
+		if trial is not None:
+			self.args.log_dir = self.args.log_dir / name / str(trial.number)
+			name = f"{name}_{trial.number}"
+		else:
+			self.args.log_dir /= name
+		print(f"Logging to {self.args.log_dir}")
+		self.args.log_dir.mkdir(parents=True, exist_ok=True)
 
-	for i in tqdm(range(args.times)):
-		env = Monitor(env_, str(args.log_dir), allow_early_resets=True, info_keywords=("failReason", "updatedPolicy"))
+		config = {
+			"policy_type": ActorCriticPolicy_mod,
+			"total_timesteps": max(self.args.n_steps, self.args.steps),
+			"env_name": env_id,
+		}
+		if use_wandb:
+			run = wandb.init(
+				project="RL_pretrained",
+				config=config,
+				sync_tensorboard=True, # auto-upload sb3's tensorboard metrics
+				monitor_gym=True, # auto-upload the videos of agents playing the game
+				save_code=True, # optional
+			)
+
+		env_ = gym.make(env_id)
+		env_eval = gym.make(env_id)
+
+		env = Monitor(env_, str(self.args.log_dir), allow_early_resets=True, info_keywords=("failReason", "updatedPolicy"))
 		policy_kwargs = dict(
 			# features_extractor_class=Estimator,
 			features_extractor_class=EDeNN,
@@ -67,17 +80,17 @@ def main(args: argparse.Namespace) -> None:
 			env,
 			policy_kwargs=policy_kwargs,
 			verbose=1,
-			learning_rate=args.lr,
-			device="cpu" if args.cpu else "auto",
-			n_steps=args.n_steps,
-			tensorboard_log=args.log_dir,
+			learning_rate=self.args.lr,
+			device="cpu" if self.args.cpu else "auto",
+			n_steps=self.args.n_steps,
+			tensorboard_log=self.args.log_dir,
 			# pl_coef=0.0,
 			# ent_coef=0.0,
 			# vf_coef=0.0,
 			# bs_coef=0.0,
 		) # total_timesteps will be at least n_steps (2048)
 
-		if args.load_feat:
+		if self.args.load_feat:
 			assert model.policy.features_extractor is Estimator, "Only use --load_feat with `Estimator` feature extractor"
 			checkpoint = torch.load("/code/train_estimator_RL_estimator/219_1e4b47kx/checkpoints/epoch=59-step=75000.ckpt") # Normal sum(1)
 			# checkpoint = torch.load("/code/train_estimator_RL_estimator/221_k1db1ttd/checkpoints/epoch=36-step=46250.ckpt") # Binary->255 image
@@ -86,7 +99,7 @@ def main(args: argparse.Namespace) -> None:
 			# FIX TRY LOADING OPTIMIZER STATE DICT
 			# load_optimizer_state_dict(model.policy.optimizer, checkpoint["optimizer_states"][0])
 
-		if args.load_mlp:
+		if self.args.load_mlp:
 			# Critic network
 			# Could to `model.load` with `custom_objects` parameter, but this isn't done in-place!
 			# So...
@@ -121,7 +134,7 @@ def main(args: argparse.Namespace) -> None:
 			model.set_parameters({"policy": stateDict}, exact_match=False) # FIX not doing "policy.optimizer" key
 
 		# Freeze weights?
-		if args.freeze:
+		if self.args.freeze:
 			for param in model.policy.features_extractor.parameters():
 				param.requires_grad = False
 			# model.policy.features_extractor.layer1.0.weight.requires_grad = False
@@ -131,40 +144,48 @@ def main(args: argparse.Namespace) -> None:
 
 		env.set_model(model.policy.features_extractor)
 
+		callbacks = [TqdmCallback(), PolicyUpdateCallback(env)]
 		if use_wandb:
 			wandbCallback = WandbCallback(
-				model_save_path=args.log_dir / f"{args.name}",
+				model_save_path=self.args.log_dir / f"{self.args.name}",
 				gradient_save_freq=100,
 			)
-			callbacks = [TqdmCallback(), wandbCallback, PolicyUpdateCallback(env)]
-		else:
-			callbacks = [TqdmCallback(), PolicyUpdateCallback(env)]
+			callbacks.append(wandbCallback)
+		if trial is not None:
+			eval_callback = TrialEvalCallback(env_eval, trial)
+			callbacks.append(eval_callback)
+
 		model.learn(
-			total_timesteps=max(model.n_steps, args.steps),
+			total_timesteps=max(model.n_steps, self.args.steps),
 			callback=callbacks,
-			eval_freq=args.n_steps,
+			eval_freq=self.args.n_steps,
 		)
-		all_rewards.append(env.get_episode_rewards())
+		if eval_callback.is_pruned:
+			raise optuna.exceptions.TrialPruned()
+		elif self.args.save:
+			model.save(self.args.log_dir / f"{self.args.name}")
 
-		if args.save and i == 0:
-			model.save(args.log_dir / f"{args.name}")
+		# if self.args.render and i == self.args.times - 1:
+		# 	obs = env.reset()
+		# 	for i in range(1000):
+		# 		action, _states = model.predict(obs, deterministic=True)
+		# 		obs, reward, done, info = env.step(action)
+		# 		env.render()
+		# 		if done:
+		# 			obs = env.reset()
 
-		if args.render and i == args.times - 1:
-			obs = env.reset()
-			for i in range(1000):
-				action, _states = model.predict(obs, deterministic=True)
-				obs, reward, done, info = env.step(action)
-				env.render()
-				if done:
-					obs = env.reset()
-	env.close()
-	# run.finish() # wandb?
+		env.close()
+		env_eval.close()
+		if use_wandb:
+			run.finish()
+
+		if trial is not None:
+			return eval_callback.last_mean_reward
 
 
 # ==================================================================================================
 def parse_args() -> argparse.Namespace:
 	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-	parser.add_argument("times", type=int, help="Times to run")
 	parser.add_argument("-r", "--render", action="store_true", help="Render final trained model output")
 	parser.add_argument("-s", "--steps", type=int, default=1000, help="How many steps to train for")
 	parser.add_argument("-S", "--save", action="store_true", help="Save first trained model")
@@ -176,10 +197,35 @@ def parse_args() -> argparse.Namespace:
 	parser.add_argument("--load_feat", action="store_true", help="Load weights for the feature extractor")
 	parser.add_argument("--cpu", action="store_true", help="Force running on CPU")
 	parser.add_argument("--n_steps", type=int, default=2048, help="Number of steps before each weights update")
+	parser.add_argument("--optuna", type=str, help="Optimise with optuna using this storage URL. Examples: 'sqlite:///optuna.db' or 'postgresql://postgres:password@host:5432/postgres'")
 
 	return parser.parse_args()
 
 
 # ==================================================================================================
 if __name__ == "__main__":
-	main(parse_args())
+	args = parse_args()
+	if args.optuna is not None:
+		torch.set_num_threads(1)
+		pruner = optuna.pruners.MedianPruner
+		study = optuna.create_study(
+			study_name=f"{args.name}",
+			direction=optuna.study.StudyDirection.MINIMIZE,
+			storage=args.optuna,
+			load_if_exists=True
+		)
+		optuna.create_study(pruner=pruner, direction="maximize")
+		study.optimize(Objective(args), n_trials=100, n_jobs=1, gc_after_trial=False)
+		# print(f"Best params so far: {study.best_params}")
+		print(f"Number of finished trials: {len(study.trials)}")
+		print("Best trial:")
+		trial = study.best_trial
+		print(f"  Value: {trial.value}")
+		print("  Params: ")
+		for key, value in trial.params.items():
+			print(f"    {key}: {value}")
+		print("  User attrs:")
+		for key, value in trial.user_attrs.items():
+			print(f"    {key}: {value}")
+	else:
+		Objective(args)()

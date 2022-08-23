@@ -15,3 +15,4 @@ from .utils import setup_callbacks
 from .tqdm_callback import TqdmCallback
 from .policy_update_callback import PolicyUpdateCallback
 from .load_optimizer_state_dict import load_optimizer_state_dict
+from .trial_eval_callback import TrialEvalCallback
