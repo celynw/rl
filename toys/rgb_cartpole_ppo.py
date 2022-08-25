@@ -40,14 +40,11 @@ class Objective():
 		# env_id = "CartPole-events-debug"
 		# env_id = "CartPole-v1"
 
-		name = f"{int(time.time())}" # Epoch
-		if self.args.name:
-			name = f"{name} {self.args.name}"
+		epoch = f"{int(time.time())}" # Epoch
 		if trial is not None:
-			self.args.log_dir = self.args.log_dir / name / str(trial.number)
-			name = f"{name}_{trial.number}"
+			self.args.log_dir = self.args.log_dir / self.args.name / f"{trial.number}_{epoch}"
 		else:
-			self.args.log_dir /= name
+			self.args.log_dir /= f"{epoch} {self.args.name}"
 		print(f"Logging to {self.args.log_dir}")
 		self.args.log_dir.mkdir(parents=True, exist_ok=True)
 
@@ -186,10 +183,10 @@ class Objective():
 # ==================================================================================================
 def parse_args() -> argparse.Namespace:
 	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+	parser.add_argument("name", type=str, help="Name of experiment")
 	parser.add_argument("-r", "--render", action="store_true", help="Render final trained model output")
 	parser.add_argument("-s", "--steps", type=int, default=1000, help="How many steps to train for")
 	parser.add_argument("-S", "--save", action="store_true", help="Save first trained model")
-	parser.add_argument("-n", "--name", type=str, help="Name of experiment")
 	parser.add_argument("-d", "--log_dir", type=Path, default=Path("/tmp/gym/"), help="Location of log directory")
 	parser.add_argument("--lr", type=float, default=3e-4, help="Learning rate")
 	parser.add_argument("-f", "--freeze", action="store_true", help="Freeze feature extractor weights")

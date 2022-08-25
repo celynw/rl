@@ -18,9 +18,9 @@ docker exec -i $id bash -ci "/code/venv/bin/python -m pip install -e /code"
 docker exec -id $id bash -ci "Xvfb :0 -screen 0 800x600x24 +extension RANDR 2>/dev/null"
 {
 	if [ "$#" -eq 0 ]; then
-		docker exec -e DISPLAY=:0 -it $id bash -ci "$cmd"
+		echo "Expected name argument"
 	elif [ "$#" -eq 1 ]; then
-		docker exec -e DISPLAY=:0 -it $id bash -ci "$cmd -n $1"
+		docker exec -e DISPLAY=:0 -it $id bash -ci "$cmd $1"
 	else
 		echo "Too many arguments!"
 	fi
