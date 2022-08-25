@@ -63,7 +63,6 @@ class Objective():
 			)
 
 		env_ = gym.make(env_id)
-		env_eval = gym.make(env_id)
 
 		env = Monitor(env_, str(self.args.log_dir), allow_early_resets=True, info_keywords=("failReason", "updatedPolicy"))
 		policy_kwargs = dict(
@@ -149,7 +148,11 @@ class Objective():
 			)
 			callbacks.append(wandbCallback)
 		if trial is not None:
-			eval_callback = TrialEvalCallback(env_eval, trial)
+			eval_callback = TrialEvalCallback(
+				env,
+				trial,
+				eval_freq=self.args.n_steps,
+			)
 			callbacks.append(eval_callback)
 
 		model.learn(
@@ -157,7 +160,7 @@ class Objective():
 			callback=callbacks,
 			eval_freq=self.args.n_steps,
 		)
-		if eval_callback.is_pruned:
+		if trial is not None and eval_callback.is_pruned:
 			raise optuna.exceptions.TrialPruned()
 		elif self.args.save:
 			model.save(self.args.log_dir / f"{self.args.name}")
@@ -172,7 +175,6 @@ class Objective():
 		# 			obs = env.reset()
 
 		env.close()
-		env_eval.close()
 		if use_wandb:
 			run.finish()
 
@@ -204,14 +206,14 @@ if __name__ == "__main__":
 	args = parse_args()
 	if args.optuna is not None:
 		torch.set_num_threads(1)
-		pruner = optuna.pruners.MedianPruner
+		pruner = optuna.pruners.MedianPruner()
 		study = optuna.create_study(
 			study_name=f"{args.name}",
-			direction=optuna.study.StudyDirection.MINIMIZE,
+			direction=optuna.study.StudyDirection.MAXIMIZE,
 			storage=args.optuna,
-			load_if_exists=True
+			load_if_exists=True,
+			pruner=pruner,
 		)
-		optuna.create_study(pruner=pruner, direction="maximize")
 		study.optimize(Objective(args), n_trials=100, n_jobs=1, gc_after_trial=False)
 		# print(f"Best params so far: {study.best_params}")
 		print(f"Number of finished trials: {len(study.trials)}")

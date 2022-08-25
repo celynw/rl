@@ -29,6 +29,12 @@ class TrialEvalCallback(EvalCallback):
 	def _on_step(self) -> bool:
 		if self.eval_freq > 0 and self.n_calls % self.eval_freq == 0:
 			super()._on_step()
+
+			# Seems that env is reset before, but not after eval
+			# If train_env == eval_env, we should reset afterwards
+			if self.eval_freq > 0 and self.n_calls % self.eval_freq == 0:
+				self.eval_env.reset()
+
 			self.eval_idx += 1
 			self.trial.report(self.last_mean_reward, self.eval_idx)
 			# Prune trial if need
