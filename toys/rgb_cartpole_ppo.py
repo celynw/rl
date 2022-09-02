@@ -8,6 +8,7 @@ from typing import Union, Optional
 import torch
 import gym
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.callbacks import EvalCallback
 # from gym.wrappers.monitoring.video_recorder import VideoRecorder
 import wandb
 from wandb.integration.sb3 import WandbCallback
@@ -151,11 +152,10 @@ class Objective():
 			)
 			callbacks.append(wandbCallback)
 		if trial is not None:
-			eval_callback = TrialEvalCallback(
-				env,
-				trial,
-				eval_freq=self.args.n_steps,
-			)
+			eval_callback = TrialEvalCallback(env, trial, eval_freq=self.args.n_steps)
+			callbacks.append(eval_callback)
+		else:
+			eval_callback = EvalCallback(env, eval_freq=self.args.n_steps)
 			callbacks.append(eval_callback)
 
 		model.learn(
