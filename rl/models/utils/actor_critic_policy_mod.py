@@ -42,10 +42,17 @@ class ActorCriticPolicy_mod(ActorCriticPolicy):
 		# except AttributeError:
 		else:
 			features = self.extract_features(obs)
+			projectionHead = hasattr(self.features_extractor, "forward_final")
+			if projectionHead:
+				projection = self.features_extractor.forward_final(features)
+
 		features_detached = features.clone().detach()
 		latent_pi, latent_vf = self.mlp_extractor(features_detached)
 		distribution = self._get_action_dist_from_latent(latent_pi)
 		log_prob = distribution.log_prob(actions)
 		values = self.value_net(latent_vf)
 
-		return values, log_prob, distribution.entropy(), features
+		if projectionHead:
+			return values, log_prob, distribution.entropy(), projection
+		else:
+			return values, log_prob, distribution.entropy(), features

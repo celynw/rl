@@ -16,7 +16,7 @@ import optuna
 
 import rl
 # from rl.models.utils.visual import CartPoleRGBTemp
-from rl.models import PPO_mod, A2C_mod, Estimator, EDeNN
+from rl.models import PPO_mod, A2C_mod, Estimator, EstimatorPH, EDeNN
 from rl.models.utils import ActorCriticPolicy_mod
 from rl.utils import TqdmCallback, PolicyUpdateCallback, TrialEvalCallback
 # from rl.utils import load_optimizer_state_dict
@@ -66,11 +66,13 @@ class Objective():
 		env_ = gym.make(env_id)
 
 		env = Monitor(env_, str(self.log_dir), allow_early_resets=True, info_keywords=("failReason", "updatedPolicy"))
-		policy_kwargs = dict(
-			# features_extractor_class=Estimator,
-			features_extractor_class=EDeNN,
-			optimizer_class=torch.optim.Adam,
-		)
+		extractor = EstimatorPH if self.args.projection_head else Estimator
+		# extractor = EDeNN
+		if self.args.projection_head:
+			features_extractor_kwargs=dict(features_dim=256)
+		else:
+			features_extractor_kwargs = None
+		policy_kwargs = dict(features_extractor_class=extractor, optimizer_class=torch.optim.Adam, features_extractor_kwargs=features_extractor_kwargs)
 		model = PPO_mod(
 		# model = A2C_mod(
 			ActorCriticPolicy_mod,
@@ -197,6 +199,7 @@ def parse_args() -> argparse.Namespace:
 	parser.add_argument("--load_feat", action="store_true", help="Load weights for the feature extractor")
 	parser.add_argument("--cpu", action="store_true", help="Force running on CPU")
 	parser.add_argument("--n_steps", type=int, default=2048, help="Number of steps before each weights update")
+	parser.add_argument("--projection_head", action="store_true", help="Use proejction head")
 	parser.add_argument("--optuna", type=str, help="Optimise with optuna using this storage URL. Examples: 'sqlite:///optuna.db' or 'postgresql://postgres:password@host:5432/postgres'")
 
 	return parser.parse_args()

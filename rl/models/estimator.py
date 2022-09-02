@@ -64,3 +64,33 @@ class Estimator(BaseFeaturesExtractor):
 	# ----------------------------------------------------------------------------------------------
 	def reset_env(self):
 		pass # Compatibility
+
+
+# ==================================================================================================
+class EstimatorPH(Estimator):
+	# ----------------------------------------------------------------------------------------------
+	def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 4):
+		super().__init__(observation_space, features_dim)
+		self.layer4 = torch.nn.Sequential(
+			torch.nn.Flatten(),
+			torch.nn.Linear(15360, 256),
+			# # torch.nn.Dropout(0.5),
+			torch.nn.ReLU(),
+		)
+		self.final = torch.nn.Sequential(
+			torch.nn.Linear(256, 4),
+			# # torch.nn.Dropout(0.5),
+			# torch.nn.ReLU # TODO
+		)
+		self.layers = torch.nn.Sequential(
+			self.layer1,
+			self.layer2,
+			self.layer3,
+			self.layer4,
+		)
+
+	# ----------------------------------------------------------------------------------------------
+	def forward_final(self, x):
+		x = self.final(x)
+
+		return x

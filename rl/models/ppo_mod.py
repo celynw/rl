@@ -13,11 +13,12 @@ from rl.models.utils import RolloutBuffer_mod
 # ==================================================================================================
 class PPO_mod(PPO):
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, *args, pl_coef: float = 1.0, bs_coef: float = 1.0, save_loss: bool = False, **kwargs):
+	def __init__(self, *args, pl_coef: float = 1.0, bs_coef: float = 1.0, save_loss: bool = False, projection_head: bool = False, **kwargs):
 		super().__init__(*args, **kwargs)
 		self.pl_coef = pl_coef
 		self.bs_coef = bs_coef
 		self.save_loss = save_loss
+		self.projection_head = projection_head
 
 		buffer_cls = DictRolloutBuffer if isinstance(self.observation_space, gym.spaces.Dict) else RolloutBuffer_mod
 		self.rollout_buffer = buffer_cls(
