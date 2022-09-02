@@ -28,6 +28,7 @@ class Objective():
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, args: argparse.Namespace):
 		self.args = args
+		self.log_dir = self.args.log_dir # Preserve value in case we want to repeatedly modify it for optuna
 
 	# ----------------------------------------------------------------------------------------------
 	def __call__(self, trial: Optional[optuna.trial.Trial] = None):
@@ -40,13 +41,12 @@ class Objective():
 		# env_id = "CartPole-events-debug"
 		# env_id = "CartPole-v1"
 
-		epoch = f"{int(time.time())}" # Epoch
 		if trial is not None:
-			self.args.log_dir = self.args.log_dir / self.args.name / f"{trial.number}_{epoch}"
-		else:
-			self.args.log_dir /= f"{epoch} {self.args.name}"
+			# Insert trial number at start of child directory name
+			self.log_dir = self.args.log_dir.parent / f"{trial.number} {self.args.log_dir.name}"
+
 		print(f"Logging to {self.args.log_dir}")
-		self.args.log_dir.mkdir(parents=True, exist_ok=True)
+		self.log_dir.mkdir(parents=True, exist_ok=True)
 
 		config = {
 			"policy_type": ActorCriticPolicy_mod,
@@ -64,7 +64,7 @@ class Objective():
 
 		env_ = gym.make(env_id)
 
-		env = Monitor(env_, str(self.args.log_dir), allow_early_resets=True, info_keywords=("failReason", "updatedPolicy"))
+		env = Monitor(env_, str(self.log_dir), allow_early_resets=True, info_keywords=("failReason", "updatedPolicy"))
 		policy_kwargs = dict(
 			# features_extractor_class=Estimator,
 			features_extractor_class=EDeNN,
@@ -79,7 +79,7 @@ class Objective():
 			learning_rate=self.args.lr,
 			device="cpu" if self.args.cpu else "auto",
 			n_steps=self.args.n_steps,
-			tensorboard_log=self.args.log_dir,
+			tensorboard_log=self.log_dir,
 			# pl_coef=0.0,
 			# ent_coef=0.0,
 			# vf_coef=0.0,
@@ -143,7 +143,7 @@ class Objective():
 		callbacks = [TqdmCallback(), PolicyUpdateCallback(env)]
 		if use_wandb:
 			wandbCallback = WandbCallback(
-				model_save_path=self.args.log_dir / f"{self.args.name}",
+				model_save_path=self.log_dir / f"{self.args.name}",
 				gradient_save_freq=100,
 			)
 			callbacks.append(wandbCallback)
@@ -163,7 +163,7 @@ class Objective():
 		if trial is not None and eval_callback.is_pruned:
 			raise optuna.exceptions.TrialPruned()
 		elif self.args.save:
-			model.save(self.args.log_dir / f"{self.args.name}")
+			model.save(self.log_dir / f"{self.args.name}")
 
 		# if self.args.render and i == self.args.times - 1:
 		# 	obs = env.reset()
@@ -204,7 +204,9 @@ def parse_args() -> argparse.Namespace:
 # ==================================================================================================
 if __name__ == "__main__":
 	args = parse_args()
+	epoch = f"{int(time.time())}" # Epoch
 	if args.optuna is not None:
+		args.log_dir = args.log_dir / args.name / epoch
 		torch.set_num_threads(1)
 		pruner = optuna.pruners.MedianPruner()
 		study = optuna.create_study(
@@ -227,4 +229,5 @@ if __name__ == "__main__":
 		for key, value in trial.user_attrs.items():
 			print(f"    {key}: {value}")
 	else:
+		args.log_dir /= f"{epoch} {args.name}"
 		Objective(args)()
