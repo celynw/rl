@@ -25,7 +25,7 @@ from dvs_msgs.msg import EventArray, Event
 
 import gym
 from gym import spaces, logger
-# from gym.envs.classic_control import cartpole
+from gym.envs.classic_control.cartpole import CartPoleEnv
 
 # use_4D = True # Use 4D tensor instead of 5D tensor, for debug training only
 use_4D = False
@@ -157,7 +157,6 @@ class CartPoleEnvEvents(gym.Env):
 		self.clock = None
 		self.isopen = True
 		self.state = None
-		self.physics_state = None
 		self.connected = False
 		self.updatedPolicy = False
 
@@ -199,7 +198,7 @@ class CartPoleEnvEvents(gym.Env):
 
 	# ----------------------------------------------------------------------------------------------
 	def set_state(self, state):
-		self.physics_state = state
+		self.state = state
 
 	# ----------------------------------------------------------------------------------------------
 	def set_updatedPolicy(self):
@@ -210,7 +209,7 @@ class CartPoleEnvEvents(gym.Env):
 		self.info = {
 			"failReason": None,
 			"updatedPolicy": int(self.updatedPolicy),
-			"physicsState": np.zeros(4),
+			"state": np.zeros(4),
 		}
 
 		# print(f"action.shape: {action.shape}")
@@ -218,8 +217,8 @@ class CartPoleEnvEvents(gym.Env):
 		# quit(0)
 		err_msg = f"{action!r} ({type(action)}) invalid"
 		assert self.action_space.contains(action), err_msg
-		assert self.physics_state is not None, "Call reset before using step method."
-		x, x_dot, theta, theta_dot = self.physics_state
+		assert self.state is not None, "Call reset before using step method."
+		x, x_dot, theta, theta_dot = self.state
 		force = self.force_mag if action == 1 else -self.force_mag
 		costheta = math.cos(theta)
 		sintheta = math.sin(theta)
@@ -245,7 +244,7 @@ class CartPoleEnvEvents(gym.Env):
 			theta_dot = theta_dot + self.tau * thetaacc
 			theta = theta + self.tau * theta_dot
 
-		self.physics_state = (x, x_dot, theta, theta_dot)
+		self.state = (x, x_dot, theta, theta_dot)
 
 		done = bool(
 			x < -self.x_threshold
@@ -319,7 +318,7 @@ class CartPoleEnvEvents(gym.Env):
 			# We're not doing setting this to False immediately because the monitor only writes a line when an episode is done
 			self.updatedPolicy = False
 
-		self.info["physicsState"] = self.physics_state
+		self.info["state"] = self.state
 
 		return event_tensor.numpy(), reward, done, self.info
 
@@ -336,7 +335,7 @@ class CartPoleEnvEvents(gym.Env):
 		# seed = 0
 
 		super().reset(seed=seed)
-		self.physics_state = self.np_random.uniform(low=-0.05, high=0.05, size=(4,))
+		self.state = self.np_random.uniform(low=-0.05, high=0.05, size=(4,))
 		self.steps_beyond_done = None
 		# print("render")
 		rgb = self.render("rgb_array")
@@ -500,10 +499,10 @@ class CartPoleEnvEvents(gym.Env):
 		cartwidth = 50.0
 		cartheight = 30.0
 
-		if self.physics_state is None:
+		if self.state is None:
 			return None
 
-		x = self.physics_state
+		x = self.state
 
 		if self.screen is None:
 			pygame.init()

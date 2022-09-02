@@ -59,12 +59,12 @@ class Object():
 			theta = random.uniform(-env.theta_threshold_radians, env.theta_threshold_radians) # 0.20943951023931953
 			theta_dot = random.uniform(-2.7895198, 2.7895198)
 			env.reset()
-			env.set_state((x, x_dot, theta, theta_dot)) # Don't set `env.physics_state` directly, it won't fail but won't work!
+			env.set_state((x, x_dot, theta, theta_dot)) # Don't set `env.state` directly, it won't fail but won't work!
 			# Run twice so that the event images have something to go on
 			obs = env.step(random.randint(0, 1))
 			obs = env.step(random.randint(0, 1))
 			obs = obs[0] # Only interested in the event stream
-			np.savez(self.args.out_dir / f"{i:0{fw}d}.npz", obs=obs, gt=np.array(env.physics_state))
+			np.savez(self.args.out_dir / f"{i:0{fw}d}.npz", obs=obs, gt=np.array(env.state))
 			# rgb = env.render("rgb_array")
 			# cv2.imwrite(str(self.args.out_dir / f"{i:0{fw}d}.png"), rgb)
 

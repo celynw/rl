@@ -143,7 +143,6 @@ class CartPoleEnvEventsDebug(gym.Env):
 		self.clock = None
 		self.isopen = True
 		self.state = None
-		self.physics_state = None
 		self.connected = False
 
 		self.steps_beyond_done = None
@@ -173,8 +172,8 @@ class CartPoleEnvEventsDebug(gym.Env):
 		# quit(0)
 		err_msg = f"{action!r} ({type(action)}) invalid"
 		assert self.action_space.contains(action), err_msg
-		assert self.physics_state is not None, "Call reset before using step method."
-		x, x_dot, theta, theta_dot = self.physics_state
+		assert self.state is not None, "Call reset before using step method."
+		x, x_dot, theta, theta_dot = self.state
 		force = self.force_mag if action == 1 else -self.force_mag
 		costheta = math.cos(theta)
 		sintheta = math.sin(theta)
@@ -200,7 +199,7 @@ class CartPoleEnvEventsDebug(gym.Env):
 			theta_dot = theta_dot + self.tau * thetaacc
 			theta = theta + self.tau * theta_dot
 
-		self.physics_state = (x, x_dot, theta, theta_dot)
+		self.state = (x, x_dot, theta, theta_dot)
 
 		done = bool(
 			x < -self.x_threshold
@@ -273,7 +272,7 @@ class CartPoleEnvEventsDebug(gym.Env):
 		seed = 0
 
 		super().reset(seed=seed)
-		self.physics_state = self.np_random.uniform(low=-0.05, high=0.05, size=(4,))
+		self.state = self.np_random.uniform(low=-0.05, high=0.05, size=(4,))
 		self.steps_beyond_done = None
 		rgb = self.render("rgb_array")
 
@@ -431,10 +430,10 @@ class CartPoleEnvEventsDebug(gym.Env):
 		cartwidth = 50.0
 		cartheight = 30.0
 
-		if self.physics_state is None:
+		if self.state is None:
 			return None
 
-		x = self.physics_state
+		x = self.state
 
 		if self.screen is None:
 			pygame.init()

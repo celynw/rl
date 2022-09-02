@@ -218,7 +218,7 @@ class PPO_mod(PPO):
 
 			assert(len(infos) == 1)
 			info = infos[0]
-			state = torch.tensor(info["physicsState"], device=self.device)[None, ...]
+			state = torch.tensor(info["state"], device=self.device)[None, ...]
 
 			self.num_timesteps += env.num_envs
 
