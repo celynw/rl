@@ -20,6 +20,7 @@ from rl.models import PPO_mod, A2C_mod, Estimator, EDeNN
 from rl.models.utils import ActorCriticPolicy_mod
 from rl.utils import TqdmCallback, PolicyUpdateCallback, TrialEvalCallback
 # from rl.utils import load_optimizer_state_dict
+from rl.utils import MultiplePruners, DelayedThresholdPruner
 
 use_wandb = False
 
@@ -208,7 +209,9 @@ if __name__ == "__main__":
 	if args.optuna is not None:
 		args.log_dir = args.log_dir / args.name / epoch
 		torch.set_num_threads(1)
-		pruner = optuna.pruners.MedianPruner()
+		# For RandomSampler, MedianPruner is the best
+		# For TPESampler (default), Hyperband is the best
+		pruner = MultiplePruners((optuna.pruners.HyperbandPruner(), DelayedThresholdPruner(lower=10, max_prunes=3)))
 		study = optuna.create_study(
 			study_name=f"{args.name}",
 			direction=optuna.study.StudyDirection.MAXIMIZE,
