@@ -20,6 +20,7 @@ docker exec -id $id bash -ci "Xvfb :0 -screen 0 800x600x24 +extension RANDR 2>/d
 	if [ "$#" -eq 0 ]; then
 		echo "Expected name argument"
 	elif [ "$#" -eq 1 ]; then
+		echo "Running '$cmd $1'"
 		docker exec -e DISPLAY=:0 -it $id bash -ci "$cmd $1"
 	else
 		echo "Too many arguments!"
