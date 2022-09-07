@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 set -e
 
-# cmd="/code/toys/rgb_cartpole_ppo.py 1 -S -s 200000 -d /runs/"
-# cmd="/code/venv/bin/python /code/toys/rgb_cartpole_ppo.py 1 -S -s 200000 -d /runs/ --lr 3e-4 --lr2 3e-3"
-# cmd="/code/venv/bin/python /code/toys/rgb_cartpole_ppo.py 1 -S -s 200000 -d /runs/"
-cmd="/code/venv/bin/python /code/toys/rgb_cartpole_ppo.py -S -s 200000 -d /runs/ --optuna postgresql://postgres:password@$HOSTNAME:5432/postgres"
+# cmd="/code/toys/rgb_cartpole_ppo.py -S -s 200000 -d /runs/"
+# cmd="/code/venv/bin/python /code/toys/rgb_cartpole_ppo.py -S -s 200000 -d /runs/ --lr 3e-4 --lr2 3e-3"
+# cmd="/code/venv/bin/python /code/toys/rgb_cartpole_ppo.py -S -s 200000 -d /runs/"
+# cmd="/code/venv/bin/python /code/toys/rgb_cartpole_ppo.py -S -s 200000 -d /runs/ --projection_head"
+cmd="/code/venv/bin/python /code/toys/rgb_cartpole_ppo.py -S -s 200000 -d /runs/ --projection_head --optuna postgresql://postgres:password@$HOSTNAME:5432/postgres"
 WANDB_API_KEY="local-10f17eeb44c533e126f6639891d16595a1c7f337"
 WANDB_BASE_URL="http://umcvplws196:8080"
 
