@@ -36,7 +36,8 @@ class Objective():
 	def __call__(self, trial: Optional[optuna.trial.Trial] = None):
 		if trial is not None:
 			# raise NotImplementedError("TODO Suggest hparams in arg parsing")
-			self.args.lr = trial.suggest_float("lr", 1e-4, 1e-1, log=True) # Default was 3e-4
+			# self.args.lr = trial.suggest_float("lr", 1e-4, 1e-1, log=True) # Default was 3e-4
+			self.args.tsamples = trial.suggest_int("tsamples", 1, 40) # EDeNN specific TODO what should max be?
 
 		# env_id = "CartPole-contrast-v1"
 		env_id = "CartPole-events-v1"
@@ -64,8 +65,7 @@ class Objective():
 				save_code=True, # optional
 			)
 
-		env_ = gym.make(env_id)
-
+		env_ = gym.make(env_id, tsamples=self.args.tsamples)
 		env = Monitor(env_, str(self.log_dir), allow_early_resets=True, info_keywords=("failReason", "updatedPolicy"))
 
 		# extractor = EstimatorPH if self.args.projection_head else Estimator
@@ -194,6 +194,7 @@ def parse_args() -> argparse.Namespace:
 	parser.add_argument("-S", "--save", action="store_true", help="Save first trained model")
 	parser.add_argument("-d", "--log_dir", type=Path, default=Path("/tmp/gym/"), help="Location of log directory")
 	parser.add_argument("--lr", type=float, default=3e-4, help="Learning rate")
+	parser.add_argument("--tsamples", type=int, default=10, help="Time samples for env, propagates through EDeNN")
 	parser.add_argument("-f", "--freeze", action="store_true", help="Freeze feature extractor weights")
 	parser.add_argument("--load_mlp", action="store_true", help="Load weights for the actor/critic")
 	parser.add_argument("--load_feat", action="store_true", help="Load weights for the feature extractor")

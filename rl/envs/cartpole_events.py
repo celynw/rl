@@ -94,7 +94,7 @@ class CartPoleEnvEvents(gym.Env):
 	metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 50}
 
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, init_ros: bool = True):
+	def __init__(self, init_ros: bool = True, tsamples: int = 10):
 		self.gravity = 9.8
 		self.masscart = 1.0
 		self.masspole = 0.1
@@ -131,12 +131,8 @@ class CartPoleEnvEvents(gym.Env):
 		# self.screen_height_ = 400
 		self.screen_height_ = 64
 
-		# self.tsamples = 100 # TODO
-		# self.tsamples = 20 # TODO
-		self.tsamples = 10 # TODO
-		# self.tsamples = 1 # TODO
-
 		self.init_ros = init_ros
+		self.tsamples = tsamples
 
 		self.action_space = spaces.Discrete(2)
 		# NOTE: I should normalise my observation space (well, both), but not sure how to for event tensor
