@@ -152,10 +152,10 @@ class Objective():
 			)
 			callbacks.append(wandbCallback)
 		if trial is not None:
-			eval_callback = TrialEvalCallback(env, trial, eval_freq=self.args.n_steps)
+			eval_callback = TrialEvalCallback(env, trial, eval_freq=self.args.n_steps, best_model_save_path=self.log_dir)
 			callbacks.append(eval_callback)
 		else:
-			eval_callback = EvalCallback(env, eval_freq=self.args.n_steps)
+			eval_callback = EvalCallback(env, eval_freq=self.args.n_steps, best_model_save_path=self.log_dir)
 			callbacks.append(eval_callback)
 
 		model.learn(

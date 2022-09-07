@@ -1,3 +1,6 @@
+from pathlib import Path
+from typing import Optional
+
 from stable_baselines3.common.callbacks import EvalCallback
 import gym
 import optuna
@@ -9,13 +12,16 @@ class TrialEvalCallback(EvalCallback):
 		self,
 		eval_env: gym.Env,
 		trial: optuna.Trial,
+		# callback_on_new_best: Optional[BaseCallback] = None,
 		n_eval_episodes: int = 5,
 		eval_freq: int = 10000,
+		best_model_save_path: Optional[Path] = None,
 		deterministic: bool = True,
 		verbose: int = 0,
 	):
 		super().__init__(
 			eval_env=eval_env,
+			best_model_save_path=str(best_model_save_path),
 			n_eval_episodes=n_eval_episodes,
 			eval_freq=eval_freq,
 			deterministic=deterministic,
