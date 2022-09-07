@@ -17,7 +17,7 @@ import optuna
 
 import rl
 # from rl.models.utils.visual import CartPoleRGBTemp
-from rl.models import PPO_mod, A2C_mod, Estimator, EstimatorPH, EDeNN
+from rl.models import PPO_mod, A2C_mod, Estimator, EstimatorPH, EDeNN, EDeNNPH
 from rl.models.utils import ActorCriticPolicy_mod
 from rl.utils import TqdmCallback, PolicyUpdateCallback, TrialEvalCallback
 # from rl.utils import load_optimizer_state_dict
@@ -67,13 +67,15 @@ class Objective():
 		env_ = gym.make(env_id)
 
 		env = Monitor(env_, str(self.log_dir), allow_early_resets=True, info_keywords=("failReason", "updatedPolicy"))
-		extractor = EstimatorPH if self.args.projection_head else Estimator
-		# extractor = EDeNN
+
+		# extractor = EstimatorPH if self.args.projection_head else Estimator
+		extractor = EDeNNPH if self.args.projection_head else EDeNN
 		if self.args.projection_head:
 			features_extractor_kwargs=dict(features_dim=256)
 		else:
 			features_extractor_kwargs = None
 		policy_kwargs = dict(features_extractor_class=extractor, optimizer_class=torch.optim.Adam, features_extractor_kwargs=features_extractor_kwargs)
+
 		model = PPO_mod(
 		# model = A2C_mod(
 			ActorCriticPolicy_mod,
@@ -98,7 +100,6 @@ class Objective():
 			model.policy.features_extractor.load_state_dict(checkpoint["state_dict"])
 			# FIX TRY LOADING OPTIMIZER STATE DICT
 			# load_optimizer_state_dict(model.policy.optimizer, checkpoint["optimizer_states"][0])
-
 		if self.args.load_mlp:
 			# Critic network
 			# Could to `model.load` with `custom_objects` parameter, but this isn't done in-place!
@@ -132,7 +133,6 @@ class Objective():
 			# del stateDict["value_net.weight"]
 			# del stateDict["value_net.bias"]
 			model.set_parameters({"policy": stateDict}, exact_match=False) # FIX not doing "policy.optimizer" key
-
 		# Freeze weights?
 		if self.args.freeze:
 			for param in model.policy.features_extractor.parameters():

@@ -7,11 +7,10 @@ from stable_baselines3.common.policies import ActorCriticPolicy
 class ActorCriticPolicy_mod(ActorCriticPolicy):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
-		self.out_c1 = None
-		self.out_c2 = None
-		self.out_c3 = None
-		self.out_c4 = None
-		self.out_mid = None
+		self.layer1_out = None
+		self.layer2_out = None
+		self.layer3_out = None
+		self.layer4_out = None
 
 	# ----------------------------------------------------------------------------------------------
 	def evaluate_actions(self, obs: torch.Tensor, actions: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -28,17 +27,16 @@ class ActorCriticPolicy_mod(ActorCriticPolicy):
 		if "rl.models.EDeNN" in str(type(self.features_extractor)): # Nasty workaround!
 		# try: # FIX can't import EDeNN due to partially initialised module
 			# EDeNN (propagate decays between steps)
-			self.features_extractor.out_c1 = self.out_c1
-			self.features_extractor.out_c2 = self.out_c2
-			self.features_extractor.out_c3 = self.out_c3
-			self.features_extractor.out_c4 = self.out_c4
-			self.features_extractor.out_mid = self.out_mid
+			assert(hasattr(self.features_extractor, "layer1_out")) # Catch using the wrong model...
+			self.features_extractor.layer1_out = self.layer1_out
+			self.features_extractor.layer2_out = self.layer2_out
+			self.features_extractor.layer3_out = self.layer3_out
+			self.features_extractor.layer4_out = self.layer4_out
 			features = self.extract_features(obs)
-			self.out_c1 = self.features_extractor.out_c1
-			self.out_c2 = self.features_extractor.out_c2
-			self.out_c3 = self.features_extractor.out_c3
-			self.out_c4 = self.features_extractor.out_c4
-			self.out_mid = self.features_extractor.out_mid
+			self.layer1_out = self.features_extractor.layer1_out
+			self.layer2_out = self.features_extractor.layer2_out
+			self.layer3_out = self.features_extractor.layer3_out
+			self.layer4_out = self.features_extractor.layer4_out
 		# except AttributeError:
 		else:
 			features = self.extract_features(obs)

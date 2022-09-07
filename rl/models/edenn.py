@@ -1,3 +1,4 @@
+import math
 from typing import Optional
 
 import torch
@@ -11,32 +12,100 @@ class EDeNN(BaseFeaturesExtractor):
 	"""
 	:param observation_space: (gym.Space)
 	"""
+	n_flatten: Optional[int] = None
+	layer1_out: Optional[torch.Tensor] = None
+	layer2_out: Optional[torch.Tensor] = None
+	layer3_out: Optional[torch.Tensor] = None
+	layer4_out: Optional[torch.Tensor] = None
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 4):
-		# `features_dim` should be 128 to match self.mid?
-		super().__init__(observation_space, features_dim)
-		n_input_channels = observation_space.shape[0]
-		# print(f"n_input_channels: {n_input_channels}")
-		# self.layers = self.get_layers(n_input_channels)
-		self.final = None
-		self.get_layers(n_input_channels)
+		super().__init__(observation_space, features_dim) # features_dim should be 128 to match self.layer4?
+		self.observation_space = observation_space
+		self.get_layers(observation_space.shape[0])
+
+	# ----------------------------------------------------------------------------------------------
+	def get_layers(self, n_input_channels: int):
+		# D, H, W
+		kernel_size = 3
+		stride = (1, 2, 2)
+		pad = (0, 1, 1)
+		scale_factor = (1, 2, 2)
+
+		partial_kwargs = {}
+		conv = Decay3dPartial
+		partial_kwargs["multi_channel"] = True
+		partial_kwargs["return_mask"] = True
+		partial_kwargs["kernel_ratio"] = True
+
+		self.layer1 = torch.nn.Sequential(
+			conv(n_input_channels, 16, kernel_size=kernel_size, stride=stride, bias=True, padding=pad, return_decay=True, **partial_kwargs),
+			torch.nn.ReLU(inplace=True),
+			torch.nn.BatchNorm3d(num_features=16),
+		)
+		self.layer2 = torch.nn.Sequential(
+			conv(16, 32, kernel_size=kernel_size, stride=stride, bias=True, padding=pad, return_decay=True, **partial_kwargs),
+			torch.nn.ReLU(inplace=True),
+			torch.nn.BatchNorm3d(num_features=32),
+		)
+		self.layer3 = torch.nn.Sequential(
+			conv(32, 64, kernel_size=kernel_size, stride=stride, bias=True, padding=pad, return_decay=True, **partial_kwargs),
+			torch.nn.ReLU(inplace=True),
+			torch.nn.BatchNorm3d(num_features=64),
+		)
+		self.layer4 = torch.nn.Sequential(
+			# conv(128, 128, kernel_size=(1, 1, 1), stride=1, bias=True, padding=0, return_decay=True, **partial_kwargs),
+			# conv(128, 128, kernel_size=(1, 1, 1), stride=1, bias=True, padding=0, return_decay=True, **partial_kwargs),
+			conv(64, 64, kernel_size=(1, 1, 1), stride=1, bias=True, padding=0, return_decay=True, **partial_kwargs),
+			# conv(128, 128, kernel_size=(1, 1, 1), stride=1, bias=True, padding=0, return_decay=True, **partial_kwargs),
+		)
 
 		# Compute shape by doing one forward pass
 		self.reset_env()
 		with torch.no_grad():
-			observation = torch.as_tensor(observation_space.sample()[None]).float()
-			n_flatten = self(
-				observation,
-				(observation != 0).float()
-			).shape[1]
+			observation = torch.as_tensor(self.observation_space.sample()[None]).float()
+			result = self(observation, calc_n_flatten=True)
+			# self.n_flatten = result.shape[1]
+			self.n_flatten = math.prod(result.shape)
 
-		self.final = torch.nn.Sequential(
-			torch.nn.Linear(n_flatten, 256), # 15360 -> ...
+		self.layer5 = torch.nn.Sequential(
+			torch.nn.Flatten(),
+			torch.nn.Linear(self.n_flatten, 256), # 15360 -> ...
 			torch.nn.ReLU(inplace=True),
 			# torch.nn.Sigmoid(),
 			torch.nn.Linear(256, self.features_dim), # ... -> 128
 			# torch.nn.CELU(inplace=True),
 		)
+
+	# ----------------------------------------------------------------------------------------------
+	def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None, calc_n_flatten: bool = False) -> torch.Tensor:
+		if mask is None:
+			mask = (x != 0).float()
+
+		# for i, layer in enumerate(self.layers):
+		# 	for sublayer in layer:
+		# 		x, mask = self.process(sublayer, x, mask, self.out_c1)
+		# 	exec(f"self.out_c{i} = x.detach()")
+		for sublayer in self.layer1:
+			x, mask = self.process(sublayer, x, mask, self.layer1_out)
+		self.layer1_out = x.detach()
+		for sublayer in self.layer2:
+			x, mask = self.process(sublayer, x, mask, self.layer2_out)
+		self.layer2_out = x.detach()
+		for sublayer in self.layer3:
+			x, mask = self.process(sublayer, x, mask, self.layer3_out)
+		self.layer3_out = x.detach()
+		for sublayer in self.layer4:
+			x, mask = self.process(sublayer, x, mask, self.layer4_out)
+		self.layer4_out = x.detach()
+
+		x = x[:, :, -1]
+		if calc_n_flatten:
+			return x
+		# The sizes of `x` and `mask` will diverge here, but that's OK as we don't need the mask anymore
+		# We only care about the final bin prediction for now...
+		x = self.layer5(x)
+
+		return x
 
 	# ----------------------------------------------------------------------------------------------
 	def process(self, layer: torch.nn.Module, x: torch.Tensor, mask: Optional[torch.Tensor] = None, previous_output: Optional[torch.Tensor] = None):
@@ -55,113 +124,31 @@ class EDeNN(BaseFeaturesExtractor):
 
 	# ----------------------------------------------------------------------------------------------
 	def reset_env(self):
-		self.out_c1 = None
-		self.out_c2 = None
-		self.out_c3 = None
-		self.out_c4 = None
-		self.out_mid = None
+		self.layer1_out = None
+		self.layer2_out = None
+		self.layer3_out = None
+		self.layer4_out = None
+
+
+# ==================================================================================================
+class EDeNNPH(EDeNN):
+	# ----------------------------------------------------------------------------------------------
+	def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 4):
+		super().__init__(observation_space, features_dim)
+		self.layer5 = torch.nn.Sequential(
+			torch.nn.Flatten(),
+			torch.nn.Linear(self.n_flatten, 256), # 15360 -> ...
+			torch.nn.ReLU(inplace=True),
+			# torch.nn.Sigmoid(),
+		)
+		self.final = torch.nn.Sequential(
+			# torch.nn.Linear(256, self.features_dim), # ... -> 128
+			torch.nn.Linear(256, 4), # ... -> 128
+			# torch.nn.CELU(inplace=True),
+		)
 
 	# ----------------------------------------------------------------------------------------------
-	# def forward(self, x: torch.Tensor) -> torch.Tensor:
-	def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
-		# DEBUG
-		mask = (x != 0).float()
-		# print(f"x, mask shape 1: {x.shape}, {mask.shape}")
+	def forward_final(self, x: torch.Tensor) -> torch.Tensor:
+		x = self.final(x)
 
-		for sublayer in self.conv1:
-			x, mask = self.process(sublayer, x, mask, self.out_c1)
-		# print(f"x, mask shape 2: {x.shape}, {mask.shape}")
-		self.out_c1 = x.detach()
-
-		for sublayer in self.conv2:
-			x, mask = self.process(sublayer, x, mask, self.out_c2)
-		# print(f"x, mask shape 3: {x.shape}, {mask.shape}")
-		self.out_c2 = x.detach()
-
-		for sublayer in self.conv3:
-			x, mask = self.process(sublayer, x, mask, self.out_c3)
-		# print(f"x, mask shape 4: {x.shape}, {mask.shape}")
-		self.out_c3 = x.detach()
-
-		# for sublayer in self.conv4:
-		# 	x, mask = self.process(sublayer, x, mask, self.out_c4)
-		# # print(f"x, mask shape 5: {x.shape}, {mask.shape}")
-		# self.out_c4 = x.detach()
-
-		for sublayer in self.mid:
-			x, mask = self.process(sublayer, x, mask, self.out_mid)
-		# print(f"x, mask shape 6: {x.shape}, {mask.shape}")
-		self.out_mid = x.detach()
-
-		# The sizes of `x` and `mask` will diverge here, but that's OK as we don't need the mask anymore
-		# We only care about the final bin prediction for now...
-		x = x[:, :, -1]
-		# print(f"x shape 8: {x.shape}")
-
-		x = self.flatten(x)
-		# print(f"x shape 9: {x.shape}")
-
-		if self.final is not None:
-			x = self.final(x)
-			# print(f"x shape 10: {x.shape}")
-
-
-		# quit(0)
 		return x
-
-	# ----------------------------------------------------------------------------------------------
-	def get_layers(self, n_input_channels: int):
-		# D, H, W
-		kernel_size = 3
-		stride = (1, 2, 2)
-		pad = (0, 1, 1)
-		scale_factor = (1, 2, 2)
-
-		partial_kwargs = {}
-		conv = Decay3dPartial
-		partial_kwargs["multi_channel"] = True
-		partial_kwargs["return_mask"] = True
-		partial_kwargs["kernel_ratio"] = True
-
-		self.conv1 = torch.nn.Sequential(
-			conv(n_input_channels, 16, kernel_size=kernel_size, stride=stride, bias=True, padding=pad, return_decay=True, **partial_kwargs),
-			torch.nn.ReLU(inplace=True),
-			torch.nn.BatchNorm3d(num_features=16),
-		)
-		self.conv2 = torch.nn.Sequential(
-			conv(16, 32, kernel_size=kernel_size, stride=stride, bias=True, padding=pad, return_decay=True, **partial_kwargs),
-			torch.nn.ReLU(inplace=True),
-			torch.nn.BatchNorm3d(num_features=32),
-		)
-		self.conv3 = torch.nn.Sequential(
-			conv(32, 64, kernel_size=kernel_size, stride=stride, bias=True, padding=pad, return_decay=True, **partial_kwargs),
-			torch.nn.ReLU(inplace=True),
-			torch.nn.BatchNorm3d(num_features=64),
-		)
-		# self.conv4 = torch.nn.Sequential(
-		# 	conv(64, 128, kernel_size=kernel_size, stride=stride, bias=False, padding=pad, return_decay=True, **partial_kwargs),
-		# 	torch.nn.ReLU(inplace=True),
-		# 	torch.nn.BatchNorm3d(num_features=128),
-		# )
-
-		# Bias?
-		self.mid = torch.nn.Sequential(
-			# conv(128, 128, kernel_size=(1, 1, 1), stride=1, bias=True, padding=0, return_decay=True, **partial_kwargs),
-			# conv(128, 128, kernel_size=(1, 1, 1), stride=1, bias=True, padding=0, return_decay=True, **partial_kwargs),
-			conv(64, 64, kernel_size=(1, 1, 1), stride=1, bias=True, padding=0, return_decay=True, **partial_kwargs),
-			# conv(128, 128, kernel_size=(1, 1, 1), stride=1, bias=True, padding=0, return_decay=True, **partial_kwargs),
-		)
-		self.flatten = torch.nn.Flatten()
-
-		# self.final = torch.nn.Linear(128, 64, bias=True)
-		# self.final1 = torch.nn.Linear(18, 1, bias=True)
-		# self.final1 = torch.nn.Linear(60, 1, bias=True)
-
-		# return torch.nn.Sequential(
-		# 	self.conv1,
-		# 	self.conv2,
-		# 	self.conv3,
-		# 	# self.conv4,
-		# 	self.mid,
-		# 	# torch.nn.Flatten(),
-		# )
