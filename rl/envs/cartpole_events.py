@@ -92,10 +92,8 @@ class CartPoleEnvEvents(EventEnv, CartPoleEnv):
 		self.get_events(wait=False)
 		event_tensor = self.get_events()
 		if self.event_image:
-			event_tensor = event_tensor.sum(1) # DEBUG
-			# # DEBUG AGAIN
-			# event_tensor = event_tensor.bool().double() * 255
-
+			event_tensor = event_tensor.sum(1)
+			# event_tensor = event_tensor.bool().double() * 255 # DEBUG
 		if self.model is not None:
 			self.model.reset_env()
 		else:
