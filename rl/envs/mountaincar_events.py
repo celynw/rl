@@ -6,14 +6,13 @@ from typing import Optional
 import numpy as np
 import cv2
 import torch
-
 from gym import spaces
 from gym.envs.classic_control.mountain_car import MountainCarEnv
 
 from rl.envs.utils import EventEnv
 
 # ==================================================================================================
-class MountainCarEnvEvents(MountainCarEnv, EventEnv):
+class MountainCarEnvEvents(EventEnv, MountainCarEnv):
 	state_shape = (2, ) # TODO unused for now
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, init_ros: bool = True, tsamples: int = 10, event_image: bool = False):
@@ -24,10 +23,10 @@ class MountainCarEnvEvents(MountainCarEnv, EventEnv):
 
 		# NOTE: I should normalise my observation space (well, both), but not sure how to for event tensor
 		if self.event_image:
-			self.observation_space = spaces.Box(low=0, high=1, dtype=np.float32, shape=(2, self.screen_height_, self.screen_width_))
+			self.observation_space = spaces.Box(low=0, high=1, dtype=np.double, shape=(2, self.screen_height_, self.screen_width_))
 			# self.observation_space = spaces.Box(low=0, high=255, dtype=np.double, shape=(2, self.screen_height_, self.screen_width_))
 		else:
-			self.observation_space = spaces.Box(low=0, high=1, dtype=np.float32, shape=(2, self.tsamples, self.screen_height_, self.screen_width_))
+			self.observation_space = spaces.Box(low=0, high=1, dtype=np.double, shape=(2, self.tsamples, self.screen_height_, self.screen_width_))
 			# self.observation_space = spaces.Box(low=0, high=255, dtype=np.double, shape=(2, self.tsamples, self.screen_height_, self.screen_width_))
 
 	# ----------------------------------------------------------------------------------------------
@@ -76,7 +75,6 @@ class MountainCarEnvEvents(MountainCarEnv, EventEnv):
 		if self.event_image:
 			event_tensor = event_tensor.sum(1)
 			# event_tensor = event_tensor.bool().double() * 255 # DEBUG
-
 		if self.model is not None:
 			self.model.reset_env()
 		else:
