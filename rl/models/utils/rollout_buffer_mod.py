@@ -19,8 +19,8 @@ class RolloutBufferSamples_mod(NamedTuple):
 # ==================================================================================================
 class RolloutBuffer_mod(RolloutBuffer):
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, *args, **kwargs):
-		self.physics_shape = (4, ) # For CartPole-v1
+	def __init__(self, *args, state_shape, **kwargs):
+		self.physics_shape = state_shape
 		super().__init__(*args, **kwargs)
 		self.states = None
 

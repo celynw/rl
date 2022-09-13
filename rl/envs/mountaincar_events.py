@@ -13,9 +13,8 @@ from gym.envs.classic_control.mountain_car import MountainCarEnv
 from rl.envs.utils import EventEnv
 
 # ==================================================================================================
-class MountainCarEnvEvents(EventEnv, MountainCarEnv):
-	metadata = {"render_modes": ["human", "rgb_array", "single_rgb_array"], "render_fps": 50}
-
+class MountainCarEnvEvents(MountainCarEnv, EventEnv):
+	state_shape = (2, ) # TODO unused for now
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, init_ros: bool = True, tsamples: int = 10, event_image: bool = False):
 		self.screen_width_ = 160

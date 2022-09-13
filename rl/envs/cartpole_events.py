@@ -16,6 +16,7 @@ from rl.envs.utils import EventEnv
 
 # ==================================================================================================
 class CartPoleEnvEvents(EventEnv, CartPoleEnv):
+	state_shape = (4, ) # TODO unused for now
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, init_ros: bool = True, tsamples: int = 10, event_image: bool = False):
 		self.screen_width_ = 240

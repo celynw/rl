@@ -13,7 +13,7 @@ from rl.models.utils import RolloutBuffer_mod
 # ==================================================================================================
 class PPO_mod(PPO):
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, *args, pl_coef: float = 1.0, bs_coef: float = 1.0, save_loss: bool = False, projection_head: bool = False, **kwargs):
+	def __init__(self, *args, pl_coef: float = 1.0, bs_coef: float = 1.0, save_loss: bool = False, projection_head: bool = False, state_shape, **kwargs):
 		super().__init__(*args, **kwargs)
 		self.pl_coef = pl_coef
 		self.bs_coef = bs_coef
@@ -29,6 +29,7 @@ class PPO_mod(PPO):
 			gamma=self.gamma,
 			gae_lambda=self.gae_lambda,
 			n_envs=self.n_envs,
+			state_shape=state_shape, # Can't work out how to pull this from self.env (wrapped in DummyVecEnv)
 		)
 
 	# ----------------------------------------------------------------------------------------------
@@ -217,8 +218,7 @@ class PPO_mod(PPO):
 			new_obs, rewards, dones, infos = env.step(clipped_actions)
 
 			assert(len(infos) == 1)
-			info = infos[0]
-			state = torch.tensor(info["state"], device=self.device)[None, ...]
+			state = torch.tensor(infos[0]["state"], device=self.device)[None, ...]
 
 			self.num_timesteps += env.num_envs
 
@@ -245,8 +245,6 @@ class PPO_mod(PPO):
 					terminal_obs = self.policy.obs_to_tensor(infos[idx]["terminal_observation"])[0]
 					with torch.no_grad():
 						terminal_value = self.policy.predict_values(terminal_obs)[0]
-						# values, features = self.policy.predict_values(terminal_obs)
-						# terminal_value = values[0]
 					rewards[idx] += self.gamma * terminal_value
 
 			rollout_buffer.add(self._last_obs, actions, rewards, self._last_episode_starts, values, log_probs, state)
