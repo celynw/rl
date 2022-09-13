@@ -24,6 +24,11 @@ from rl.utils import TqdmCallback, PolicyUpdateCallback, TrialEvalCallback
 from rl.utils import MultiplePruners, DelayedThresholdPruner
 
 use_wandb = False
+env_id = "CartPole-events-v1"
+# env_id = "MountainCar-events-v0"
+# env_id = "CartPole-events-debug"
+# env_id = "CartPole-v1"
+# env_id = "CartPole-rgb"
 
 # ==================================================================================================
 class Objective():
@@ -39,12 +44,6 @@ class Objective():
 			# self.args.lr = trial.suggest_float("lr", 1e-4, 1e-1, log=True) # Default was 3e-4
 			self.args.tsamples = trial.suggest_int("tsamples", 1, 40) # EDeNN specific TODO what should max be?
 
-		# env_id = "CartPole-contrast-v1"
-		env_id = "CartPole-events-v1"
-		# env_id = "CartPole-events-debug"
-		# env_id = "CartPole-v1"
-
-		if trial is not None:
 			# Insert trial number at start of child directory name
 			self.log_dir = self.args.log_dir.parent / f"{trial.number} {self.args.log_dir.name}"
 
@@ -65,8 +64,17 @@ class Objective():
 				save_code=True, # optional
 			)
 
-		env_ = gym.make(env_id, tsamples=self.args.tsamples)
+		if env_id in ["CartPole-events-v1", "MountainCar-events-v0"]:
+			env_ = gym.make(env_id, tsamples=self.args.tsamples) # Events env
+		else:
+			env_ = gym.make(env_id) # RGB env
 		env = Monitor(env_, str(self.log_dir), allow_early_resets=True, info_keywords=("failReason", "updatedPolicy"))
+		if env_id == "CartPole-events-v1":
+			state_shape = (4, )
+		elif env_id == "MountainCar-events-v0":
+			state_shape = (2, )
+		else:
+			raise RuntimeError
 
 		# extractor = EstimatorPH if self.args.projection_head else Estimator
 		extractor = EDeNNPH if self.args.projection_head else EDeNN
@@ -90,6 +98,7 @@ class Objective():
 			# ent_coef=0.0,
 			# vf_coef=0.0,
 			# bs_coef=0.0,
+			state_shape=state_shape,
 		) # total_timesteps will be at least n_steps (2048)
 
 		if self.args.load_feat:
