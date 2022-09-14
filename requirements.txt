@@ -9,6 +9,9 @@ kellog
 gitpython
 setproctitle
 opencv-python
-gym[all]
-stable_baselines3
+gym[all]==0.25.1
+stable-baselines3==1.6.0
 msgpack
+wandb
+rospkg
+psycopg2-binary
