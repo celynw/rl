@@ -1,52 +1,81 @@
-environment = "mount=$ENV(PWD)"
-executable = /vol/research/reflexive3/miniconda3/envs/pytorch/bin/python
-
-# ---------------------------------------------------
-# Universe (vanilla, docker)
+# ==================================================================================================
 universe = docker
-docker_image = nvidia/cuda:10.1-cudnn7-runtime-ubuntu16.04
+docker_image = celynw/esim_rl:v3
+environment = "mount=$(_ws)"
 
-# -------------------------------------------------
-# Event, out and error logs
-log    = c$(cluster).p$(process).log
-output = c$(cluster).p$(process).out
-error  = c$(cluster).p$(process).error
+# Requirements -------------------------------------------------------------------------------------
+request_GPUs = 1
+request_CPUs = 1
+request_memory = 8G
+# requirements = (HasDocker) && \
+# 			   (HasStornext) && \
+# 			   (TARGET.CondorPlatform == "$CondorPlatform: X86_64-Ubuntu_16.04 $") && \
+# 			   (CUDAGlobalMemoryMb > 4500) && (CUDAGlobalMemoryMb < 17000) && \
+# 			   (CUDACapability > 2.0)
+requirements = (HasDocker)\
+	&& (machine != "sounds01.eps.surrey.ac.uk")\
+	&& (machine != "gloin.eps.surrey.ac.uk")\
+	&& (machine != "fili.eps.surrey.ac.uk")\
+	&& (machine != "nimrodel.eps.surrey.ac.uk")\
+	&& (machine != "dwalin.eps.surrey.ac.uk")\
+	&& (machine != "bofur.eps.surrey.ac.uk")\
+	&& (machine != "cogvis2.eps.surrey.ac.uk")\
+	&& (CUDAGlobalMemoryMb > 4000)
+	# && (CUDACapability > 2.0)\
+	# && (machine != "aisurrey06.surrey.ac.uk")\
+	# && (machine != "aisurrey03.surrey.ac.uk")\
+	# && (machine != "aisurrey15.surrey.ac.uk")\
 
-# -----------------------------------
-# File Transfer, Input, Output
+# Bad:
+# - sounds01: Unable to find image 'celynw/esim_rl:v3' locally
+# - gloin: Unable to find image 'celynw/esim_rl:v3' locally
+# - fili: Unable to find image 'celynw/esim_rl:v3' locally
+# - nimrodel: Unable to find image 'celynw/esim_rl:v3' locally
+# - dwalin: Unable to find image 'celynw/esim_rl:v3' locally
+# - bofur: Unable to find image 'celynw/esim_rl:v3' locally
+# - cogvis2: Keeps getting evicted
+# Good:
+# - balin
+
+# Variables ----------------------------------------------------------------------------------------
+_ws = /vol/research/reflexive3
+_wd = $(_ws)/rl
+_name = cartPole_EDeNN_grid
+# _optuna = --optuna postgresql://postgres:password@umcvplws196.surrey.ac.uk:5432/postgres
+_optuna =
+_steps = -s 500000
+_ph = --projection_head
+_out = -d $(_wd)/runs/
+
+# Command ------------------------------------------------------------------------------------------
+executable = $(_wd)/docker/run_condor.bash
+arguments = $(_name) -S $(_out) $(_optuna) $(_steps) $(_ph) --tsamples $(_tsamples)
+
+# Other parameters ---------------------------------------------------------------------------------
 should_transfer_files = YES
-
-
-# -------------------------------------
-# Requirements for the Job (see NvidiaDocker/Example09)
-requirements = (HasDocker) && \
-               (HasStornext) && \
-               (TARGET.CondorPlatform == "$CondorPlatform: X86_64-Ubuntu_16.04 $") && \
-               (CUDAGlobalMemoryMb > 4500) && (CUDAGlobalMemoryMb <  17000) && \
-               (CUDACapability > 2.0)
-
-# --------------------------------------
-# Resources
-request_GPUs   = 1
-request_CPUs   = 1
-request_memory = 4G
-
-# ------------------------------------
+log = $(_wd)/runs/condor/c-$(cluster)_p-$(process).log
+output = $(_wd)/runs/condor/c-$(cluster)_p-$(process).out
+error = $(_wd)/runs/condor/c-$(cluster)_p-$(process).error
 # Request for guaruanteed run time. 0 means job is happy to checkpoint and move at any time.
 # This lets Condor remove our job ASAP if a machine needs rebooting. Useful when we can checkpoint and restore
 # Measured in seconds, so it can be changed to match the time it takes for an epoch to run
-MaxJobRetirementTime = 0
+# MaxJobRetirementTime = 0
++CanCheckpoint = false
+# JobRunTime is in hours
++JobRunTime = 8
++GPUMem = 8000
+# stream_output = true
 
-# -----------------------------------
-# Queue commands. We can use variables and flags to launch our command with multiple options (as you would from the command line)
-arguments = $(script) --ckpt-dir $(ckpt_dir) --batch-size $(batch_size) --epochs $(epochs) --lr $(lr) --resume-training
-
-# NOTE: Variable names can't contain dashes!
-script = $ENV(PWD)/mnist_pytorch.py
-ckpt_dir = $ENV(PWD)/models
-
-batch_size = 32
-epochs = 10
-lr = 0.01
-
-queue 1
+# Queue ============================================================================================
+queue _tsamples from (
+	1
+	2
+	3
+	4
+	5
+	6
+	7
+	8
+	9
+	10
+)
