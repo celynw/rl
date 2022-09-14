@@ -17,7 +17,7 @@ import optuna
 
 import rl
 # from rl.models.utils.visual import CartPoleRGBTemp
-from rl.models import PPO_mod, A2C_mod, Estimator, EstimatorPH, EDeNN, EDeNNPH
+from rl.models import PPO_mod, A2C_mod, Estimator, EstimatorPH, EDeNN, EDeNNPH, NatureCNN# RLPTCNN
 from rl.models.utils import ActorCriticPolicy_mod
 from rl.utils import TqdmCallback, PolicyUpdateCallback, TrialEvalCallback
 # from rl.utils import load_optimizer_state_dict
@@ -42,10 +42,25 @@ class Objective():
 		if trial is not None:
 			# raise NotImplementedError("TODO Suggest hparams in arg parsing")
 			# self.args.lr = trial.suggest_float("lr", 1e-4, 1e-1, log=True) # Default was 3e-4
-			self.args.tsamples = trial.suggest_int("tsamples", 1, 40) # EDeNN specific TODO what should max be?
+			self.args.tsamples = trial.suggest_int("tsamples", 1, 25, step=1) # EDeNN specific TODO what should max be?
 
 			# Insert trial number at start of child directory name
 			self.log_dir = self.args.log_dir.parent / f"{trial.number} {self.args.log_dir.name}"
+
+			# Check duplication and skip if it's detected
+			# for t in trial.study.trials:
+			# 	# if t.state != optuna.structs.TrialState.COMPLETE:
+			# 	if t is trial:
+			# 		continue
+			# 	if t.params == trial.params:
+			# 		return t.value # Return the previous value without re-evaluating it
+			# 		#
+			# 		# Note that if duplicate parameter sets are suggested too frequently,
+			# 		# you can use the pruning mechanism of Optuna to mitigate the problem.
+			# 		# By raising `TrialPruned` instead of just returning the previous value,
+			# 		# the sampler is more likely to avoid sampling the parameters in the succeeding trials.
+			# 		raise optuna.exceptions.TrialPruned("Duplicate parameter set")
+
 
 		print(f"Logging to {self.args.log_dir}")
 		self.log_dir.mkdir(parents=True, exist_ok=True)
@@ -78,6 +93,8 @@ class Objective():
 
 		# extractor = EstimatorPH if self.args.projection_head else Estimator
 		extractor = EDeNNPH if self.args.projection_head else EDeNN
+		# extractor = None if self.args.projection_head else RLPTCNN
+		# extractor = None if self.args.projection_head else NatureCNN
 		if self.args.projection_head:
 			features_extractor_kwargs=dict(features_dim=256)
 		else:
@@ -203,7 +220,7 @@ def parse_args() -> argparse.Namespace:
 	parser.add_argument("-S", "--save", action="store_true", help="Save first trained model")
 	parser.add_argument("-d", "--log_dir", type=Path, default=Path("/tmp/gym/"), help="Location of log directory")
 	parser.add_argument("--lr", type=float, default=3e-4, help="Learning rate")
-	parser.add_argument("--tsamples", type=int, default=10, help="Time samples for env, propagates through EDeNN")
+	parser.add_argument("--tsamples", type=int, default=6, help="Time samples for env, propagates through EDeNN")
 	parser.add_argument("-f", "--freeze", action="store_true", help="Freeze feature extractor weights")
 	parser.add_argument("--load_mlp", action="store_true", help="Load weights for the actor/critic")
 	parser.add_argument("--load_feat", action="store_true", help="Load weights for the feature extractor")
