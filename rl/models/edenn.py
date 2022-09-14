@@ -12,14 +12,16 @@ class EDeNN(BaseFeaturesExtractor):
 	"""
 	:param observation_space: (gym.Space)
 	"""
+	features_out: int
 	n_flatten: Optional[int] = None
 	layer1_out: Optional[torch.Tensor] = None
 	layer2_out: Optional[torch.Tensor] = None
 	layer3_out: Optional[torch.Tensor] = None
 	layer4_out: Optional[torch.Tensor] = None
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 4):
+	def __init__(self, observation_space: gym.spaces.Box, features_out: int, features_dim: int = 256):
 		super().__init__(observation_space, features_dim) # features_dim should be 128 to match self.layer4?
+		self.features_out = features_out
 		self.observation_space = observation_space
 		self.get_layers(observation_space.shape[0])
 
@@ -69,10 +71,10 @@ class EDeNN(BaseFeaturesExtractor):
 
 		self.layer5 = torch.nn.Sequential(
 			torch.nn.Flatten(),
-			torch.nn.Linear(self.n_flatten, 256), # 15360 -> ...
+			torch.nn.Linear(self.n_flatten, self.features_dim), # 15360 -> ...
 			torch.nn.ReLU(inplace=True),
 			# torch.nn.Sigmoid(),
-			torch.nn.Linear(256, self.features_dim), # ... -> 128
+			torch.nn.Linear(256, self.features_out), # ... -> 128
 			# torch.nn.CELU(inplace=True),
 		)
 
@@ -133,17 +135,16 @@ class EDeNN(BaseFeaturesExtractor):
 # ==================================================================================================
 class EDeNNPH(EDeNN):
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 4):
-		super().__init__(observation_space, features_dim)
+	def __init__(self, observation_space: gym.spaces.Box, features_out: int, features_dim: int = 256):
+		super().__init__(observation_space, features_out, features_dim)
 		self.layer5 = torch.nn.Sequential(
 			torch.nn.Flatten(),
-			torch.nn.Linear(self.n_flatten, 256), # 15360 -> ...
+			torch.nn.Linear(self.n_flatten, self.features_dim), # 15360 -> ...
 			torch.nn.ReLU(inplace=True),
 			# torch.nn.Sigmoid(),
 		)
 		self.final = torch.nn.Sequential(
-			# torch.nn.Linear(256, self.features_dim), # ... -> 128
-			torch.nn.Linear(256, 4), # ... -> 128
+			torch.nn.Linear(256, self.features_out),
 			# torch.nn.CELU(inplace=True),
 		)
 
