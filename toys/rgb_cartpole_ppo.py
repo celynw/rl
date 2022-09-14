@@ -86,11 +86,11 @@ class Objective():
 		info_keywords=("updatedPolicy",)
 		if env_id == "CartPole-events-v1":
 			state_shape = (4, )
-			features_out = 4
+			features_dim = 4
 			info_keywords += ("failReason",)
 		elif env_id == "MountainCar-events-v0":
 			state_shape = (2, )
-			features_out = 2
+			features_dim = 2
 		else:
 			raise RuntimeError
 		env = Monitor(env_, str(self.log_dir), allow_early_resets=True, info_keywords=info_keywords)
@@ -99,10 +99,7 @@ class Objective():
 		extractor = EDeNNPH if self.args.projection_head else EDeNN
 		# extractor = None if self.args.projection_head else RLPTCNN
 		# extractor = None if self.args.projection_head else NatureCNN
-		if self.args.projection_head:
-			features_extractor_kwargs = dict(features_out=features_out, features_dim=256)
-		else:
-			features_extractor_kwargs = dict(features_out=features_out)
+		features_extractor_kwargs = dict(features_dim=features_dim, features_pre=256)
 		policy_kwargs = dict(features_extractor_class=extractor, optimizer_class=torch.optim.Adam, features_extractor_kwargs=features_extractor_kwargs)
 
 		model = PPO_mod(

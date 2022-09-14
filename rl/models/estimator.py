@@ -4,13 +4,16 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 # ==================================================================================================
 class Estimator(BaseFeaturesExtractor):
+	features_pre: int
+	n_flatten: int = 15360
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 4):
+	def __init__(self, observation_space: gym.spaces.Box, features_dim: int, features_pre: int = 256):
 		super().__init__(observation_space, features_dim)
 		# n_input_channels = observation_space.shape[0]
 		# self.layers = self.get_layers(n_input_channels)
 		# self.final = None
 		# self.get_layers(n_input_channels)
+		self.features_pre = features_pre
 
 		self.layer1 = torch.nn.Sequential(
 			torch.nn.Conv2d(2, 16, 3, stride=2, padding=1),
@@ -32,10 +35,10 @@ class Estimator(BaseFeaturesExtractor):
 		)
 		self.layer4 = torch.nn.Sequential(
 			torch.nn.Flatten(),
-			torch.nn.Linear(15360, 256),
+			torch.nn.Linear(self.n_flatten, self.features_pre),
 			# # torch.nn.Dropout(0.5),
 			torch.nn.ReLU(),
-			torch.nn.Linear(256, 4),
+			torch.nn.Linear(self.features_pre, self.features_dim),
 			# # torch.nn.Dropout(0.5),
 			# torch.nn.ReLU # TODO
 		)
@@ -69,16 +72,16 @@ class Estimator(BaseFeaturesExtractor):
 # ==================================================================================================
 class EstimatorPH(Estimator):
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 4):
-		super().__init__(observation_space, features_dim)
+	def __init__(self, observation_space: gym.spaces.Box, features_dim: int, features_pre: int = 256):
+		super().__init__(observation_space, features_dim, features_pre)
 		self.layer4 = torch.nn.Sequential(
 			torch.nn.Flatten(),
-			torch.nn.Linear(15360, 256),
+			torch.nn.Linear(self.n_flatten, self.features_pre),
 			# # torch.nn.Dropout(0.5),
 			torch.nn.ReLU(),
 		)
 		self.final = torch.nn.Sequential(
-			torch.nn.Linear(256, 4),
+			torch.nn.Linear(self.features_pre, self.features_dim),
 			# # torch.nn.Dropout(0.5),
 			# torch.nn.ReLU # TODO
 		)
