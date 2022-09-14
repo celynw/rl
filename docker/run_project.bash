@@ -6,7 +6,7 @@ cmd="/vol/research/reflexive3/rl/venv/bin/python /vol/research/reflexive3/rl/toy
 WANDB_API_KEY="local-10f17eeb44c533e126f6639891d16595a1c7f337"
 WANDB_BASE_URL="http://umcvplws196:8080"
 
-id=$(docker run -tid --runtime=nvidia -P -v /vol/research/reflexive3/rl/:/vol/research/reflexive3/rl/ -v /vol/research/reflexive3/rl/catkin_ws/:/vol/research/reflexive3/rl/catkin_ws/ -v /vol/research/reflexive3/rl/runs/:/vol/research/reflexive3/rl/runs/ -e WANDB_API_KEY=$WANDB_API_KEY -e WANDB_BASE_URL=$WANDB_BASE_URL esim_rl)
+id=$(docker run -tid --runtime=nvidia -P -v /vol/research/reflexive3/rl/:/vol/research/reflexive3/rl/ -v /vol/research/reflexive3/rl/catkin_ws/:/vol/research/reflexive3/rl/catkin_ws/ -v /vol/research/reflexive3/rl/runs/:/vol/research/reflexive3/rl/runs/ -e WANDB_API_KEY=$WANDB_API_KEY -e WANDB_BASE_URL=$WANDB_BASE_URL celynw/esim_rl:v3)
 echo "Docker image ID: $id"
 
 docker exec -id $id bash -ci "roscore"
