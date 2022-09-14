@@ -1,4 +1,4 @@
-FROM celynw/esim:v2 as esim
+FROM celynw/esim:v3 as esim
 ARG USERNAME=docker
 
 USER $root
