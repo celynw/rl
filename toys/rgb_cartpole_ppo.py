@@ -83,15 +83,17 @@ class Objective():
 			env_ = gym.make(env_id, tsamples=self.args.tsamples) # Events env
 		else:
 			env_ = gym.make(env_id) # RGB env
-		env = Monitor(env_, str(self.log_dir), allow_early_resets=True, info_keywords=("failReason", "updatedPolicy"))
+		info_keywords=("updatedPolicy",)
 		if env_id == "CartPole-events-v1":
 			state_shape = (4, )
 			features_out = 4
+			info_keywords += ("failReason",)
 		elif env_id == "MountainCar-events-v0":
 			state_shape = (2, )
 			features_out = 2
 		else:
 			raise RuntimeError
+		env = Monitor(env_, str(self.log_dir), allow_early_resets=True, info_keywords=info_keywords)
 
 		# extractor = EstimatorPH if self.args.projection_head else Estimator
 		extractor = EDeNNPH if self.args.projection_head else EDeNN
