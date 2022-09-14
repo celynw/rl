@@ -18,3 +18,5 @@ train_estimator_RL_estimator/
 *.zip
 *.png
 *.gv
+docker_stderror
+esim_node*
