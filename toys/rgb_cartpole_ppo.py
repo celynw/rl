@@ -83,8 +83,8 @@ class Objective():
 			env_ = gym.make(env_id, tsamples=self.args.tsamples) # Events env
 		else:
 			env_ = gym.make(env_id) # RGB env
-		info_keywords=("updatedPolicy",)
-		if env_id == "CartPole-events-v1":
+		info_keywords = ("updatedPolicy",)
+		if env_id in ["CartPole-events-v1", "CartPole-rgb"]:
 			state_shape = (4, )
 			features_dim = 4
 			info_keywords += ("failReason",)
