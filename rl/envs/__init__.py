@@ -5,8 +5,33 @@ from .cartpole_rgb import CartPoleEnvRGB
 from .mountaincar_events import MountainCarEnvEvents
 from gym.envs.registration import register
 
-register(id="CartPole-events-v1", entry_point="rl.envs:CartPoleEnvEvents")
-register(id="CartPole-events-sim-v1", entry_point="rl.envs:CartPoleEnvEventsSim")
-register(id="CartPole-events-debug", entry_point="rl.envs:CartPoleEnvEventsDebug", max_episode_steps=10)
-register(id="CartPole-rgb", entry_point="rl.envs:CartPoleEnvRGB")
-register(id="MountainCar-events-v0", entry_point="rl.envs:MountainCarEnvEvents")
+register(
+	id="CartPole-events-v1",
+	entry_point="rl.envs:CartPoleEnvEvents",
+	max_episode_steps=500,
+	reward_threshold=475.0,
+)
+register(
+	id="CartPole-events-sim-v1",
+	entry_point="rl.envs:CartPoleEnvEventsSim",
+	max_episode_steps=500,
+	reward_threshold=475.0,
+)
+register(
+	id="CartPole-events-debug",
+	entry_point="rl.envs:CartPoleEnvEventsDebug",
+	max_episode_steps=10,
+	reward_threshold=475.0,
+)
+register(
+	id="CartPole-rgb",
+	entry_point="rl.envs:CartPoleEnvRGB",
+	max_episode_steps=500,
+	reward_threshold=475.0,
+)
+register(
+	id="MountainCar-events-v0",
+	entry_point="rl.envs:MountainCarEnvEvents",
+	max_episode_steps=200,
+	reward_threshold=-110.0,
+)
