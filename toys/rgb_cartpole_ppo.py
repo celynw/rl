@@ -256,16 +256,16 @@ if __name__ == "__main__":
 		)
 		study.optimize(Objective(args), n_trials=100, n_jobs=1, gc_after_trial=False)
 		# print(f"Best params so far: {study.best_params}")
-		print(f"Number of finished trials: {len(study.trials)}")
-		print("Best trial:")
-		trial = study.best_trial
-		print(f"  Value: {trial.value}")
-		print("  Params: ")
-		for key, value in trial.params.items():
-			print(f"    {key}: {value}")
-		print("  User attrs:")
-		for key, value in trial.user_attrs.items():
-			print(f"    {key}: {value}")
+		# print(f"Number of finished trials: {len(study.trials)}")
+		# print("Best trial:")
+		# trial = study.best_trial
+		# print(f"  Value: {trial.value}")
+		# print("  Params: ")
+		# for key, value in trial.params.items():
+		# 	print(f"    {key}: {value}")
+		# print("  User attrs:")
+		# for key, value in trial.user_attrs.items():
+		# 	print(f"    {key}: {value}")
 	else:
 		args.log_dir /= f"{epoch} {args.name}"
 		Objective(args)()
