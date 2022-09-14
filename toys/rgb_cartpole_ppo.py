@@ -3,7 +3,7 @@ import colored_traceback.auto
 import argparse
 from pathlib import Path
 import time
-from typing import Union, Optional
+from typing import Optional
 
 import torch
 import gym
