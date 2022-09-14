@@ -252,6 +252,7 @@ if __name__ == "__main__":
 			storage=args.optuna,
 			load_if_exists=True,
 			pruner=pruner,
+			sampler=optuna.samplers.GridSampler({"tsamples": list(range(1, 26, 1))})
 		)
 		study.optimize(Objective(args), n_trials=100, n_jobs=1, gc_after_trial=False)
 		# print(f"Best params so far: {study.best_params}")
