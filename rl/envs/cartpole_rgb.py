@@ -34,7 +34,7 @@ class CartPoleEnvRGB(CartPoleEnv):
 		# self.observation_space = spaces.Box(low=0, high=1, dtype=np.double, shape=(3, self.screen_height_, self.screen_width_))
 		self.observation_space = spaces.Box(low=0, high=1, dtype=np.double, shape=(1, self.screen_height_, self.screen_width_))
 		# # self.observation_space = spaces.Box(low=0, high=255, dtype=np.double, shape=(3, self.screen_height_, self.screen_width_))
-		# self.observation_space = spaces.Box(low=0, high=255, dtype=np.double, shape=(2, self.screen_height_, self.screen_width_))
+		# self.observation_space = spaces.Box(low=0, high=255, dtype=np.double, shape=(1, self.screen_height_, self.screen_width_))
 
 	# ----------------------------------------------------------------------------------------------
 	def set_model(self, model):

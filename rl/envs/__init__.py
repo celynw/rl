@@ -3,6 +3,7 @@ from .cartpole_events_sim import CartPoleEnvEventsSim
 from .cartpole_events_debug import CartPoleEnvEventsDebug
 from .cartpole_rgb import CartPoleEnvRGB
 from .mountaincar_events import MountainCarEnvEvents
+from .mountaincar_rgb import MountainCarEnvRGB
 from gym.envs.registration import register
 
 register(
@@ -32,6 +33,12 @@ register(
 register(
 	id="MountainCar-events-v0",
 	entry_point="rl.envs:MountainCarEnvEvents",
+	max_episode_steps=200,
+	reward_threshold=-110.0,
+)
+register(
+	id="MountainCar-rgb-v0",
+	entry_point="rl.envs:MountainCarEnvRGB",
 	max_episode_steps=200,
 	reward_threshold=-110.0,
 )

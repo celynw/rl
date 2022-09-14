@@ -29,6 +29,7 @@ env_id = "CartPole-events-v1"
 # env_id = "CartPole-events-debug"
 # env_id = "CartPole-v1"
 # env_id = "CartPole-rgb"
+# env_id = "MountainCar-rgb-v0"
 
 # ==================================================================================================
 class Objective():
@@ -81,6 +82,7 @@ class Objective():
 
 		if env_id in ["CartPole-events-v1", "MountainCar-events-v0"]:
 			env_ = gym.make(env_id, tsamples=self.args.tsamples) # Events env
+			# env_ = gym.make(env_id, tsamples=self.args.tsamples, event_image=True) # Events env
 		else:
 			env_ = gym.make(env_id) # RGB env
 		info_keywords = ("updatedPolicy",)
@@ -88,7 +90,7 @@ class Objective():
 			state_shape = (4, )
 			features_dim = 4
 			info_keywords += ("failReason",)
-		elif env_id == "MountainCar-events-v0":
+		elif env_id in ["MountainCar-events-v0", "MountainCar-rgb-v0"]:
 			state_shape = (2, )
 			features_dim = 2
 		else:
