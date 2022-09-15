@@ -20,6 +20,7 @@ requirements = (HasDocker)\
 	&& (machine != "dwalin.eps.surrey.ac.uk")\
 	&& (machine != "bofur.eps.surrey.ac.uk")\
 	&& (machine != "cogvis2.eps.surrey.ac.uk")\
+	&& (machine != "cvsspgpu03.eps.surrey.ac.uk")\
 	&& (CUDAGlobalMemoryMb > 4000)
 	# && (CUDACapability > 2.0)\
 	# && (machine != "aisurrey06.surrey.ac.uk")\
@@ -33,6 +34,7 @@ requirements = (HasDocker)\
 # - nimrodel: Unable to find image 'celynw/esim_rl:v3' locally
 # - dwalin: Unable to find image 'celynw/esim_rl:v3' locally
 # - bofur: Unable to find image 'celynw/esim_rl:v3' locally
+# - cvsspgpu03: Unable to find image 'celynw/esim_rl:v3' locally
 # - cogvis2: Keeps getting evicted
 # Good:
 # - balin
