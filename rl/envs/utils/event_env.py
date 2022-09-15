@@ -55,8 +55,9 @@ class EventEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 		return
 
 	# ----------------------------------------------------------------------------------------------
-	def get_events(self, wait: bool = True) -> Optional[torch.Tensor]:
-		rgb = self.render("rgb_array")
+	def get_events(self, rgb=None, wait: bool = True) -> Optional[torch.Tensor]:
+		if rgb is None:
+			rgb = self.render("rgb_array")
 		rgb = self.resize(rgb)
 
 		if self.init_ros:
