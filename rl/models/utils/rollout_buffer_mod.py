@@ -43,6 +43,9 @@ class RolloutBuffer_mod(RolloutBuffer):
 		return RolloutBufferSamples_mod(*tuple(map(self.to_torch, data)))
 
 	# ----------------------------------------------------------------------------------------------
-	def add(self, obs: np.ndarray, action: np.ndarray, reward: np.ndarray, episode_start: np.ndarray, value: torch.Tensor, log_prob: torch.Tensor, states: torch.Tensor) -> None:
-		self.states[self.pos] = states.clone().cpu().numpy()
+	def add(self, obs: np.ndarray, action: np.ndarray, reward: np.ndarray, episode_start: np.ndarray, value: torch.Tensor, log_prob: torch.Tensor, state: Optional[torch.Tensor]) -> None:
+		if state is not None:
+			self.states[self.pos] = state.clone().cpu().numpy()
+		else:
+			self.states[self.pos] = state
 		super().add(obs, action, reward, episode_start, value, log_prob)

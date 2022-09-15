@@ -81,31 +81,34 @@ class Objective():
 				save_code=True, # optional
 			)
 
-		if env_id in ["CartPole-events-v1", "MountainCar-events-v0", "Pong-events-v0"]:
-			env_ = gym.make(env_id, tsamples=self.args.tsamples) # Events env
-			# env_ = gym.make(env_id, tsamples=self.args.tsamples, event_image=True) # Events env
-		else:
-			env_ = gym.make(env_id) # RGB env
-		info_keywords = ("updatedPolicy",)
-		if env_id in ["CartPole-events-v1", "CartPole-rgb"]:
-			state_shape = (4, )
-			features_dim = 4
-			info_keywords += ("failReason",)
-		elif env_id in ["MountainCar-events-v0", "MountainCar-rgb-v0"]:
-			state_shape = (2, )
-			features_dim = 2
-		elif env_id in ["Pong-events-v0", "Pong-rgb-v0"]:
-			state_shape = 0
-			features_dim = 2
-		else:
-			raise RuntimeError
-		env = Monitor(env_, str(self.log_dir), allow_early_resets=True, info_keywords=info_keywords)
-
 		# extractor = EstimatorPH if self.args.projection_head else Estimator
 		extractor = EDeNNPH if self.args.projection_head else EDeNN
 		# extractor = None if self.args.projection_head else RLPTCNN
 		# extractor = None if self.args.projection_head else NatureCNN
-		features_extractor_kwargs = dict(features_dim=features_dim, features_pre=256)
+
+		if env_id in ["CartPole-events-v1", "MountainCar-events-v0", "Pong-events-v0"]:
+			if extractor is NatureCNN:
+				env_ = gym.make(env_id, tsamples=self.args.tsamples, event_image=True) # Events env
+			else:
+				env_ = gym.make(env_id, tsamples=self.args.tsamples) # Events env
+		else:
+			env_ = gym.make(env_id) # RGB env
+		info_keywords = ("updatedPolicy",)
+		no_pre = False
+		if env_id in ["CartPole-events-v1", "CartPole-rgb"]:
+			features_dim = 4
+			info_keywords += ("failReason",)
+		elif env_id in ["MountainCar-events-v0", "MountainCar-rgb-v0"]:
+			features_dim = 2
+		elif env_id in ["Pong-events-v0", "Pong-rgb-v0"]:
+			assert not self.args.projection_head
+			features_dim = 512
+			no_pre = True
+		else:
+			raise RuntimeError
+		env = Monitor(env_, str(self.log_dir), allow_early_resets=True, info_keywords=info_keywords)
+
+		features_extractor_kwargs = dict(features_dim=features_dim, features_pre=256, no_pre=no_pre)
 		policy_kwargs = dict(features_extractor_class=extractor, optimizer_class=torch.optim.Adam, features_extractor_kwargs=features_extractor_kwargs)
 
 		model = PPO_mod(
@@ -122,7 +125,7 @@ class Objective():
 			# ent_coef=0.0,
 			# vf_coef=0.0,
 			# bs_coef=0.0,
-			state_shape=state_shape,
+			state_shape=(features_dim, ),
 		) # total_timesteps will be at least n_steps (2048)
 
 		if self.args.load_feat:

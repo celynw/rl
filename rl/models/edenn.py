@@ -19,9 +19,10 @@ class EDeNN(BaseFeaturesExtractor):
 	layer3_out: Optional[torch.Tensor] = None
 	layer4_out: Optional[torch.Tensor] = None
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, observation_space: gym.spaces.Box, features_dim: int, features_pre: int = 256):
+	def __init__(self, observation_space: gym.spaces.Box, features_dim: int, features_pre: int = 256, no_pre: bool = False):
 		super().__init__(observation_space, features_dim)
 		self.features_pre = features_pre
+		self.no_pre = no_pre
 		self.observation_space = observation_space
 		self.get_layers(observation_space.shape[0])
 
@@ -69,14 +70,21 @@ class EDeNN(BaseFeaturesExtractor):
 			# self.n_flatten = result.shape[1]
 			self.n_flatten = math.prod(result.shape)
 
-		self.layer5 = torch.nn.Sequential(
-			torch.nn.Flatten(),
-			torch.nn.Linear(self.n_flatten, self.features_pre), # 15360 -> ...
-			torch.nn.ReLU(inplace=True),
-			# torch.nn.Sigmoid(),
-			torch.nn.Linear(self.features_pre, self.features_dim),
-			# torch.nn.CELU(inplace=True),
-		)
+		if self.no_pre:
+			self.layer5 = torch.nn.Sequential(
+				torch.nn.Flatten(),
+				torch.nn.Linear(self.n_flatten, self.features_dim), # 15360 -> ...
+				# torch.nn.CELU(inplace=True),
+			)
+		else:
+			self.layer5 = torch.nn.Sequential(
+				torch.nn.Flatten(),
+				torch.nn.Linear(self.n_flatten, self.features_pre), # 15360 -> ...
+				torch.nn.ReLU(inplace=True),
+				# torch.nn.Sigmoid(),
+				torch.nn.Linear(self.features_pre, self.features_dim),
+				# torch.nn.CELU(inplace=True),
+			)
 
 	# ----------------------------------------------------------------------------------------------
 	def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None, calc_n_flatten: bool = False) -> torch.Tensor:

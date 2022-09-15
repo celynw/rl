@@ -218,7 +218,9 @@ class PPO_mod(PPO):
 			new_obs, rewards, dones, infos = env.step(clipped_actions)
 
 			assert(len(infos) == 1)
-			state = torch.tensor(infos[0]["state"], device=self.device)[None, ...]
+			state = infos[0]["state"]
+			if state is not None:
+				state = torch.tensor(infos[0]["state"], device=self.device)[None, ...]
 
 			self.num_timesteps += env.num_envs
 
