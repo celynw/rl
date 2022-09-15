@@ -42,11 +42,9 @@ class AtariEnvEvents(EventEnv, AtariEnv):
 		rgb = rgb[35:-15, :, :]
 		# SIMON - Naively convert to greyscale (shit way to do it but don't want extra imports)
 		rgb[:, :, 0] = rgb[:, :, 0] / 3 + rgb[:, :, 1] / 3 + rgb[:, :, 2] / 3
-		# # SIMON - Make it 3 channel again
-		# rgb[:, :, 1] = rgb[:, :, 0]
-		# rgb[:, :, 2] = rgb[:, :, 0]
-		# CELYN - Reduce to 1 channel
-		rgb = rgb[:, :, 0][..., None]
+		# SIMON - Make it 3 channel again
+		rgb[:, :, 1] = rgb[:, :, 0]
+		rgb[:, :, 2] = rgb[:, :, 0]
 		# # SIMON - rescale contrast
 		# rgb = rgb - np.min(rgb)
 		# rgb = np.clip(rgb * (255 / np.max(rgb)), 0, 255).astype("uint8")
