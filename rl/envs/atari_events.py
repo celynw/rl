@@ -1,14 +1,12 @@
 """
-Based on MountainCar-v0 from gym=0.25.1
+Based on AtariEnv from gym=0.25.1
 """
-import math
 from typing import Optional
 
 import numpy as np
 import torch
 from gym import spaces
 from gym.envs.atari.environment import AtariEnv
-from gym.error import DependencyNotInstalled
 
 from rl.envs.utils import EventEnv
 
@@ -56,13 +54,13 @@ class AtariEnvEvents(EventEnv, AtariEnv):
 
 	# ----------------------------------------------------------------------------------------------
 	def step(self, action):
-		_, reward, terminated, truncated, _ = super().step(action)
+		observation, reward, terminated, _ = super().step(action)
 		info = {
 			"updatedPolicy": int(self.updatedPolicy),
-			# "state": self.state,
+			"state": None, # Compatibility. For bootstrap loss
 		}
 
-		event_tensor = self.get_events()
+		event_tensor = self.get_events(observation)
 		if self.event_image:
 			event_tensor = event_tensor.sum(1)
 			# event_tensor = event_tensor.bool().double() * 255
@@ -71,7 +69,7 @@ class AtariEnvEvents(EventEnv, AtariEnv):
 			# We're not doing setting this to False immediately because the monitor only writes a line when an episode is done
 			self.updatedPolicy = False
 
-		return event_tensor.numpy(), reward, terminated, truncated, info
+		return event_tensor.numpy(), reward, terminated, info
 
 	# ----------------------------------------------------------------------------------------------
 	def reset(
@@ -83,8 +81,7 @@ class AtariEnvEvents(EventEnv, AtariEnv):
 	):
 		# Not using the output of super().reset()
 		super().reset(seed=seed, return_info=return_info, options=options)
-		# info = {"state": self.state}
-		info = {}
+		info = {"state": None} # Compatibility. For bootstrap loss
 
 		# Initialise ESIM, need two frames to get a difference to generate events
 		self.get_events(wait=False)
