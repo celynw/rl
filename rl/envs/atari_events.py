@@ -14,11 +14,11 @@ from rl.envs.utils import EventEnv
 class AtariEnvEvents(EventEnv, AtariEnv):
 	state_shape = (2, ) # TODO unused for now
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, init_ros: bool = True, tsamples: int = 10, event_image: bool = False):
+	def __init__(self, init_ros: bool = True, tsamples: int = 10, event_image: bool = False, frameskip: int = 4):
 		self.screen_width_ = 160
 		self.screen_height_ = 210 - 35 - 15
 		EventEnv.__init__(self, self.screen_width_, self.screen_height_, init_ros, tsamples, event_image)
-		AtariEnv.__init__(self, game="pong", render_mode="rgb_array")
+		AtariEnv.__init__(self, game="pong", render_mode="rgb_array", frameskip=frameskip)
 		self.screen_width = 160
 		self.screen_height = 210 - 35 - 15
 
