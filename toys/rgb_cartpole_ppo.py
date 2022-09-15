@@ -30,6 +30,7 @@ env_id = "CartPole-events-v1"
 # env_id = "CartPole-v1"
 # env_id = "CartPole-rgb"
 # env_id = "MountainCar-rgb-v0"
+# env_id = "Pong-events-v0"
 
 # ==================================================================================================
 class Objective():
@@ -80,7 +81,7 @@ class Objective():
 				save_code=True, # optional
 			)
 
-		if env_id in ["CartPole-events-v1", "MountainCar-events-v0"]:
+		if env_id in ["CartPole-events-v1", "MountainCar-events-v0", "Pong-events-v0"]:
 			env_ = gym.make(env_id, tsamples=self.args.tsamples) # Events env
 			# env_ = gym.make(env_id, tsamples=self.args.tsamples, event_image=True) # Events env
 		else:
@@ -92,6 +93,9 @@ class Objective():
 			info_keywords += ("failReason",)
 		elif env_id in ["MountainCar-events-v0", "MountainCar-rgb-v0"]:
 			state_shape = (2, )
+			features_dim = 2
+		elif env_id in ["Pong-events-v0", "Pong-rgb-v0"]:
+			state_shape = 0
 			features_dim = 2
 		else:
 			raise RuntimeError

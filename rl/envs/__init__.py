@@ -4,6 +4,7 @@ from .cartpole_events_debug import CartPoleEnvEventsDebug
 from .cartpole_rgb import CartPoleEnvRGB
 from .mountaincar_events import MountainCarEnvEvents
 from .mountaincar_rgb import MountainCarEnvRGB
+from .atari_events import AtariEnvEvents
 from gym.envs.registration import register
 
 register(
@@ -41,4 +42,8 @@ register(
 	entry_point="rl.envs:MountainCarEnvRGB",
 	max_episode_steps=200,
 	reward_threshold=-110.0,
+)
+register(
+	id="Pong-events-v0",
+	entry_point="rl.envs:AtariEnvEvents",
 )
