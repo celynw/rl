@@ -7,6 +7,8 @@ from .mountaincar_rgb import MountainCarEnvRGB
 from .atari_events import AtariEnvEvents
 from gym.envs.registration import register
 
+# NOTE: reward_threshold isn't actually used, it's just available metadata
+
 register(
 	id="CartPole-events-v1",
 	entry_point="rl.envs:CartPoleEnvEvents",
