@@ -7,6 +7,7 @@ import numpy as np
 import torch
 from gym import spaces
 from gym.envs.atari.environment import AtariEnv
+from atariari.benchmark.wrapper import ram2label
 
 from rl.envs.utils import EventEnv
 
@@ -14,13 +15,14 @@ from rl.envs.utils import EventEnv
 class AtariEnvEvents(EventEnv, AtariEnv):
 	state_shape = (2, ) # TODO unused for now
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, init_ros: bool = True, tsamples: int = 10, event_image: bool = False, frameskip: int = 4):
+	def __init__(self, init_ros: bool = True, tsamples: int = 10, event_image: bool = False, frameskip: int = 4, map_ram: bool = False):
 		self.screen_width_ = 160
 		self.screen_height_ = 210 - 35 - 15
 		EventEnv.__init__(self, self.screen_width_, self.screen_height_, init_ros, tsamples, event_image)
 		AtariEnv.__init__(self, game="pong", render_mode="rgb_array", frameskip=frameskip)
 		self.screen_width = 160
 		self.screen_height = 210 - 35 - 15
+		self.map_ram = map_ram
 
 		# NOTE: I should normalise my observation space (well, both), but not sure how to for event tensor
 		if self.event_image:
@@ -55,9 +57,18 @@ class AtariEnvEvents(EventEnv, AtariEnv):
 	# ----------------------------------------------------------------------------------------------
 	def step(self, action):
 		observation, reward, terminated, _ = super().step(action)
+		ram = self.ale.getRAM()
+		# self.ale.getScreenRGB()
+		# self.ale.getScreenGrayscale()
+		if self.map_ram:
+			state = ram2label(self.spec.id, ram)
+			state = torch.tensor([state[l] for l in ["player_y", "player_x", "enemy_y", "enemy_x", "ball_x", "ball_y"]], dtype=float)
+			state /= 128.0
+		else:
+			state = torch.tensor(ram)
 		info = {
 			"updatedPolicy": int(self.updatedPolicy),
-			"state": None, # Compatibility. For bootstrap loss
+			"state": state,
 		}
 
 		event_tensor = self.get_events(observation)
@@ -81,7 +92,14 @@ class AtariEnvEvents(EventEnv, AtariEnv):
 	):
 		# Not using the output of super().reset()
 		super().reset(seed=seed, return_info=return_info, options=options)
-		info = {"state": None} # Compatibility. For bootstrap loss
+		ram = self.ale.getRAM()
+		if self.map_ram:
+			state = ram2label(self.spec.id, ram)
+			state = torch.tensor([state[l] for l in ["player_y", "player_x", "enemy_y", "enemy_x", "ball_x", "ball_y"]], dtype=float)
+			state /= 128.0
+		else:
+			state = torch.tensor(ram)
+		info = {"state": state}
 
 		# Initialise ESIM, need two frames to get a difference to generate events
 		self.get_events(wait=False)
