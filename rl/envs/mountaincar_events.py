@@ -16,7 +16,7 @@ from rl.envs.utils import EventEnv
 class MountainCarEnvEvents(EventEnv, MountainCarEnv):
 	state_shape = (2, ) # TODO unused for now
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, init_ros: bool = True, tsamples: int = 10, event_image: bool = False):
+	def __init__(self, init_ros: bool = True, tsamples: int = 10, event_image: bool = False, return_rgb: bool = False):
 		self.screen_width_ = 150
 		self.screen_height_ = 100
 		EventEnv.__init__(self, self.screen_width_, self.screen_height_, init_ros, tsamples, event_image)
@@ -31,6 +31,8 @@ class MountainCarEnvEvents(EventEnv, MountainCarEnv):
 		else:
 			self.observation_space = spaces.Box(low=0, high=1, dtype=np.double, shape=(2, self.tsamples, self.screen_height_, self.screen_width_))
 			# self.observation_space = spaces.Box(low=0, high=255, dtype=np.double, shape=(2, self.tsamples, self.screen_height_, self.screen_width_))
+
+		self.return_rgb = return_rgb
 
 	# ----------------------------------------------------------------------------------------------
 	def resize(self, rgb):
@@ -154,6 +156,9 @@ class MountainCarEnvEvents(EventEnv, MountainCarEnv):
 		if terminated:
 			# We're not doing setting this to False immediately because the monitor only writes a line when an episode is done
 			self.updatedPolicy = False
+
+		if self.return_rgb:
+			info["rgb"] = self.render("rgb_array")
 
 		return event_tensor.numpy(), reward, terminated, truncated, info
 
