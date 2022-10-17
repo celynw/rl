@@ -236,7 +236,7 @@ def parse_args() -> argparse.Namespace:
 	parser.add_argument("--load_feat", action="store_true", help="Load weights for the feature extractor")
 	parser.add_argument("--cpu", action="store_true", help="Force running on CPU")
 	parser.add_argument("--n_steps", type=int, default=2048, help="Number of steps before each weights update")
-	parser.add_argument("--projection_head", action="store_true", help="Use proejction head")
+	parser.add_argument("--projection_head", action="store_true", help="Use projection head")
 	parser.add_argument("--optuna", type=str, help="Optimise with optuna using this storage URL. Examples: 'sqlite:///optuna.db' or 'postgresql://postgres:password@host:5432/postgres'")
 
 	return parser.parse_args()
