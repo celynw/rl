@@ -2,5 +2,5 @@
 	path = catkin_ws/src/rpg_esim
 	url = git@github.com:celynw/rpg_esim.git
 [submodule "rl/envs/spacerobot_v1"]
-	path = rl/envs/spacerobot_v1
+	path = rl/environments/spacerobot_v1
 	url = git@github.com:celynw/SpaceRobot.git
