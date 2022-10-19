@@ -75,6 +75,8 @@ USER $USERNAME
 RUN echo ". /opt/ros/noetic/setup.bash" >> /home/$USERNAME/.bashrc
 RUN echo ". /opt/conda/etc/profile.d/conda.sh" >> /home/$USERNAME/.bashrc
 RUN echo ". ~/catkin_ws/devel/setup.bash" >> /home/$USERNAME/.bashrc
+RUN echo "export TERM=xterm" >> /home/$USERNAME/.bashrc
+RUN echo "export TERMINFO=/etc/terminfo" >> /home/$USERNAME/.bashrc
 SHELL ["/bin/bash", "-c"]
 
 STOPSIGNAL SIGINT
