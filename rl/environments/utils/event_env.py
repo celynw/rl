@@ -78,7 +78,7 @@ class EventEnv(gym.Env):
 			tuple[np.ndarray, Optional[dict]]: First observation and optionally info about the step.
 		"""
 		super().reset(seed=seed, options=options) # NOTE: Not using the output
-		info = super().get_info()
+		info = self.get_info()
 
 		self.observe(wait=False) # Initialise ESIM; Need two frames to get a difference to generate events
 		self.observe()
