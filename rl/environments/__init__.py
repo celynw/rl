@@ -1,6 +1,8 @@
 from .cartpole import CartPoleEvents
 from .mountaincar import MountainCarEvents
 from .pong import PongEvents
+from .freeway import FreewayEvents
+from .skiing import SkiingEvents
 
 from gym.envs.registration import register, EnvSpec
 # ARBITRARY arguments are passed to EnvSpec
@@ -22,6 +24,26 @@ register(
 register(
 	id=f"{PongEvents.__qualname__}-{version}",
 	entry_point=PongEvents,
+	kwargs=dict(
+		frameskip=(2, 5), # XXXXXX-v4
+		repeat_action_probability=0.0, # XXXXXX-v4
+		full_action_space=False, # XXXXXX-v4
+		max_num_frames_per_episode=108_000, # XXXXXX-v4
+	),
+)
+register(
+	id=f"{FreewayEvents.__qualname__}-{version}",
+	entry_point=FreewayEvents,
+	kwargs=dict(
+		frameskip=(2, 5), # XXXXXX-v4
+		repeat_action_probability=0.0, # XXXXXX-v4
+		full_action_space=False, # XXXXXX-v4
+		max_num_frames_per_episode=108_000, # XXXXXX-v4
+	),
+)
+register(
+	id=f"{SkiingEvents.__qualname__}-{version}",
+	entry_point=SkiingEvents,
 	kwargs=dict(
 		frameskip=(2, 5), # XXXXXX-v4
 		repeat_action_probability=0.0, # XXXXXX-v4
