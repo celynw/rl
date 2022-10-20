@@ -57,13 +57,13 @@ class Objective():
 
 		# Set up feature extractor
 		features_extractor_kwargs = dict(
-			features_dim=env.state_space.shape[0] if hasattr(env, "state_space") else env.observation_space.shape[0],
+			features_dim=env.state_space.shape[-1] if hasattr(env, "state_space") else env.observation_space.shape[0],
 		)
 		if features_extractor_class is rl.models.EDeNN and self.args.projection_head:
 			features_extractor_kwargs = dict(
 				features_dim=256,
 				projection_head=self.args.projection_head,
-				projection_dim=env.state_space.shape[0] if hasattr(env, "state_space") else env.observation_space.shape[0],
+				projection_dim=env.state_space.shape[-1] if hasattr(env, "state_space") else env.observation_space.shape[0],
 			)
 		policy_kwargs = dict(
 			features_extractor_class=features_extractor_class,
