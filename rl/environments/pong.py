@@ -1,5 +1,7 @@
 import argparse
 
+import numpy as np
+
 from rl.environments.utils import AtariEnv
 
 # ==================================================================================================
@@ -8,6 +10,7 @@ class PongEvents(AtariEnv):
 	wanted_states: list[str] = ["player_y", "player_x", "enemy_y", "enemy_x", "ball_x", "ball_y"]
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, *args, **kwargs):
+		self.events_height -= (35 + 15) # For `self.resize()`
 		super().__init__(*args, game="pong", **kwargs)
 
 	# ----------------------------------------------------------------------------------------------
@@ -32,3 +35,30 @@ class PongEvents(AtariEnv):
 		parser.set_defaults(batch_size=256)
 
 		return parser
+
+	# ----------------------------------------------------------------------------------------------
+	def resize(self, rgb: np.ndarray) -> np.ndarray:
+		"""
+		Crop the top and bottom, then reduce the resolution.
+
+		Args:
+			rgb (np.ndarray): OpenCV render of the observation.
+
+		Returns:
+			np.ndarray: Resized image.
+		"""
+		# SIMON - Crop
+		rgb = rgb[35:-15, :, :]
+		# SIMON - Naively convert to greyscale (shit way to do it but don't want extra imports)
+		rgb[:, :, 0] = rgb[:, :, 0] / 3 + rgb[:, :, 1] / 3 + rgb[:, :, 2] / 3
+		# SIMON - Make it 3 channel again
+		rgb[:, :, 1] = rgb[:, :, 0]
+		rgb[:, :, 2] = rgb[:, :, 0]
+		# # SIMON - rescale contrast
+		# rgb = rgb - np.min(rgb)
+		# rgb = np.clip(rgb * (255 / np.max(rgb)), 0, 255).astype("uint8")
+		# SIMON - rescale contrast
+		rgb = rgb - 57
+		rgb = np.clip(rgb * (255 / 89), 0, 255).astype("uint8")
+
+		return rgb

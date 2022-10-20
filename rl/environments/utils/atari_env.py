@@ -16,6 +16,8 @@ from rl.environments.utils import EventEnv
 class AtariEnv(EventEnv, SB3_AtariEnv):
 	state_space: spaces.Space
 	wanted_states: list[str] = [] # Placeholder, to be overridden in child classes
+	events_width: int = 160 # self.ale.getScreenDims()[1]
+	events_height: int = 210 # self.ale.getScreenDims()[0]
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, game: str, args: argparse.Namespace, event_image: bool = False,
 		frameskip: Union[int, tuple[int, int]] = (2, 5), repeat_action_probability: float = 0.0,
@@ -36,8 +38,6 @@ class AtariEnv(EventEnv, SB3_AtariEnv):
 		"""
 		self.game = game
 		self.return_rgb = return_rgb
-		self.events_width = 160
-		self.events_height = 210 - 35 - 15
 		SB3_AtariEnv.__init__(self, game="pong", render_mode="rgb_array",
 			frameskip=frameskip,
 			repeat_action_probability=repeat_action_probability,
@@ -136,31 +136,3 @@ class AtariEnv(EventEnv, SB3_AtariEnv):
 			self.updatedPolicy = False
 
 		return events.numpy(), reward, terminated, truncated, info
-
-	# ----------------------------------------------------------------------------------------------
-	# FIX specific to Pong!
-	def resize(self, rgb: np.ndarray) -> np.ndarray:
-		"""
-		Crop the top and bottom, then reduce the resolution.
-
-		Args:
-			rgb (np.ndarray): OpenCV render of the observation.
-
-		Returns:
-			np.ndarray: Resized image.
-		"""
-		# SIMON - Crop
-		rgb = rgb[35:-15, :, :]
-		# SIMON - Naively convert to greyscale (shit way to do it but don't want extra imports)
-		rgb[:, :, 0] = rgb[:, :, 0] / 3 + rgb[:, :, 1] / 3 + rgb[:, :, 2] / 3
-		# SIMON - Make it 3 channel again
-		rgb[:, :, 1] = rgb[:, :, 0]
-		rgb[:, :, 2] = rgb[:, :, 0]
-		# # SIMON - rescale contrast
-		# rgb = rgb - np.min(rgb)
-		# rgb = np.clip(rgb * (255 / np.max(rgb)), 0, 255).astype("uint8")
-		# SIMON - rescale contrast
-		rgb = rgb - 57
-		rgb = np.clip(rgb * (255 / 89), 0, 255).astype("uint8")
-
-		return rgb

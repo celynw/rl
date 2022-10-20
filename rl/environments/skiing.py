@@ -1,5 +1,7 @@
 import argparse
 
+import numpy as np
+
 from rl.environments.utils import AtariEnv
 
 # ==================================================================================================
@@ -32,3 +34,7 @@ class SkiingEvents(AtariEnv):
 		parser.set_defaults(batch_size=256)
 
 		return parser
+
+	# ----------------------------------------------------------------------------------------------
+	def resize(self, rgb: np.ndarray) -> np.ndarray:
+		return rgb
