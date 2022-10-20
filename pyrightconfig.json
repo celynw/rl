@@ -4,15 +4,17 @@
 		".mypy_cache/",
 		"venv*/",
 		"submodules/",
-		"*/build",
-		"*/devel"
+		"*/build/",
+		"*/devel/"
+		"old/"
 	],
 	// Always excluded
 	"ignore": [
 		".mypy_cache/",
 		"venv*/",
 		"submodules/",
-		"*/build",
-		"*/devel"
+		"*/build/",
+		"*/devel/"
+		"old/"
 	],
 }
