@@ -153,6 +153,9 @@ class EventEnv(gym.Env):
 			if self.pub_image.get_num_connections() > 0:
 				self.connected = True
 				print("Connected")
+			if rospy.is_shutdown():
+				print("Node is shutting down")
+				break
 			i += 1
 
 		self.pub_image.publish(msg)
