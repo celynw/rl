@@ -38,7 +38,7 @@ class AtariEnv(EventEnv, SB3_AtariEnv):
 		"""
 		self.game = game
 		self.return_rgb = return_rgb
-		SB3_AtariEnv.__init__(self, game="pong", render_mode="rgb_array",
+		SB3_AtariEnv.__init__(self, game=game, render_mode="rgb_array",
 			frameskip=frameskip,
 			repeat_action_probability=repeat_action_probability,
 			full_action_space=full_action_space,
