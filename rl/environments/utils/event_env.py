@@ -8,6 +8,7 @@ import gym
 from gym import spaces
 import numpy as np
 import torch
+from rich import print, inspect
 
 import rospy
 from cv_bridge import CvBridge
@@ -20,20 +21,19 @@ from rl.environments.utils import SpikeRepresentationGenerator
 class EventEnv(gym.Env):
 	debug = False # For ROS logging
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, width: int, height: int, fps: int, tsamples: int = 10, event_image: bool = False):
+	def __init__(self, width: int, height: int, args: argparse.Namespace, event_image: bool = False):
 		"""
 		Base class which handles the ROS side for event versions of AI gym environments.
 
 		Args:
 			width (int): Width of the event frame in pixels.
 			height (int): Height of the event frame in pixels.
-			fps (int): Frames per second of the environment.
-			tsamples (int, optional): Number of time bins in the observations. Defaults to 10.
+			args (argparse.Namespace): Parsed arguments, depends on which specific env we're using.
 			event_image (bool, optional): Accuumlates events into an event image. Defaults to False.
 		"""
 		self.state_space = self.observation_space # For access later
-		if fps is not None:
-			self.metadata["render_fps"] = fps
+		if args.fps is not None:
+			self.metadata["render_fps"] = args.fps
 		else:
 			fps = self.metadata["render_fps"] # type: ignore
 
@@ -41,8 +41,8 @@ class EventEnv(gym.Env):
 		self.bridge = CvBridge()
 		self.pub_image = rospy.Publisher("image", Image, queue_size=10)
 		self.sub_events = rospy.Subscriber("/cam0/events", EventArray, self.callback)
-		self.generator = SpikeRepresentationGenerator(height, width, tsamples)
-		self.fps = fps
+		self.generator = SpikeRepresentationGenerator(height, width, args.tsamples)
+		self.fps = self.metadata["render_fps"]
 		self.event_image = event_image
 		self.time = rospy.Time.now() # Initial timestamp for events
 		self.events = None # Placeholder until messages arrive
@@ -53,7 +53,7 @@ class EventEnv(gym.Env):
 		if self.event_image:
 			self.shape = [2, height, width]
 		else:
-			self.shape = [2, tsamples, height, width]
+			self.shape = [2, args.tsamples, height, width]
 		self.observation_space = spaces.Box(low=0, high=1, shape=self.shape, dtype=np.double)
 
 	# ----------------------------------------------------------------------------------------------

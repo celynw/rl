@@ -50,9 +50,8 @@ class Objective():
 		features_extractor_class = getattr(rl.models, self.args.model)
 		env = gym.make(
 			f"{self.args.environment}-v0",
-			fps=self.args.fps,
-			tsamples=self.args.tsamples,
 			event_image=features_extractor_class is rl.models.NatureCNN,
+			args=self.args,
 		)
 
 		# Set up feature extractor

@@ -16,14 +16,12 @@ class CartPoleEvents(EventEnv, CartPoleEnv):
 	state_space: spaces.Space
 	model: Optional[Union[EDeNN, SNN]] = None
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, fps: Optional[int] = None, tsamples: int = 10, event_image: bool = False,
-			return_rgb: bool = False):
+	def __init__(self, args: argparse.Namespace, event_image: bool = False, return_rgb: bool = False):
 		"""
-		Event version of CartPole environment
+		Event version of CartPole environment.
 
 		Args:
-			fps (int, optional): Frames per second for event simulation and step times. Defaults to the environment's default.
-			tsamples (int, optional): Number of time bins in the observations. Defaults to 10.
+			args (argparse.Namespace): Parsed arguments, depends on which specific env we're using.
 			event_image (bool, optional): Accuumlates events into an event image. Defaults to False.
 			return_rgb (bool, optional): _description_. Defaults to False.
 		"""
@@ -31,7 +29,7 @@ class CartPoleEvents(EventEnv, CartPoleEnv):
 		self.events_width = 240
 		self.events_height = 64
 		CartPoleEnv.__init__(self, render_mode="rgb_array")
-		EventEnv.__init__(self, self.events_width, self.events_height, fps, tsamples, event_image) # type: ignore
+		EventEnv.__init__(self, self.events_width, self.events_height, args, event_image) # type: ignore
 
 	# ----------------------------------------------------------------------------------------------
 	@staticmethod
