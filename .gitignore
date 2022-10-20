@@ -12,7 +12,6 @@ catkin_ws/devel
 catkin_ws/.catkin_tools
 catkin_ws_local/
 catkin_ws_docker_venv/
-HC ROMS/
 old/toys/debug_training/dataset/
 train_estimator_RL_estimator/
 *.bag
