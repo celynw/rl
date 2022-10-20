@@ -95,9 +95,9 @@ class Objective():
 		tb_log_name = f"{rl.utils.datestr()}_{self.args.name}"
 		logger_save_path = self.log_dir / f"{tb_log_name}_1" # Based on stable_baselines3.common.utils.configure_logger
 		if trial is not None:
-			eval_callback = TrialEvalCallback(env, trial, eval_freq=self.args.n_steps, best_model_save_path=logger_save_path)
+			eval_callback = TrialEvalCallback(env, trial, eval_freq=self.args.n_steps * self.args.eval_every, best_model_save_path=logger_save_path)
 		else:
-			eval_callback = EvalCallback(env, eval_freq=self.args.n_steps, best_model_save_path=logger_save_path)
+			eval_callback = EvalCallback(env, eval_freq=self.args.n_steps * self.args.eval_every, best_model_save_path=logger_save_path)
 		callbacks = [eval_callback, PolicyUpdateCallback(env)]
 
 		# Train

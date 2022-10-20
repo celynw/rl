@@ -39,6 +39,7 @@ def parse_args() -> argparse.Namespace:
 	parser.add_argument("--n_epochs", type=int, help="Number of epoch when optimizing the surrogate loss", default=10)
 	parser.add_argument("--ent_coef", type=float, help="Entropy coefficient for the loss calculation", default=0.0)
 	parser.add_argument("--batch_size", type=int, help="Minibatch size", default=64)
+	parser.add_argument("--eval_every", type=int, help="Run evaluation every N policy updates", default=10)
 
 	# Add model-specific arguments -----------------------------------------------------------------
 	args_known, _ = parser.parse_known_args()
