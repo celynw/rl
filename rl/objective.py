@@ -64,6 +64,11 @@ class Objective():
 				projection_head=self.args.projection_head,
 				projection_dim=env.state_space.shape[-1] if hasattr(env, "state_space") else env.observation_space.shape[0],
 			)
+		elif features_extractor_class is rl.models.SNN:
+			features_extractor_kwargs.update(dict(
+				fps=env.fps,
+				tsamples=self.args.tsamples,
+			))
 		policy_kwargs = dict(
 			features_extractor_class=features_extractor_class,
 			optimizer_class=torch.optim.Adam,

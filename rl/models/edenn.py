@@ -114,7 +114,7 @@ class EDeNN(BaseFeaturesExtractor):
 				torch.nn.Linear(self.n_flatten, self.features_dim), # 15360 -> ...
 				torch.nn.ReLU(inplace=True),
 				# torch.nn.Sigmoid(),
-				torch.nn.Linear(self.features_dim, self.projection_dim),
+				torch.nn.Linear(self.features_dim, self.projection_dim), # FIX Although this runs, is this right?
 				# torch.nn.CELU(inplace=True),
 			)
 
@@ -143,14 +143,14 @@ class EDeNN(BaseFeaturesExtractor):
 		x, mask = self.process(self.layer4, x, mask, self.layer4_out)
 		self.layer4_out = x.detach()
 
-		x = x[:, :, -1]
+		x = x[:, :, -1] # FIX Is it really OK to just take the last time bin?
 		if calc_n_flatten:
 			return x
 		# The sizes of `x` and `mask` will diverge here, but that's OK as we don't need the mask anymore
 		# We only care about the final bin prediction for now...
 		x = self.layer5(x)
 
-		return x
+		return x # [1, self.features_dim]
 
 	# ----------------------------------------------------------------------------------------------
 	def project(self, x: torch.Tensor) -> torch.Tensor:
