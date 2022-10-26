@@ -4,3 +4,6 @@
 [submodule "rl/envs/spacerobot_v1"]
 	path = rl/environments/spacerobot_v1
 	url = git@github.com:celynw/SpaceRobot.git
+[submodule "submodules/slayerPytorch"]
+	path = submodules/slayerPytorch
+	url = git@github.com:bamsumit/slayerPytorch.git
