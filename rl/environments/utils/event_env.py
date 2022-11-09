@@ -2,7 +2,7 @@ from abc import abstractmethod
 from pathlib import Path
 import time
 import argparse
-from typing import Union, Optional
+from typing import Optional
 
 import gym
 from gym import spaces

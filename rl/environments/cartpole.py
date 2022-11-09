@@ -1,12 +1,12 @@
 import argparse
-from typing import Optional, Union
+from typing import Optional
 
+import gym
 from gym.envs.classic_control.cartpole import CartPoleEnv
 from gym import spaces
 import numpy as np
 import cv2
 import pygame, pygame.gfxdraw
-import gym
 
 from rl.environments.utils import EventEnv
 from rl.models import EDeNN, SNN
@@ -14,7 +14,7 @@ from rl.models import EDeNN, SNN
 # ==================================================================================================
 class CartPoleEvents(EventEnv, CartPoleEnv):
 	state_space: spaces.Space
-	model: Optional[Union[EDeNN, SNN]] = None
+	model: Optional[EDeNN | SNN] = None
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, args: argparse.Namespace, event_image: bool = False, return_rgb: bool = False):
 		"""

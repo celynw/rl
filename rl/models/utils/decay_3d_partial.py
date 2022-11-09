@@ -1,5 +1,5 @@
 import math
-from typing import Union, Optional
+from typing import Optional
 
 import torch
 import torch.nn.functional as F
@@ -10,11 +10,11 @@ from rl.models.utils import Decay3d
 # ==================================================================================================
 class Decay3dPartial(Decay3d):
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, in_channels: int, out_channels: int, kernel_size: Union[int, tuple[int, int]] = 3,
-			stride: Union[int, tuple[int, int, int]] = 1, padding: Union[int, tuple[int, int, int]] = 0,
+	def __init__(self, in_channels: int, out_channels: int, kernel_size: int | tuple[int, int] = 3,
+			stride: int | tuple[int, int, int] = 1, padding: int | tuple[int, int, int] = 0,
 			bias: bool = True, multi_channel: bool = False, return_mask: bool = True,
 			return_decay: bool = False, kernel_ratio: bool = False, spatial: tuple[int, int] = (1, 1),
-			scale_factor: Union[int, tuple[int, int, int]] = 1):
+			scale_factor: int | tuple[int, int, int] = 1):
 		super().__init__(in_channels, out_channels, kernel_size, stride, padding, bias, spatial)
 		self.multi_channel = multi_channel
 		self.return_mask = return_mask

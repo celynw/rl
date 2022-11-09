@@ -1,6 +1,6 @@
 import pathlib
 import io
-from typing import Union, Optional, Dict, Any
+from typing import Optional, Dict, Any
 
 import numpy as np
 import torch
@@ -43,10 +43,10 @@ class PPO(SB3_PPO):
 	# # @classmethod
 	# def load(
 	# 	self,
-	# 	path: Union[str, pathlib.Path, io.BufferedIOBase],
+	# 	path: str | pathlib.Path, io.BufferedIOBase,
 	# 	state_shape,
 	# 	env: Optional[GymEnv] = None,
-	# 	device: Union[torch.device, str] = "auto",
+	# 	device: torch.device | str = "auto",
 	# 	custom_objects: Optional[Dict[str, Any]] = None,
 	# 	print_system_info: bool = False,
 	# 	force_reset: bool = True,

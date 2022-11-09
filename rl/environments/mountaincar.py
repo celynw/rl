@@ -1,6 +1,6 @@
 import argparse
 import math
-from typing import Optional, Union
+from typing import Optional
 
 from gym.envs.classic_control.mountain_car import MountainCarEnv
 from gym import spaces
@@ -15,7 +15,7 @@ from rl.models import EDeNN, SNN
 # ==================================================================================================
 class MountainCarEvents(EventEnv, MountainCarEnv):
 	state_space: spaces.Space
-	model: Optional[Union[EDeNN, SNN]] = None
+	model: Optional[EDeNN | SNN] = None
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, args: argparse.Namespace, event_image: bool = False, return_rgb: bool = False):
 		"""

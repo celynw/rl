@@ -2,7 +2,7 @@
 Based on AtariEnv from gym=0.25.1
 """
 import argparse
-from typing import Optional, Union
+from typing import Optional
 
 import numpy as np
 import torch
@@ -20,7 +20,7 @@ class AtariEnv(EventEnv, SB3_AtariEnv):
 	events_height: int = 210 # self.ale.getScreenDims()[0]
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, game: str, args: argparse.Namespace, event_image: bool = False,
-		frameskip: Union[int, tuple[int, int]] = (2, 5), repeat_action_probability: float = 0.0,
+		frameskip: int | tuple[int, int] = (2, 5), repeat_action_probability: float = 0.0,
 		full_action_space: bool = False, max_num_frames_per_episode: int = 108_000,
 		return_rgb: bool = False):
 		"""
@@ -30,7 +30,7 @@ class AtariEnv(EventEnv, SB3_AtariEnv):
 			game (str): _description_
 			args (argparse.Namespace): Parsed arguments, depends on which specific env we're using.
 			event_image (bool, optional): Accuumlates events into an event image. Defaults to False.
-			frameskip (Union[int, tuple[int, int]], optional): Stochastic frameskip as tuple or fixed. Defaults to (2, 5).
+			frameskip (int | tuple[int, int], optional): Stochastic frameskip as tuple or fixed. Defaults to (2, 5).
 			repeat_action_probability (float, optional): Probability to repeat actions, see Machado et al., 2018. Defaults to 0.0.
 			full_action_space (bool, optional): Use full action space? Defaults to False.
 			max_num_frames_per_episode (int, optional): Max number of frame per epsiode. Once `max_num_frames_per_episode` is reached the episode is truncated. Defaults to 108_000.
