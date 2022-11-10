@@ -26,10 +26,10 @@ class CartPoleEvents(EventEnv, CartPoleEnv):
 			return_rgb (bool, optional): _description_. Defaults to False.
 		"""
 		self.return_rgb = return_rgb
-		self.events_width = 240
-		self.events_height = 64
+		self.output_width = 240
+		self.output_height = 64
 		CartPoleEnv.__init__(self, render_mode="rgb_array")
-		EventEnv.__init__(self, self.events_width, self.events_height, args, event_image) # type: ignore
+		EventEnv.__init__(self, self.output_width, self.output_height, args, event_image) # type: ignore
 
 	# ----------------------------------------------------------------------------------------------
 	@staticmethod
@@ -93,7 +93,7 @@ class CartPoleEvents(EventEnv, CartPoleEnv):
 		# Crop
 		rgb = rgb[int(self.screen_height * 0.4):int(self.screen_height * 0.8), :, :]
 		# Resize
-		rgb = cv2.resize(rgb, (self.events_width, self.events_height), interpolation=cv2.INTER_AREA)
+		rgb = cv2.resize(rgb, (self.output_width, self.output_height), interpolation=cv2.INTER_AREA)
 
 		return rgb
 

@@ -16,8 +16,8 @@ from rl.environments.utils import EventEnv
 class AtariEnv(EventEnv, SB3_AtariEnv):
 	state_space: spaces.Space
 	wanted_states: list[str] = [] # Placeholder, to be overridden in child classes
-	events_width: int = 160 # self.ale.getScreenDims()[1]
-	events_height: int = 210 # self.ale.getScreenDims()[0]
+	output_width: int = 160 # self.ale.getScreenDims()[1]
+	output_height: int = 210 # self.ale.getScreenDims()[0]
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, game: str, args: argparse.Namespace, event_image: bool = False,
 		frameskip: int | tuple[int, int] = (2, 5), repeat_action_probability: float = 0.0,
@@ -51,7 +51,7 @@ class AtariEnv(EventEnv, SB3_AtariEnv):
 			"render_fps": 30
 		}
 		try:
-			EventEnv.__init__(self, self.events_width, self.events_height, args, event_image) # type: ignore
+			EventEnv.__init__(self, self.output_width, self.output_height, args, event_image) # type: ignore
 		except AttributeError:
 			# Cannot override self.observation_space! Grr...
 			self._obs_space = spaces.Box(low=0, high=1, shape=self.shape, dtype=np.double)

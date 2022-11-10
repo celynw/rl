@@ -27,10 +27,10 @@ class MountainCarEvents(EventEnv, MountainCarEnv):
 			return_rgb (bool, optional): _description_. Defaults to False.
 		"""
 		self.return_rgb = return_rgb
-		self.events_width = 150
-		self.events_height = 100
+		self.output_width = 150
+		self.output_height = 100
 		MountainCarEnv.__init__(self, render_mode="rgb_array")
-		EventEnv.__init__(self, self.events_width, self.events_height, args, event_image) # type: ignore
+		EventEnv.__init__(self, self.output_width, self.output_height, args, event_image) # type: ignore
 
 	# ----------------------------------------------------------------------------------------------
 	@staticmethod

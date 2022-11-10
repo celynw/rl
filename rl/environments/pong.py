@@ -10,7 +10,7 @@ class PongEvents(AtariEnv):
 	wanted_states: list[str] = ["player_y", "player_x", "enemy_y", "enemy_x", "ball_x", "ball_y"]
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, *args, **kwargs):
-		self.events_height -= (35 + 15) # For `self.resize()`
+		self.output_height -= (35 + 15) # For `self.resize()`
 		super().__init__(*args, game="pong", **kwargs)
 
 	# ----------------------------------------------------------------------------------------------

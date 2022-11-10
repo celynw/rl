@@ -183,7 +183,7 @@ if __name__ == "__main__":
 	)
 	snn = SNN(observation_space=env.observation_space, features_dim=env.state_space.shape[-1])
 
-	event_tensor = torch.rand([1, 2, args.tsamples, env.events_height, env.events_width])
+	event_tensor = torch.rand([1, 2, args.tsamples, env.output_height, env.output_width])
 
 	snn = snn.to("cuda")
 	event_tensor = event_tensor.to("cuda")
