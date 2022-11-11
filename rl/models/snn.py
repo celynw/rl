@@ -181,13 +181,20 @@ if __name__ == "__main__":
 		"CartPoleEvents-v0",
 		args=args,
 	)
-	snn = SNN(observation_space=env.observation_space, features_dim=env.state_space.shape[-1])
+	snn = SNN(observation_space=env.observation_space, features_dim=env.state_space.shape[-1], fps=fps, tsamples=args.tsamples)
 
 	event_tensor = torch.rand([1, 2, args.tsamples, env.output_height, env.output_width])
+	print(f"input event shape: {event_tensor.shape}")
+	print(f"features_dim: {snn.features_dim}")
 
 	snn = snn.to("cuda")
 	event_tensor = event_tensor.to("cuda")
 	output = snn(event_tensor)
 
-	print(snn)
-	print(output.shape)
+	print(f"model: {snn}")
+	print(f"layer 1: {snn._data['conv1'].getTensor().shape}")
+	print(f"layer 2: {snn._data['conv2'].getTensor().shape}")
+	print(f"layer 3: {snn._data['conv3'].getTensor().shape}")
+	print(f"layer 4: {snn._data['conv4'].getTensor().shape}")
+	print(f"layer 5: {snn._data['conv5'].getTensor().shape}")
+	print(f"output features shape: {output.shape}")
