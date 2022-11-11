@@ -6,7 +6,9 @@ import optuna.trial
 import optuna.exceptions
 import gym
 import torch
-from stable_baselines3.common.callbacks import EvalCallback
+import wandb
+from wandb.integration.sb3 import WandbCallback
+from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
 from rich import print, inspect
 
 import rl.models
@@ -42,6 +44,14 @@ class Objective():
 		Returns:
 			Optional[float]: Last mean reward of this trial, to be stored and plotted with `optuna`.
 		"""
+		run = wandb.init(
+			project="CERiL",
+			config=self.args,
+			sync_tensorboard=True, # Auto-upload tensorboard metrics to wandb
+			# monitor_gym=True, # Auto-upload the videos of agents playing the game
+			save_code=True, # Save the code to W&B
+		)
+
 		# Set up logger
 		print(f"Logging to {self.log_dir}")
 		self.log_dir.mkdir(parents=True, exist_ok=True)
@@ -65,9 +75,10 @@ class Objective():
 		if features_extractor_class is rl.models.EDeNN and self.args.projection_head:
 			features_extractor_kwargs = dict(
 				features_dim=256,
-				projection_head=self.args.projection_head,
 				projection_dim=env.state_space.shape[-1] if hasattr(env, "state_space") else env.observation_space.shape[0],
 			)
+		if features_extractor_class is rl.models.EDeNN:
+			features_extractor_kwargs["projection_head"] = self.args.projection_head
 		elif features_extractor_class is rl.models.SNN:
 			features_extractor_kwargs.update(dict(
 				fps=env.fps,
@@ -106,13 +117,25 @@ class Objective():
 			eval_callback = TrialEvalCallback(env, trial, eval_freq=self.args.n_steps * self.args.eval_every, best_model_save_path=logger_save_path)
 		else:
 			eval_callback = EvalCallback(env, eval_freq=self.args.n_steps * self.args.eval_every, best_model_save_path=logger_save_path)
-		callbacks = [eval_callback, PolicyUpdateCallback(env)]
+		callbacks = [
+			eval_callback,
+			PolicyUpdateCallback(env),
+			WandbCallback(
+				gradient_save_freq=1000,
+				model_save_path=f"models/{run.id}",
+			),
+			CheckpointCallback(
+				save_freq=10000,
+				save_path=f"models/{run.id}",
+				name_prefix=self.args.environment,
+			),
+		]
 
 		# Train
 		model.learn(
 			total_timesteps=max(model.n_steps, self.args.steps),
 			callback=callbacks,
-			eval_freq=self.args.n_steps,
+			# eval_freq=self.args.n_steps,
 			tb_log_name=tb_log_name,
 			progress_bar=True,
 		)
