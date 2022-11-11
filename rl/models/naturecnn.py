@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Based on NatureCNN from stable-baselines3==1.6.2
 Changed colours to increase contrast.
@@ -57,3 +58,40 @@ class NatureCNN(SB3_NatureCNN):
 			argparse.ArgumentParser: Original parser object.
 		"""
 		return parser
+
+
+# ==================================================================================================
+if __name__ == "__main__":
+	import gym
+	import torch
+	from rich import print, inspect
+
+	import rl
+	import rl.environments
+
+	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+	parser = NatureCNN.add_argparse_args(parser)
+	args = parser.parse_args()
+
+	# from gym.envs.classic_control.cartpole import CartPoleEnv
+	env = gym.make(
+		"CartPoleRGB-v0",
+		# "PongEvents-v0",
+		args=args,
+	)
+	nature = NatureCNN(observation_space=env.observation_space, features_dim=env.observation_space.shape[0])
+
+	# Box(0, 255, (84, 84, 1), uint8)
+	# rgb_tensor = torch.rand([1, 2, env.output_height, env.output_width])
+	rgb_tensor = torch.rand([1, 3, 84, 84])
+	print(f"input rgb shape: {rgb_tensor.shape}")
+	print(f"features_dim: {nature.features_dim}")
+
+	nature = nature.to("cuda")
+	rgb_tensor = rgb_tensor.to("cuda")
+	output = rgb_tensor
+
+	print(f"model: {nature}")
+	for layer in nature.cnn:
+		output = layer(output)
+		print(f"After {str(layer.__class__.__name__)}: {output.shape}")
