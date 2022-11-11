@@ -48,10 +48,14 @@ class Objective():
 
 		# Set up environment
 		features_extractor_class = getattr(rl.models, self.args.model)
+
+		env_kwargs = dict()
+		if self.args.environment not in ["CartPoleRGB"]: # TODO replace str with variable
+			env_kwargs["event_image"] = features_extractor_class is rl.models.NatureCNN
 		env = gym.make(
 			f"{self.args.environment}-v0",
-			event_image=features_extractor_class is rl.models.NatureCNN,
 			args=self.args,
+			**env_kwargs,
 		)
 
 		# Set up feature extractor
