@@ -26,8 +26,8 @@ class CartPoleEvents(EventEnv, CartPoleEnv):
 			return_rgb (bool, optional): _description_. Defaults to False.
 		"""
 		self.return_rgb = return_rgb
-		self.output_width = 240
-		self.output_height = 64
+		self.output_width = 126
+		self.output_height = 84
 		CartPoleEnv.__init__(self, render_mode="rgb_array")
 		EventEnv.__init__(self, self.output_width, self.output_height, args, event_image) # type: ignore
 
@@ -91,7 +91,7 @@ class CartPoleEvents(EventEnv, CartPoleEnv):
 			np.ndarray: Resized image.
 		"""
 		# Crop
-		rgb = rgb[int(self.screen_height * 0.4):int(self.screen_height * 0.8), :, :]
+		# rgb = rgb[int(self.screen_height * 0.4):int(self.screen_height * 0.8), :, :]
 		# Resize
 		rgb = cv2.resize(rgb, (self.output_width, self.output_height), interpolation=cv2.INTER_AREA)
 
@@ -164,8 +164,8 @@ class CartPoleEvents(EventEnv, CartPoleEnv):
 			coord = pygame.math.Vector2(coord).rotate_rad(-x[2])
 			coord = (coord[0] + cartx, coord[1] + carty + axleoffset)
 			pole_coords.append(coord)
-		pygame.gfxdraw.aapolygon(self.surf, pole_coords, (202, 152, 101))
-		pygame.gfxdraw.filled_polygon(self.surf, pole_coords, (202, 152, 101))
+		pygame.gfxdraw.aapolygon(self.surf, pole_coords, (0, 0, 0)) # NOTE: Making the pole black
+		pygame.gfxdraw.filled_polygon(self.surf, pole_coords, (0, 0, 0)) # NOTE: Making the pole black
 
 		# NOTE: Not drawing the axle or ground
 		# pygame.gfxdraw.aacircle(
@@ -210,8 +210,8 @@ class CartPoleRGB(CartPoleEnv):
 		Args:
 			args (argparse.Namespace): Parsed arguments, depends on which specific env we're using.
 		"""
-		self.output_width = 240
-		self.output_height = 64
+		self.output_width = 126
+		self.output_height = 84
 		self.updatedPolicy = False # Used for logging whenever the policy is updated
 		super().__init__(render_mode="rgb_array")
 		self.state_space = self.observation_space # For access later
@@ -301,7 +301,7 @@ class CartPoleRGB(CartPoleEnv):
 			np.ndarray: Resized image.
 		"""
 		# Crop
-		rgb = rgb[int(self.screen_height * 0.4):int(self.screen_height * 0.8), :, :]
+		# rgb = rgb[int(self.screen_height * 0.4):int(self.screen_height * 0.8), :, :]
 		# Resize
 		rgb = cv2.resize(rgb, (self.output_width, self.output_height), interpolation=cv2.INTER_AREA)
 
@@ -374,8 +374,8 @@ class CartPoleRGB(CartPoleEnv):
 			coord = pygame.math.Vector2(coord).rotate_rad(-x[2])
 			coord = (coord[0] + cartx, coord[1] + carty + axleoffset)
 			pole_coords.append(coord)
-		pygame.gfxdraw.aapolygon(self.surf, pole_coords, (202, 152, 101))
-		pygame.gfxdraw.filled_polygon(self.surf, pole_coords, (202, 152, 101))
+		pygame.gfxdraw.aapolygon(self.surf, pole_coords, (0, 0, 0)) # NOTE: Making the pole black
+		pygame.gfxdraw.filled_polygon(self.surf, pole_coords, (0, 0, 0)) # NOTE: Making the pole black
 
 		# NOTE: Not drawing the axle or ground
 		# pygame.gfxdraw.aacircle(
