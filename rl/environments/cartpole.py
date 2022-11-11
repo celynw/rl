@@ -271,6 +271,7 @@ class CartPoleRGB(CartPoleEnv):
 		_, reward, terminated, truncated, _ = super().step(action) # type: ignore
 		rgb = self.render()
 		rgb = self.resize(rgb)
+		rgb = np.transpose(rgb, (2, 0, 1)) # HWC -> CHW
 
 		info = self.get_info()
 		info["failReason"] = None
@@ -290,6 +291,29 @@ class CartPoleRGB(CartPoleEnv):
 		return rgb, reward, terminated, truncated, info
 
 	# ----------------------------------------------------------------------------------------------
+	def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None) -> tuple[np.ndarray, Optional[dict]]:
+		"""
+		Resets the environment, and also the model (if defined).
+
+		Args:
+			seed (int, optional): The seed that is used to initialize the environment's PRNG. Defaults to None.
+			options (dict, optional): Additional information to specify how the environment is reset. Defaults to None.
+
+		Returns:
+			tuple[np.ndarray, Optional[dict]]: First observation and optionally info about the step.
+		"""
+		super().reset(seed=seed, options=options) # NOTE: Not using the output
+		info = self.get_info()
+
+		rgb = self.render()
+		rgb = self.resize(rgb)
+		rgb = np.transpose(rgb, (2, 0, 1)) # HWC -> CHW
+		if self.model is not None and hasattr(self.model, "reset_env"):
+			self.model.reset_env()
+
+		return rgb, info
+
+	# ----------------------------------------------------------------------------------------------
 	def resize(self, rgb: np.ndarray) -> np.ndarray:
 		"""
 		Crop the top and bottom, then reduce the resolution.
@@ -306,6 +330,16 @@ class CartPoleRGB(CartPoleEnv):
 		rgb = cv2.resize(rgb, (self.output_width, self.output_height), interpolation=cv2.INTER_AREA)
 
 		return rgb
+
+	# ----------------------------------------------------------------------------------------------
+	def set_model(self, model):
+		"""
+		Link the model and the env, so we can call a model function when the env calls `reset()`.
+
+		Args:
+			model: Model (feature extractor) object.
+		"""
+		self.model = model
 
 	# ----------------------------------------------------------------------------------------------
 	def render(self) -> np.ndarray:
