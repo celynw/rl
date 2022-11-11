@@ -1,6 +1,5 @@
 import math
 import collections
-from typing import Union
 
 import torch
 import torch.nn.functional as F
@@ -8,8 +7,8 @@ import torch.nn.functional as F
 # ==================================================================================================
 class Decay3d(torch.nn.modules.Module):
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, in_channels: int, out_channels: int, kernel_size: Union[int, tuple[int, int]] = 3,
-			stride: Union[int, tuple[int, int, int]] = 1, padding: Union[int, tuple[int, int, int]] = 0,
+	def __init__(self, in_channels: int, out_channels: int, kernel_size: int | tuple[int, int] = 3,
+			stride: int | tuple[int, int, int] = 1, padding: int | tuple[int, int, int] = 0,
 			bias: bool = True, spatial: tuple[int, int] = (1, 1)):
 		super().__init__()
 		self.in_channels = in_channels
