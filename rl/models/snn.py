@@ -62,55 +62,43 @@ class SNN(BaseFeaturesExtractor):
 			tauRef=4.0,
 			scaleRho=0.13,
 		))
-		neuron_config_conv4 = dataclasses.asdict(NeuronConfig(
-			theta=0.4,
-			tauSr=4.0,
-			tauRef=4.0,
-			scaleRho=0.25,
-		))
-		neuron_config_conv5 = dataclasses.asdict(NeuronConfig(
-			theta=0.4,
-			tauSr=4.0,
-			tauRef=4.0,
-			scaleRho=100.0,
-		))
+		# neuron_config_conv4 = dataclasses.asdict(NeuronConfig(
+		# 	theta=0.4,
+		# 	tauSr=4.0,
+		# 	tauRef=4.0,
+		# 	scaleRho=0.25,
+		# ))
+		# neuron_config_conv5 = dataclasses.asdict(NeuronConfig(
+		# 	theta=0.4,
+		# 	tauSr=4.0,
+		# 	tauRef=4.0,
+		# 	scaleRho=100.0,
+		# ))
 		# NOTE: tauSr is the only parameter that has any influence on the output or the gradients
 		neuron_config_fc = dataclasses.asdict(NeuronConfig(tauSr=8.0))
 
 		self.slayer_conv1 = spikeLayer(neuron_config_conv1, simulation_params)
 		self.slayer_conv2 = spikeLayer(neuron_config_conv2, simulation_params)
 		self.slayer_conv3 = spikeLayer(neuron_config_conv3, simulation_params)
-		self.slayer_conv4 = spikeLayer(neuron_config_conv4, simulation_params)
-		self.slayer_conv5 = spikeLayer(neuron_config_conv5, simulation_params)
 		self.slayer_fc = spikeLayer(neuron_config_fc, simulation_params)
 
-		conv1_out_channels = 16
-		conv2_out_channels = 32
-		conv3_out_channels = 64
-		conv4_out_channels = 128
-		conv5_out_channels = 256
+		conv1_out_channels = 32
+		conv2_out_channels = 64
+		conv3_out_channels = 128
 
 		self.conv1 = self.slayer_conv1.conv(
 			inChannels=2, outChannels=conv1_out_channels,
-			kernelSize=3, stride=2, padding=0, dilation=1, groups=1, weightScale=1,
+			kernelSize=8, stride=4, padding=0, dilation=1, groups=1, weightScale=1,
 		)
 		self.conv2 = self.slayer_conv2.conv(
 			inChannels=conv1_out_channels, outChannels=conv2_out_channels,
-			kernelSize=3, stride=2, padding=0, dilation=1, groups=1, weightScale=1,
+			kernelSize=4, stride=2, padding=0, dilation=1, groups=1, weightScale=1,
 		)
 		self.conv3 = self.slayer_conv3.conv(
 			inChannels=conv2_out_channels, outChannels=conv3_out_channels,
-			kernelSize=3, stride=2, padding=0, dilation=1, groups=1, weightScale=1,
-		)
-		self.conv4 = self.slayer_conv4.conv(
-			inChannels=conv3_out_channels, outChannels=conv4_out_channels,
-			kernelSize=3, stride=2, padding=0, dilation=1, groups=1, weightScale=1,
-		)
-		self.conv5 = self.slayer_conv5.conv(
-			inChannels=conv4_out_channels, outChannels=conv5_out_channels,
 			kernelSize=3, stride=1, padding=0, dilation=1, groups=1, weightScale=1,
 		)
-		self.fc = self.slayer_fc.dense(inFeatures=conv5_out_channels, outFeatures=self.features_dim, weightScale=1)
+		self.fc = self.slayer_fc.dense(inFeatures=conv3_out_channels, outFeatures=self.features_dim, weightScale=1)
 
 	# ----------------------------------------------------------------------------------------------
 	def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -122,17 +110,13 @@ class SNN(BaseFeaturesExtractor):
 		spikes_layer_1 = self.slayer_conv1.spike(self.conv1(self.slayer_conv1.psp(x)))
 		spikes_layer_2 = self.slayer_conv2.spike(self.conv2(self.slayer_conv2.psp(spikes_layer_1)))
 		spikes_layer_3 = self.slayer_conv3.spike(self.conv3(self.slayer_conv3.psp(spikes_layer_2)))
-		spikes_layer_4 = self.slayer_conv4.spike(self.conv4(self.slayer_conv4.psp(spikes_layer_3)))
-		spikes_layer_5 = self.slayer_conv5.spike(self.conv5(self.slayer_conv5.psp(spikes_layer_4)))
 
 		self.addMetaTensor("conv1", MetaTensor(spikes_layer_1, TensorLayout.Conv, DataType.Spike))
 		self.addMetaTensor("conv2", MetaTensor(spikes_layer_2, TensorLayout.Conv, DataType.Spike))
 		self.addMetaTensor("conv3", MetaTensor(spikes_layer_3, TensorLayout.Conv, DataType.Spike))
-		self.addMetaTensor("conv4", MetaTensor(spikes_layer_4, TensorLayout.Conv, DataType.Spike))
-		self.addMetaTensor("conv5", MetaTensor(spikes_layer_5, TensorLayout.Conv, DataType.Spike))
 
 		# Apply average pooling on spike-trains.
-		spikes_mean = torch.mean(spikes_layer_5, dim=(2, 3), keepdims=True) # type: ignore
+		spikes_mean = torch.mean(spikes_layer_3, dim=(2, 3), keepdims=True) # type: ignore
 		psp_out = self.slayer_fc.psp(self.fc(spikes_mean))
 		self.addOutputMetaTensor(MetaTensor(psp_out, TensorLayout.FC, DataType.Dense))
 
@@ -195,6 +179,4 @@ if __name__ == "__main__":
 	print(f"layer 1: {snn._data['conv1'].getTensor().shape}")
 	print(f"layer 2: {snn._data['conv2'].getTensor().shape}")
 	print(f"layer 3: {snn._data['conv3'].getTensor().shape}")
-	print(f"layer 4: {snn._data['conv4'].getTensor().shape}")
-	print(f"layer 5: {snn._data['conv5'].getTensor().shape}")
 	print(f"output features shape: {output.shape}")
