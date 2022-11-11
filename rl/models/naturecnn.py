@@ -79,7 +79,7 @@ if __name__ == "__main__":
 		# "PongEvents-v0",
 		args=args,
 	)
-	nature = NatureCNN(observation_space=env.observation_space, features_dim=env.observation_space.shape[0])
+	nature = NatureCNN(observation_space=env.observation_space, features_dim=env.state_space.shape[-1])
 
 	# Box(0, 255, (84, 84, 1), uint8)
 	# rgb_tensor = torch.rand([1, 2, env.output_height, env.output_width])
