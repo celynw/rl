@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import argparse
 import math
 from typing import Optional
@@ -202,3 +203,40 @@ class EDeNN(BaseFeaturesExtractor):
 		self.layer2_out = None
 		self.layer3_out = None
 		self.layer4_out = None
+
+
+# ==================================================================================================
+if __name__ == "__main__":
+	import gym
+	from rich import print, inspect
+
+	import rl
+	import rl.environments
+
+	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+	parser = EDeNN.add_argparse_args(parser)
+	parser = rl.environments.CartPoleEvents.add_argparse_args(parser)
+	args = parser.parse_args()
+	args.projection_head = False
+
+	env = gym.make(
+		"CartPoleEvents-v0",
+		args=args,
+	)
+	edenn = EDeNN(observation_space=env.observation_space, features_dim=env.state_space.shape[-1], projection_head=args.projection_head)
+	edenn.reset_env()
+
+	event_tensor = torch.rand([1, 2, args.tsamples, env.output_height, env.output_width])
+	print(f"input event shape: {event_tensor.shape}")
+	print(f"features_dim: {edenn.features_dim}")
+
+	edenn = edenn.to("cuda")
+	event_tensor = event_tensor.to("cuda")
+	output = edenn(event_tensor)
+
+	print(f"model: {edenn}")
+	print(f"layer 1: {edenn.layer1_out.shape}")
+	print(f"layer 2: {edenn.layer2_out.shape}")
+	print(f"layer 3: {edenn.layer3_out.shape}")
+	# print(f"layer 4: {edenn.layer4_out.shape}")
+	print(f"output features shape: {output.shape}")
