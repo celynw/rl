@@ -15,7 +15,6 @@ class EDeNN(BaseFeaturesExtractor):
 	layer1_out: Optional[torch.Tensor] = None
 	layer2_out: Optional[torch.Tensor] = None
 	layer3_out: Optional[torch.Tensor] = None
-	layer4_out: Optional[torch.Tensor] = None
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, observation_space: spaces.Box, features_dim: int, projection_head: bool = True, projection_dim: int = 256):
 		"""
@@ -60,11 +59,6 @@ class EDeNN(BaseFeaturesExtractor):
 		Args:
 			n_input_channels (int): Number of channels in input tensor.
 		"""
-		# D, H, W
-		kernel_size = 3
-		stride = (1, 2, 2)
-		pad = (0, 1, 1)
-
 		partial_kwargs = {}
 		conv = Decay3dPartial
 		partial_kwargs["multi_channel"] = True
@@ -72,22 +66,19 @@ class EDeNN(BaseFeaturesExtractor):
 		partial_kwargs["kernel_ratio"] = True
 
 		self.layer1 = torch.nn.Sequential(
-			conv(n_input_channels, 16, kernel_size=kernel_size, stride=stride, bias=True, padding=pad, return_decay=True, **partial_kwargs),
-			torch.nn.ReLU(inplace=True),
-			torch.nn.BatchNorm3d(num_features=16),
-		)
-		self.layer2 = torch.nn.Sequential(
-			conv(16, 32, kernel_size=kernel_size, stride=stride, bias=True, padding=pad, return_decay=True, **partial_kwargs),
+			conv(n_input_channels, 32, kernel_size=8, stride=4, bias=True, padding=0, return_decay=True, **partial_kwargs),
 			torch.nn.ReLU(inplace=True),
 			torch.nn.BatchNorm3d(num_features=32),
 		)
-		self.layer3 = torch.nn.Sequential(
-			conv(32, 64, kernel_size=kernel_size, stride=stride, bias=True, padding=pad, return_decay=True, **partial_kwargs),
+		self.layer2 = torch.nn.Sequential(
+			conv(32, 64, kernel_size=4, stride=2, bias=True, padding=0, return_decay=True, **partial_kwargs),
 			torch.nn.ReLU(inplace=True),
 			torch.nn.BatchNorm3d(num_features=64),
 		)
-		self.layer4 = torch.nn.Sequential(
-			conv(64, 64, kernel_size=(1, 1, 1), stride=1, bias=True, padding=0, return_decay=True, **partial_kwargs),
+		self.layer3 = torch.nn.Sequential(
+			conv(64, 64, kernel_size=3, stride=1, bias=True, padding=0, return_decay=True, **partial_kwargs),
+			torch.nn.ReLU(inplace=True),
+			torch.nn.BatchNorm3d(num_features=64),
 		)
 
 		# Compute shape by doing one forward pass
@@ -99,23 +90,23 @@ class EDeNN(BaseFeaturesExtractor):
 			self.n_flatten = math.prod(result.shape)
 
 		if self.projection_head:
-			self.layer5 = torch.nn.Sequential(
+			self.layer_last = torch.nn.Sequential(
 				torch.nn.Flatten(),
-				torch.nn.Linear(self.n_flatten, self.features_dim), # 15360 -> ...
+				torch.nn.Linear(self.n_flatten, self.projection_dim),
 				torch.nn.ReLU(inplace=True),
 				# torch.nn.Sigmoid(),
 			)
 			self.projection = torch.nn.Sequential(
-				torch.nn.Linear(self.features_dim, self.projection_dim),
+				torch.nn.Linear(self.projection_dim, self.features_dim),
 				# torch.nn.CELU(inplace=True),
 			)
 		else:
-			self.layer5 = torch.nn.Sequential(
+			self.layer_last = torch.nn.Sequential(
 				torch.nn.Flatten(),
-				torch.nn.Linear(self.n_flatten, self.features_dim), # 15360 -> ...
+				torch.nn.Linear(self.n_flatten, self.projection_dim),
 				torch.nn.ReLU(inplace=True),
 				# torch.nn.Sigmoid(),
-				torch.nn.Linear(self.features_dim, self.projection_dim), # FIX Although this runs, is this right?
+				torch.nn.Linear(self.projection_dim, self.features_dim),
 				# torch.nn.CELU(inplace=True),
 			)
 
@@ -141,15 +132,13 @@ class EDeNN(BaseFeaturesExtractor):
 		self.layer2_out = x.detach()
 		x, mask = self.process(self.layer3, x, mask, self.layer3_out)
 		self.layer3_out = x.detach()
-		x, mask = self.process(self.layer4, x, mask, self.layer4_out)
-		self.layer4_out = x.detach()
 
 		x = x[:, :, -1] # FIX Is it really OK to just take the last time bin?
 		if calc_n_flatten:
 			return x
 		# The sizes of `x` and `mask` will diverge here, but that's OK as we don't need the mask anymore
 		# We only care about the final bin prediction for now...
-		x = self.layer5(x)
+		x = self.layer_last(x)
 
 		return x # [1, self.features_dim]
 
@@ -202,7 +191,6 @@ class EDeNN(BaseFeaturesExtractor):
 		self.layer1_out = None
 		self.layer2_out = None
 		self.layer3_out = None
-		self.layer4_out = None
 
 
 # ==================================================================================================
@@ -238,5 +226,4 @@ if __name__ == "__main__":
 	print(f"layer 1: {edenn.layer1_out.shape}")
 	print(f"layer 2: {edenn.layer2_out.shape}")
 	print(f"layer 3: {edenn.layer3_out.shape}")
-	# print(f"layer 4: {edenn.layer4_out.shape}")
 	print(f"output features shape: {output.shape}")
