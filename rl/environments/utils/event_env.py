@@ -19,7 +19,8 @@ from rl.environments.utils import SpikeRepresentationGenerator
 
 # ==================================================================================================
 class EventEnv(gym.Env):
-	debug = False # For ROS logging
+	debug: bool = False # For ROS logging
+	return_rgb: bool
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, width: int, height: int, args: argparse.Namespace, event_image: bool = False):
 		"""
@@ -230,9 +231,11 @@ class EventEnv(gym.Env):
 		Returns:
 			dict: Key-value pairs for the step info.
 		"""
+		rgb = self.resize(self.render()) if self.return_rgb else None
 		return {
 			"state": self.state, # Used later for bootstrap loss
 			"updatedPolicy": int(self.updatedPolicy),
+			"rgb": rgb,
 		}
 
 	# ----------------------------------------------------------------------------------------------
