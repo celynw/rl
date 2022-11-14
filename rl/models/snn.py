@@ -153,7 +153,7 @@ if __name__ == "__main__":
 	import rl
 	import rl.environments
 
-	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, allow_abbrev=False)
 	parser = SNN.add_argparse_args(parser)
 	parser = rl.environments.CartPoleEvents.add_argparse_args(parser)
 	args = parser.parse_args()

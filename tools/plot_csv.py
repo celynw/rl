@@ -31,7 +31,7 @@ class Object():
 
 	# ----------------------------------------------------------------------------------------------
 	def parse_args(self):
-		parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+		parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, allow_abbrev=False)
 		parser.add_argument("csvPath", type=Path, help="Input CSV file", nargs="+", metavar="CSV_PATH")
 		parser.add_argument("-o", "--out_dir", type=Path, help="Directory", metavar="DIRECTORY")
 		parser.add_argument("-s", "--skiplines", type=int, help="Skip N lines in case of comments at the top of the file")

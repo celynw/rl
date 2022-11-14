@@ -50,7 +50,7 @@ def main(args: argparse.Namespace) -> None:
 
 # ==================================================================================================
 def parse_args() -> argparse.Namespace:
-	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, allow_abbrev=False)
 	parser.add_argument("-v", "--verbose", action="store_true", help="Print more information")
 	parser.add_argument("-n", "--name", type=str, help="Name of output files", default="gradients")
 

@@ -69,7 +69,7 @@ def events_to_img(obs: np.ndarray):
 
 # ==================================================================================================
 def parse_args() -> argparse.Namespace:
-	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, allow_abbrev=False)
 	# parser.add_argument("env", type=str, help="Which gym environment to use", choices=["CartPole-events-v1", "MountainCar-events-v0", "Pong-events-v0", "CartPole-rgb" ,"MountainCar-rgb-v0", "Pong-rgb-v0"])
 	parser.add_argument("outDir", type=Path, help="Output directory (will be created)")
 	parser.add_argument("--model", type=Path, help="Model to load")

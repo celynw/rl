@@ -16,7 +16,7 @@ def parse_args() -> argparse.Namespace:
 	Returns:
 		argparse.Namespace: Fully-parsed arguments object.
 	"""
-	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, add_help=False)
+	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, allow_abbrev=False, add_help=False)
 	models = [name for name, obj in inspect.getmembers(rl.models) if inspect.isclass(obj)]
 	environments = [name for name, obj in inspect.getmembers(rl.environments) if inspect.isclass(obj)]
 
