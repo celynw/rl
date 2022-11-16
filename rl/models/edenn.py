@@ -16,7 +16,7 @@ class EDeNN(BaseFeaturesExtractor):
 	layer2_out: Optional[torch.Tensor] = None
 	layer3_out: Optional[torch.Tensor] = None
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, observation_space: spaces.Box, features_dim: int, projection_head: bool = False, projection_dim: int = 256):
+	def __init__(self, observation_space: spaces.Box, features_dim: int, projection_head: Optional[int] = None):
 		"""
 		Feature extractor using "EDeNN: Event Decay Neural Networks for low latency vision" (Celyn Walters, Simon Hadfield).
 		https://arxiv.org/abs/2209.04362
@@ -24,13 +24,11 @@ class EDeNN(BaseFeaturesExtractor):
 		Args:
 			observation_space (spaces.Box): Observation space from environment.
 			features_dim (int): Output size of final layer (features) for RL policy.
-			projection_head (bool, optional): Use projection head or not. Defaults to True.
-			projection_dim (int, optional): Output size of projection head layer. Defaults to 256.
+			projection_head (int, optional): Output size of projection head layer, or disable. Defaults to None.
 		"""
 		super().__init__(observation_space, features_dim)
 		self.observation_space = observation_space
 		self.projection_head = projection_head
-		self.projection_dim = projection_dim
 		self.init_layers(self.observation_space.shape[0])
 
 	# ----------------------------------------------------------------------------------------------
@@ -46,7 +44,7 @@ class EDeNN(BaseFeaturesExtractor):
 			argparse.ArgumentParser: Modified parser object.
 		"""
 		group = parser.add_argument_group("Model")
-		group.add_argument("--projection_head", action="store_true", help="Use projection head")
+		group.add_argument("--projection_head", type=int, default=None, help="Use projection head, number is size of layer before projection which is sent to policy network")
 		# group.add_argument("-f", "--freeze", action="store_true", help="Freeze feature extractor weights")
 
 		return parser
@@ -89,23 +87,17 @@ class EDeNN(BaseFeaturesExtractor):
 			# self.n_flatten = result.shape[1]
 			self.n_flatten = math.prod(result.shape)
 
-		if self.projection_head:
-			self.layer_last = torch.nn.Sequential(
-				torch.nn.Flatten(),
-				torch.nn.Linear(self.n_flatten, self.projection_dim),
-				torch.nn.ReLU(inplace=True),
-				# torch.nn.Sigmoid(),
-			)
+		self.layer_last = torch.nn.Sequential(
+			torch.nn.Flatten(),
+			torch.nn.Linear(self.n_flatten, self.features_dim),
+			torch.nn.ReLU(inplace=True),
+			# torch.nn.Sigmoid(),
+			# torch.nn.CELU(inplace=True),
+		)
+
+		if self.projection_head is not None:
 			self.projection = torch.nn.Sequential(
-				torch.nn.Linear(self.projection_dim, self.features_dim),
-				# torch.nn.CELU(inplace=True),
-			)
-		else:
-			self.layer_last = torch.nn.Sequential(
-				torch.nn.Flatten(),
-				torch.nn.Linear(self.n_flatten, self.features_dim),
-				torch.nn.ReLU(inplace=True),
-				# torch.nn.Sigmoid(),
+				torch.nn.Linear(self.features_dim, self.projection_head),
 				# torch.nn.CELU(inplace=True),
 			)
 
@@ -152,7 +144,7 @@ class EDeNN(BaseFeaturesExtractor):
 		Returns:
 			torch.Tensor: Layer output.
 		"""
-		assert self.projection_head
+		assert self.projection_head is not None
 
 		return self.projection(x)
 
@@ -204,7 +196,7 @@ if __name__ == "__main__":
 	parser = EDeNN.add_argparse_args(parser)
 	parser = rl.environments.CartPoleEvents.add_argparse_args(parser)
 	args = parser.parse_args()
-	args.projection_head = False
+	args.projection_head = 256
 
 	env = gym.make(
 		"CartPoleEvents-v0",

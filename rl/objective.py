@@ -73,16 +73,18 @@ class Objective():
 		)
 
 		# Set up feature extractor
-		features_dim = env.state_space.shape[-1] if hasattr(env, "state_space") else env.observation_space.shape[0]
+		# `result_dim` should match the shape of the ground truth state (if there is one)
+		result_dim = env.state_space.shape[-1] if hasattr(env, "state_space") else env.observation_space.shape[0]
 		# Juggle keyword arguments
 		features_extractor_kwargs = dict(
-			features_dim=features_dim,
+			features_dim=result_dim,
 		)
-		if features_extractor_class is rl.models.EDeNN and self.args.projection_head:
+		if features_extractor_class is rl.models.EDeNN and self.args.projection_head is not None:
+			if self.args.projection_head < result_dim:
+				raise ValueError(f"`--projection_head` ({self.args.projection_head}) is less than `result_dim` ({result_dim}). This is probably wrong!")
 			features_extractor_kwargs.update(dict(
-				projection_head=self.args.projection_head,
-				features_dim=256,
-				projection_dim=features_dim,
+				projection_head=result_dim,
+				features_dim=self.args.projection_head,
 			))
 		elif features_extractor_class is rl.models.SNN:
 			features_extractor_kwargs.update(dict(
@@ -93,6 +95,7 @@ class Objective():
 			features_extractor_class=features_extractor_class,
 			optimizer_class=torch.optim.Adam,
 			features_extractor_kwargs=features_extractor_kwargs,
+			net_arch=[], # Important!
 		)
 
 		# Set up RL model

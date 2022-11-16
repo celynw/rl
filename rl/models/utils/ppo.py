@@ -20,13 +20,12 @@ from rl.models.utils import RolloutBuffer
 # ==================================================================================================
 class PPO(SB3_PPO):
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, policy, env, pl_coef: float = 1.0, bs_coef: float = 1.0, save_loss: bool = False, projection_head: bool = False, **kwargs):
+	def __init__(self, policy, env, pl_coef: float = 1.0, bs_coef: float = 1.0, save_loss: bool = False, **kwargs):
 		"""Subclassed to include physics states in the rollout buffer and bootstrap loss."""
 		super().__init__(policy, env, **kwargs)
 		self.pl_coef = pl_coef
 		self.bs_coef = bs_coef
 		self.save_loss = save_loss
-		self.projection_head = projection_head
 
 		self.rollout_buffer = RolloutBuffer(
 			self.n_steps,
