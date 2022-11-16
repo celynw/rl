@@ -73,16 +73,17 @@ class Objective():
 		)
 
 		# Set up feature extractor
+		features_dim = env.state_space.shape[-1] if hasattr(env, "state_space") else env.observation_space.shape[0]
+		# Juggle keyword arguments
 		features_extractor_kwargs = dict(
-			features_dim=env.state_space.shape[-1] if hasattr(env, "state_space") else env.observation_space.shape[0],
+			features_dim=features_dim,
 		)
 		if features_extractor_class is rl.models.EDeNN and self.args.projection_head:
-			features_extractor_kwargs = dict(
+			features_extractor_kwargs.update(dict(
+				projection_head=self.args.projection_head,
 				features_dim=256,
-				projection_dim=env.state_space.shape[-1] if hasattr(env, "state_space") else env.observation_space.shape[0],
-			)
-		if features_extractor_class is rl.models.EDeNN:
-			features_extractor_kwargs["projection_head"] = self.args.projection_head
+				projection_dim=features_dim,
+			))
 		elif features_extractor_class is rl.models.SNN:
 			features_extractor_kwargs.update(dict(
 				fps=env.fps,

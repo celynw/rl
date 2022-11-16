@@ -46,9 +46,11 @@ class ActorCriticPolicy(SB3_ACP):
 		log_prob = distribution.log_prob(actions)
 		values = self.value_net(latent_vf)
 
-		# Gradients are detached from the input to the RL model,
-		# so the `features_extractor` is only trained using this.
-		# `features` (or `projection`) are only used for `bs_loss`
+		# `self.features_extractor` always feeds through its layers up to `layer_last` to produce `features`.
+		# If using a projection head, `features_dim` will likely be larger, with `projection_dim` being the original size of `features_dim`.
+		# In this case, `self.features_extractor.project()` needs to be called manually, same with the loss based on that output.
+		# Gradients are detached from the input to the RL policy model, so the `features_extractor` is only trained using this.
+		# So `projection` is only used for `bs_loss`.
 		if isinstance(self.features_extractor, rl.models.EDeNN) and self.features_extractor.projection_head:
 			return values, log_prob, distribution.entropy(), projection
 		else:

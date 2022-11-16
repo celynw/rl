@@ -16,7 +16,7 @@ class EDeNN(BaseFeaturesExtractor):
 	layer2_out: Optional[torch.Tensor] = None
 	layer3_out: Optional[torch.Tensor] = None
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, observation_space: spaces.Box, features_dim: int, projection_head: bool = True, projection_dim: int = 256):
+	def __init__(self, observation_space: spaces.Box, features_dim: int, projection_head: bool = False, projection_dim: int = 256):
 		"""
 		Feature extractor using "EDeNN: Event Decay Neural Networks for low latency vision" (Celyn Walters, Simon Hadfield).
 		https://arxiv.org/abs/2209.04362
@@ -47,7 +47,7 @@ class EDeNN(BaseFeaturesExtractor):
 		"""
 		group = parser.add_argument_group("Model")
 		group.add_argument("--projection_head", action="store_true", help="Use projection head")
-		group.add_argument("-f", "--freeze", action="store_true", help="Freeze feature extractor weights")
+		# group.add_argument("-f", "--freeze", action="store_true", help="Freeze feature extractor weights")
 
 		return parser
 
@@ -68,17 +68,17 @@ class EDeNN(BaseFeaturesExtractor):
 		self.layer1 = torch.nn.Sequential(
 			conv(n_input_channels, 32, kernel_size=8, stride=4, bias=True, padding=0, return_decay=True, **partial_kwargs),
 			torch.nn.ReLU(inplace=True),
-			torch.nn.BatchNorm3d(num_features=32),
+			# torch.nn.BatchNorm3d(num_features=32),
 		)
 		self.layer2 = torch.nn.Sequential(
 			conv(32, 64, kernel_size=4, stride=2, bias=True, padding=0, return_decay=True, **partial_kwargs),
 			torch.nn.ReLU(inplace=True),
-			torch.nn.BatchNorm3d(num_features=64),
+			# torch.nn.BatchNorm3d(num_features=64),
 		)
 		self.layer3 = torch.nn.Sequential(
 			conv(64, 64, kernel_size=3, stride=1, bias=True, padding=0, return_decay=True, **partial_kwargs),
 			torch.nn.ReLU(inplace=True),
-			torch.nn.BatchNorm3d(num_features=64),
+			# torch.nn.BatchNorm3d(num_features=64),
 		)
 
 		# Compute shape by doing one forward pass
@@ -103,10 +103,9 @@ class EDeNN(BaseFeaturesExtractor):
 		else:
 			self.layer_last = torch.nn.Sequential(
 				torch.nn.Flatten(),
-				torch.nn.Linear(self.n_flatten, self.projection_dim),
+				torch.nn.Linear(self.n_flatten, self.features_dim),
 				torch.nn.ReLU(inplace=True),
 				# torch.nn.Sigmoid(),
-				torch.nn.Linear(self.projection_dim, self.features_dim),
 				# torch.nn.CELU(inplace=True),
 			)
 
