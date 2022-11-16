@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+from pathlib import Path
 from typing import Optional
 
 import optuna.trial
@@ -54,6 +55,7 @@ class Objective():
 				save_code=True, # Save the code to W&B
 				dir=self.log_dir,
 			)
+			run.log_code(Path(__file__).parent.resolve())
 
 		# Set up logger
 		print(f"Logging to {self.log_dir}")
