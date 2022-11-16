@@ -46,11 +46,13 @@ class Objective():
 		"""
 		if not self.args.nowandb:
 			run = wandb.init(
-				project="CERiL",
+				project=self.args.project,
+				name=self.args.name,
 				config=self.args,
 				sync_tensorboard=True, # Auto-upload tensorboard metrics to wandb
 				# monitor_gym=True, # Auto-upload the videos of agents playing the game
 				save_code=True, # Save the code to W&B
+				dir=self.log_dir,
 			)
 
 		# Set up logger

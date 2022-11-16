@@ -22,6 +22,7 @@ def parse_args() -> argparse.Namespace:
 
 	# Add trainer-specific arguments ---------------------------------------------------------------
 	group = parser.add_argument_group("Trainer")
+	group.add_argument("project", type=str, metavar="PROJECT_NAME", help="Name of wandb project")
 	group.add_argument("name", type=str, metavar="EXPERIMENT_NAME", help="Name of experiment")
 	group.add_argument("model", choices=models, metavar=f"MODEL: {{{', '.join(models)}}}", help="Model to train")
 	group.add_argument("environment", choices=environments, metavar=f"ENVIRONMENT: {{{', '.join(environments)}}}", help="Environment to train on")
