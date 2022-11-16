@@ -23,7 +23,7 @@ def main(args: argparse.Namespace):
 		"seed": 4089164106,
 	}
 
-	if not args.nowandb:
+	if not args.nolog:
 		run = wandb.init(
 			project=args.project,
 			name=args.name,
@@ -75,7 +75,7 @@ def main(args: argparse.Namespace):
 				name_prefix=config["env_name"]
 			)
 		]
-	if not args.nowandb:
+	if not args.nolog:
 		callbacks += [
 			WandbCallback(
 				gradient_save_freq=1000,
@@ -91,7 +91,7 @@ def parse_args() -> argparse.Namespace:
 	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, allow_abbrev=False)
 	parser.add_argument("project", type=str, help="Name for the wandb project")
 	parser.add_argument("name", type=str, help="Name for the wandb run")
-	parser.add_argument("--nowandb", action="store_true", help="Don't log to wandb")
+	parser.add_argument("--nolog", action="store_true", help="Don't log to wandb")
 
 	return parser.parse_args()
 

@@ -45,7 +45,10 @@ class Objective():
 		Returns:
 			Optional[float]: Last mean reward of this trial, to be stored and plotted with `optuna`.
 		"""
-		if not self.args.nowandb:
+		# Setup logging
+		if not self.args.nolog:
+			print(f"Logging to {self.log_dir}")
+			self.log_dir.mkdir(parents=True, exist_ok=True)
 			run = wandb.init(
 				project=self.args.project,
 				name=self.args.name,
@@ -57,11 +60,7 @@ class Objective():
 			)
 			run.log_code(Path(__file__).parent.resolve())
 
-		# Set up logger
-		print(f"Logging to {self.log_dir}")
-		self.log_dir.mkdir(parents=True, exist_ok=True)
-
-		# Set up environment
+		# Setup environment
 		features_extractor_class = getattr(rl.models, self.args.model)
 
 		env_kwargs = dict()
@@ -104,7 +103,7 @@ class Objective():
 			learning_rate=self.args.lr,
 			device="cpu" if self.args.cpu else "auto",
 			n_steps=self.args.n_steps,
-			tensorboard_log=self.log_dir,
+			tensorboard_log=Path(run.dir) if not self.args.nolog else None, # Will be appended by `tb_log_name`
 			gae_lambda=self.args.gae_lambda,
 			gamma=self.args.gamma,
 			n_epochs=self.args.n_epochs,
@@ -116,32 +115,34 @@ class Objective():
 		env.set_model(model.policy.features_extractor)
 
 		# Set up evaluation and callbacks
-		tb_log_name = f"{rl.utils.datestr()}_{self.args.name}"
-		logger_save_path = self.log_dir / f"{tb_log_name}_1" # Based on stable_baselines3.common.utils.configure_logger
+		best_model_save_path = Path(run.dir) / "best_models" if not self.args.nolog else None
 		if trial is not None:
-			eval_callback = TrialEvalCallback(env, trial, eval_freq=self.args.n_steps * self.args.eval_every, best_model_save_path=logger_save_path)
+			eval_callback = TrialEvalCallback(env, trial, eval_freq=self.args.n_steps * self.args.eval_every, best_model_save_path=best_model_save_path)
 		else:
-			eval_callback = EvalCallback(env, eval_freq=self.args.n_steps * self.args.eval_every, best_model_save_path=logger_save_path)
+			eval_callback = EvalCallback(env, eval_freq=self.args.n_steps * self.args.eval_every, best_model_save_path=best_model_save_path)
 		callbacks = [
 			eval_callback,
 			PolicyUpdateCallback(env),
-			WandbCallback(
-				gradient_save_freq=1000,
-				model_save_path=f"models/{run.id}",
-			),
-			CheckpointCallback(
-				save_freq=10000,
-				save_path=f"models/{run.id}",
-				name_prefix=self.args.environment,
-			),
 		]
+		if not self.args.nolog:
+			callbacks += [
+				WandbCallback(
+					gradient_save_freq=1000,
+					model_save_path=f"models/{run.id}",
+				),
+				CheckpointCallback(
+					save_freq=10000,
+					save_path=Path(run.dir) / "checkpoints",
+					name_prefix=self.args.environment,
+				),
+			]
 
 		# Train
 		model.learn(
 			total_timesteps=max(model.n_steps, self.args.steps),
 			callback=callbacks,
 			# eval_freq=self.args.n_steps,
-			tb_log_name=tb_log_name,
+			tb_log_name="tensorboard",
 			progress_bar=True,
 		)
 		if trial is not None and eval_callback.is_pruned:
@@ -150,6 +151,6 @@ class Objective():
 		# Spin down
 		env.close()
 
-		# For keeping track with optuna
+		# Keep track with optuna
 		if trial is not None:
 			return eval_callback.last_mean_reward
