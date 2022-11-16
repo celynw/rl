@@ -4,7 +4,7 @@ from .pong import PongEvents
 from .freeway import FreewayEvents
 from .skiing import SkiingEvents
 
-from gym.envs.registration import register, EnvSpec
+from gym.envs.registration import register#, EnvSpec
 # ARBITRARY arguments are passed to EnvSpec
 
 version = "v0"
