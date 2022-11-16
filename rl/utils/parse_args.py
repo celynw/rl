@@ -40,6 +40,9 @@ def parse_args() -> argparse.Namespace:
 	parser.add_argument("--gamma", type=float, help="Discount factor", default=0.99)
 	parser.add_argument("--n_epochs", type=int, help="Number of epoch when optimizing the surrogate loss", default=10)
 	parser.add_argument("--ent_coef", type=float, help="Entropy coefficient for the loss calculation", default=0.0)
+	parser.add_argument("--vf_coef", type=float, help="Value function coefficient for the loss calculation", default=0.5)
+	parser.add_argument("--clip_range", type=float, help="Clipping parameter, it can be a function of the current progress remaining (from 1 to 0)", default=0.2)
+	parser.add_argument("--max_grad_norm", type=float, help="The maximum value for the gradient clipping", default=0.5)
 	parser.add_argument("--batch_size", type=int, help="Minibatch size", default=64)
 	parser.add_argument("--eval_every", type=int, help="Run evaluation every N policy updates", default=10)
 

@@ -98,6 +98,7 @@ class Objective():
 		model = rl.models.utils.PPO(
 			rl.models.utils.ActorCriticPolicy,
 			env,
+			batch_size=self.args.batch_size,
 			policy_kwargs=policy_kwargs,
 			verbose=1,
 			learning_rate=self.args.lr,
@@ -108,9 +109,11 @@ class Objective():
 			gamma=self.args.gamma,
 			n_epochs=self.args.n_epochs,
 			# pl_coef=0.0,
-			# ent_coef=0.0,
-			# vf_coef=0.0,
+			ent_coef=self.args.ent_coef,
+			vf_coef=self.args.vf_coef,
 			# bs_coef=0.0,
+			clip_range=self.args.clip_range,
+			max_grad_norm=self.args.max_grad_norm,
 		) # total_timesteps will be AT LEAST self.args.n_steps
 		env.set_model(model.policy.features_extractor)
 
