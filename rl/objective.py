@@ -44,13 +44,14 @@ class Objective():
 		Returns:
 			Optional[float]: Last mean reward of this trial, to be stored and plotted with `optuna`.
 		"""
-		run = wandb.init(
-			project="CERiL",
-			config=self.args,
-			sync_tensorboard=True, # Auto-upload tensorboard metrics to wandb
-			# monitor_gym=True, # Auto-upload the videos of agents playing the game
-			save_code=True, # Save the code to W&B
-		)
+		if not self.args.nowandb:
+			run = wandb.init(
+				project="CERiL",
+				config=self.args,
+				sync_tensorboard=True, # Auto-upload tensorboard metrics to wandb
+				# monitor_gym=True, # Auto-upload the videos of agents playing the game
+				save_code=True, # Save the code to W&B
+			)
 
 		# Set up logger
 		print(f"Logging to {self.log_dir}")

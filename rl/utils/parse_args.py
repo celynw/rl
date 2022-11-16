@@ -25,6 +25,7 @@ def parse_args() -> argparse.Namespace:
 	group.add_argument("name", type=str, metavar="EXPERIMENT_NAME", help="Name of experiment")
 	group.add_argument("model", choices=models, metavar=f"MODEL: {{{', '.join(models)}}}", help="Model to train")
 	group.add_argument("environment", choices=environments, metavar=f"ENVIRONMENT: {{{', '.join(environments)}}}", help="Environment to train on")
+	group.add_argument("--nowandb", action="store_true", help="Don't log to wandb")
 	parser.add_argument("-d", "--log_dir", type=Path, default=Path("/tmp/gym/"), help="Location of log directory")
 	group.add_argument("--optuna", type=str, help="Optimise with optuna using this storage URL. Examples: 'sqlite:///optuna.db' or 'postgresql://postgres:password@host:5432/postgres'")
 	# parser.add_argument("-r", "--render", action="store_true", help="Render final trained model output")
