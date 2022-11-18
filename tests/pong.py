@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+from pathlib import Path
 
 import wandb
 from wandb.integration.sb3 import WandbCallback
@@ -8,7 +9,14 @@ from stable_baselines3.common.env_util import make_atari_env
 from stable_baselines3.common.vec_env import VecFrameStack, VecVideoRecorder
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.torch_layers import NatureCNN
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.atari_wrappers import NoopResetEnv, MaxAndSkipEnv, EpisodicLifeEnv, WarpFrame, ClipRewardEnv
+import gym
+import numpy as np
+import cv2
+from gym import spaces
 
+import rl
 import rl.models.utils
 import rl.models
 import rl.utils
@@ -16,8 +24,9 @@ from rl.environments.utils import SkipCutscenesPong
 
 # ==================================================================================================
 def main(args: argparse.Namespace):
+	logdir = Path(__file__).parent.resolve()
 	config = {
-		"env_name": "PongNoFrameskip-v4",
+		"env_name": "PongNoFrameskip-v4", # Box(0, 255, (84, 84, 4), uint8)
 		"num_envs": 8,
 		"total_timesteps": int(10e6),
 		"seed": 4089164106,
@@ -31,20 +40,16 @@ def main(args: argparse.Namespace):
 			sync_tensorboard=True, # Auto-upload tensorboard metrics to wandb
 			# monitor_gym=True, # Auto-upload the videos of agents playing the game
 			save_code=True, # Save the code to W&B
+			dir=logdir,
 		)
 
 	# There already exists an environment generator
 	# that will make and wrap atari environments correctly.
 	# Here we are also multi-worker training (n_envs=8 => 8 environments)
 	env = make_atari_env(config["env_name"], n_envs=config["num_envs"], seed=config["seed"])
-
-	print("ENV ACTION SPACE: ", env.action_space.n)
-
 	env = SkipCutscenesPong(env)
 	env = VecFrameStack(env, n_stack=4)
 	# env = VecVideoRecorder(env, "videos", record_video_trigger=lambda x: x % 100000 == 0, video_length=2000)
-
-	# env.state_space # rl compatibility
 
 	# https://github.com/DLR-RM/rl-trained-agents/blob/10a9c31e806820d59b20d8b85ca67090338ea912/ppo/PongNoFrameskip-v4_1/PongNoFrameskip-v4/config.yml
 	model = PPO(
@@ -64,26 +69,26 @@ def main(args: argparse.Namespace):
 		n_epochs=4,
 		n_steps=128,
 		vf_coef=0.5,
-		tensorboard_log=f"runs",
+		tensorboard_log=Path(run.dir) if not args.nolog else None, # Will be appended by `tb_log_name`
 		verbose=1,
 	)
 
-	callbacks = [
-			CheckpointCallback(
-				save_freq=10000,
-				save_path='./pong',
-				name_prefix=config["env_name"]
-			)
-		]
+	callbacks = []
 	if not args.nolog:
 		callbacks += [
+			CheckpointCallback(
+				save_freq=10000,
+				save_path=Path(run.dir) / "checkpoints",
+				name_prefix=config["env_name"],
+			),
 			WandbCallback(
 				gradient_save_freq=1000,
 				model_save_path=f"models/{run.id}",
 			),
 		]
-	model.learn(total_timesteps=config["total_timesteps"], callback=callbacks)
-	model.save("ppo-PongNoFrameskip-v4.zip")
+	model.learn(total_timesteps=config["total_timesteps"], callback=callbacks, tb_log_name="tensorboard")
+	if not args.nolog:
+		model.save(logdir / f"{args.project}_{args.project}.zip")
 
 
 # ==================================================================================================
