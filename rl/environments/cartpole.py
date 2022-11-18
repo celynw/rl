@@ -16,7 +16,7 @@ class CartPoleEvents(EventEnv, CartPoleEnv):
 	state_space: spaces.Space
 	model: Optional[EDeNN | SNN] = None
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, args: argparse.Namespace, event_image: bool = False, return_rgb: bool = False):
+	def __init__(self, args: argparse.Namespace, event_image: bool = False, return_rgb: bool = False, output_width: int = 126, output_height: int = 84):
 		"""
 		Event version of CartPole environment.
 
@@ -26,8 +26,8 @@ class CartPoleEvents(EventEnv, CartPoleEnv):
 			return_rgb (bool, optional): _description_. Defaults to False.
 		"""
 		self.return_rgb = return_rgb
-		self.output_width = 126
-		self.output_height = 84
+		self.output_width = output_width
+		self.output_height = output_height
 		CartPoleEnv.__init__(self, render_mode="rgb_array")
 		EventEnv.__init__(self, self.output_width, self.output_height, args, event_image) # type: ignore
 
@@ -203,15 +203,15 @@ class CartPoleRGB(CartPoleEnv):
 	state_space: spaces.Space
 	model: Optional[NatureCNN] = None
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, args: argparse.Namespace):
+	def __init__(self, args: argparse.Namespace, output_width: int = 126, output_height: int = 84):
 		"""
 		RGB version of CartPole environment.
 
 		Args:
 			args (argparse.Namespace): Parsed arguments, depends on which specific env we're using.
 		"""
-		self.output_width = 126
-		self.output_height = 84
+		self.output_width = output_width
+		self.output_height = output_height
 		self.updatedPolicy = False # Used for logging whenever the policy is updated
 		super().__init__(render_mode="rgb_array")
 		self.state_space = self.observation_space # For access later
