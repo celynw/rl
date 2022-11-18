@@ -28,7 +28,8 @@ from rl.environments.utils import SkipCutscenesPong
 def main(args: argparse.Namespace):
 	logdir = Path(__file__).parent.resolve()
 	config = {
-		"env_name": "PongNoFrameskip-v4", # Box(0, 255, (84, 84, 4), uint8)
+		# "env_name": "PongNoFrameskip-v4", # Box(0, 255, (84, 84, 4), uint8)
+		"env_name": "CartPoleRGB-v0", # Box(0, 255, (84, 84, 4), uint8)
 		"num_envs": 8,
 		"total_timesteps": int(10e6),
 		"seed": 4089164106,
@@ -49,8 +50,20 @@ def main(args: argparse.Namespace):
 	# There already exists an environment generator
 	# that will make and wrap atari environments correctly.
 	# Here we are also multi-worker training (n_envs=8 => 8 environments)
-	env = make_atari_env(config["env_name"], n_envs=config["num_envs"], seed=config["seed"])
-	env = SkipCutscenesPong(env)
+	# env = make_atari_env(config["env_name"], n_envs=config["num_envs"], seed=config["seed"])
+	env = make_vec_env(
+		env_id=config["env_name"],
+		n_envs=config["num_envs"],
+		seed=config["seed"],
+		start_index=0,
+		monitor_dir=None,
+		wrapper_class=AtariWrapper,
+		env_kwargs=dict(args=args),
+		vec_env_cls=None,
+		vec_env_kwargs=None,
+		monitor_kwargs=None,
+	)
+	# env = SkipCutscenesPong(env)
 	env = VecFrameStack(env, n_stack=4)
 	# env = VecVideoRecorder(env, "videos", record_video_trigger=lambda x: x % 100000 == 0, video_length=2000)
 
@@ -60,8 +73,8 @@ def main(args: argparse.Namespace):
 	# model = rl.models.utils.PPO(
 		policy="CnnPolicy",
 		# policy=rl.models.utils.ActorCriticPolicy,
-		# policy_kwargs=dict(features_extractor_class=rl.models.NatureCNN),
-		policy_kwargs=dict(features_extractor_class=NatureCNN),
+		# policy_kwargs=dict(features_extractor_class=NatureCNN),
+		policy_kwargs=dict(features_extractor_class=rl.models.NatureCNN, net_arch=[]),
 		env=env,
 		batch_size=256,
 		clip_range=0.1,
