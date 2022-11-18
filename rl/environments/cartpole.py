@@ -217,7 +217,7 @@ class CartPoleRGB(CartPoleEnv):
 		self.state_space = self.observation_space # For access later
 		# FIX: I should normalise my observation space (well, both), but not sure how to for event tensor
 		self.shape = [3, self.output_height, self.output_width]
-		self.observation_space = spaces.Box(low=0, high=255, shape=self.shape, dtype=np.double)
+		self.observation_space = spaces.Box(low=0, high=255, shape=self.shape, dtype=np.uint8)
 
 	# ----------------------------------------------------------------------------------------------
 	@staticmethod
