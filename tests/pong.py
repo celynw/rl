@@ -11,10 +11,12 @@ from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.torch_layers import NatureCNN
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.atari_wrappers import NoopResetEnv, MaxAndSkipEnv, EpisodicLifeEnv, WarpFrame, ClipRewardEnv
+from stable_baselines3.common.callbacks import EvalCallback
 import gym
 import numpy as np
 import cv2
 from gym import spaces
+from rich import print, inspect
 
 import rl
 import rl.models.utils
@@ -42,6 +44,7 @@ def main(args: argparse.Namespace):
 			save_code=True, # Save the code to W&B
 			dir=logdir,
 		)
+		run.log_code(Path(__file__).parent.resolve())
 
 	# There already exists an environment generator
 	# that will make and wrap atari environments correctly.
@@ -52,6 +55,7 @@ def main(args: argparse.Namespace):
 	# env = VecVideoRecorder(env, "videos", record_video_trigger=lambda x: x % 100000 == 0, video_length=2000)
 
 	# https://github.com/DLR-RM/rl-trained-agents/blob/10a9c31e806820d59b20d8b85ca67090338ea912/ppo/PongNoFrameskip-v4_1/PongNoFrameskip-v4/config.yml
+	n_steps = 128
 	model = PPO(
 	# model = rl.models.utils.PPO(
 		policy="CnnPolicy",
@@ -67,7 +71,7 @@ def main(args: argparse.Namespace):
 		learning_rate=2.5e-4,
 		max_grad_norm=0.5,
 		n_epochs=4,
-		n_steps=128,
+		n_steps=n_steps,
 		vf_coef=0.5,
 		tensorboard_log=Path(run.dir) if not args.nolog else None, # Will be appended by `tb_log_name`
 		verbose=1,
@@ -86,6 +90,7 @@ def main(args: argparse.Namespace):
 				model_save_path=f"models/{run.id}",
 			),
 		]
+	callbacks += [EvalCallback(env, eval_freq=n_steps * 10, best_model_save_path=(Path(run.dir) / "checkpoints") / "best" if not args.nolog else None)]
 	model.learn(total_timesteps=config["total_timesteps"], callback=callbacks, tb_log_name="tensorboard")
 	if not args.nolog:
 		model.save(logdir / f"{args.project}_{args.project}.zip")
