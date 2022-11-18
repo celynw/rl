@@ -110,6 +110,76 @@ def main(args: argparse.Namespace):
 
 
 # ==================================================================================================
+class WarpFrame_(WarpFrame):
+	"""
+	WarpFrame wants HWC instead of CHW.
+	Convert to grayscale and warp frames to 84x84 (default)
+	as done in the Nature paper and later work.
+
+	:param env: the environment
+	:param width:
+	:param height:
+	"""
+	# ----------------------------------------------------------------------------------------------
+	def __init__(self, env: gym.Env, width: int = 84, height: int = 84):
+		super().__init__(env, width, height)
+		self.observation_space = spaces.Box(low=0, high=255, shape=(1, self.height, self.width), dtype=env.observation_space.dtype)
+
+	# ----------------------------------------------------------------------------------------------
+	def observation(self, frame: np.ndarray) -> np.ndarray:
+		"""
+		returns the current observation from a frame
+
+		:param frame: environment frame
+		:return: the observation
+		"""
+		frame = np.transpose(frame, (1, 2, 0))
+		frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+		frame = cv2.resize(frame, (self.width, self.height), interpolation=cv2.INTER_AREA)
+
+		return frame[None, :, :]
+
+
+# ==================================================================================================
+class AtariWrapper(gym.Wrapper):
+	"""
+	Atari 2600 preprocessings
+
+	Specifically:
+
+	* NoopReset: obtain initial state by taking random number of no-ops on reset.
+	* Frame skipping: 4 by default
+	* Max-pooling: most recent two observations
+	* Termination signal when a life is lost.
+	* Resize to a square image: 84x84 by default
+	* Grayscale observation
+	* Clip reward to {-1, 0, 1}
+
+	:param env: gym environment
+	:param noop_max: max number of no-ops
+	:param frame_skip: the frequency at which the agent experiences the game.
+	:param screen_size: resize Atari frame
+	:param terminal_on_life_loss: if True, then step() returns done=True whenever a life is lost.
+	:param clip_reward: If True (default), the reward is clip to {-1, 0, 1} depending on its sign.
+	"""
+	# ----------------------------------------------------------------------------------------------
+	def __init__(
+		self,
+		env: gym.Env,
+		frame_skip: int = 1,
+		screen_size: int = 84,
+		clip_reward: bool = True,
+	):
+		if frame_skip > 0:
+			env = MaxAndSkipEnv(env, skip=frame_skip)
+		# env = WarpFrame(env, width=screen_size, height=screen_size)
+		env = WarpFrame_(env, width=screen_size, height=screen_size)
+		if clip_reward:
+			env = ClipRewardEnv(env)
+		super().__init__(env)
+
+
+# ==================================================================================================
 def parse_args() -> argparse.Namespace:
 	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, allow_abbrev=False)
 	parser.add_argument("project", type=str, help="Name for the wandb project")
