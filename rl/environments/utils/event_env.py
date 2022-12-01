@@ -55,7 +55,7 @@ class EventEnv(gym.Env):
 			self.shape = [2, height, width]
 		else:
 			self.shape = [2, args.tsamples, height, width]
-		self.observation_space = spaces.Box(low=0, high=1, shape=self.shape, dtype=np.double)
+		self.observation_space = spaces.Box(low=0, high=1, shape=self.shape, dtype=np.uint8)
 
 	# ----------------------------------------------------------------------------------------------
 	@staticmethod
@@ -86,7 +86,7 @@ class EventEnv(gym.Env):
 		if self.model is not None and hasattr(self.model, "reset_env"):
 			self.model.reset_env()
 
-		return torch.zeros(*self.shape, dtype=torch.double).numpy(), info
+		return torch.zeros(*self.shape, dtype=torch.uint8).numpy(), info
 
 	# ----------------------------------------------------------------------------------------------
 	def observe(self, rgb: Optional[np.ndarray] = None, wait: bool = True) -> Optional[torch.Tensor]:
