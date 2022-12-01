@@ -31,7 +31,8 @@ register(
 	id=f"{PongEvents.__qualname__}-{version}",
 	entry_point=PongEvents,
 	kwargs=dict(
-		frameskip=(2, 5), # XXXXXX-v4
+		# frameskip=(2, 5), # XXXXXX-v4
+		frameskip=1,
 		repeat_action_probability=0.0, # XXXXXX-v4
 		full_action_space=False, # XXXXXX-v4
 		max_num_frames_per_episode=108_000, # XXXXXX-v4
