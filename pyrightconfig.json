@@ -5,8 +5,9 @@
 		"venv*/",
 		"submodules/",
 		"*/build/",
-		"*/devel/"
-		"old/"
+		"*/devel/",
+		"old/",
+		"wandb/",
 	],
 	// Always excluded
 	"ignore": [
@@ -14,7 +15,8 @@
 		"venv*/",
 		"submodules/",
 		"*/build/",
-		"*/devel/"
-		"old/"
+		"*/devel/",
+		"old/",
+		"wandb/",
 	],
 }
