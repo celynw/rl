@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<package format="2">
+	<name>esimcpp</name>
+	<version>0.1.0</version>
+	<description>The esimcpp package</description>
+	<maintainer email="celyn.walters@surrey.ac.uk">Celyn Walters</maintainer>
+	<license>MIT</license>
+	<buildtool_depend>catkin</buildtool_depend>
+	<depend>pybind11_catkin</depend>
+	<depend>esim</depend>
+</package>
