@@ -73,13 +73,22 @@ if __name__ == "__main__":
 	parser = NatureCNN.add_argparse_args(parser)
 	args = parser.parse_args()
 
+	env_choices = ["CartPoleRGB-v0", "Pong-v4"]
+	env_choice = env_choices[1]
+
+	print(f"Running example with {env_choice}")
+	kwargs = {}
+	if env_choice == "CartPoleRGB-v0":
+		kwargs += dict(args=args)
+
 	# from gym.envs.classic_control.cartpole import CartPoleEnv
 	env = gym.make(
-		"CartPoleRGB-v0",
-		# "PongEvents-v0",
-		args=args,
+		env_choice,
+		**kwargs,
 	)
-	nature = NatureCNN(observation_space=env.observation_space, features_dim=env.state_space.shape[-1])
+	features_dim=env.state_space.shape[-1] if hasattr(env, "state_space") else env.observation_space.shape[0]
+	print(env.observation_space)
+	nature = NatureCNN(observation_space=env.observation_space, features_dim=features_dim)
 
 	# Box(0, 255, (84, 84, 1), uint8)
 	# rgb_tensor = torch.rand([1, 2, env.output_height, env.output_width])
