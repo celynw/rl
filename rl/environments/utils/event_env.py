@@ -35,10 +35,10 @@ class EventEnv(gym.Env):
 			fps = self.metadata["render_fps"] # type: ignore
 
 		self.bridge = SimulatorBridge(
-			1.0, # Contrast threshold (positive): double contrast_threshold_pos
-			1.0, # Contrast threshold (negative): double contrast_threshold_neg
-			0.021, # Standard deviation of contrast threshold (positive): double contrast_threshold_sigma_pos = 0.021
-			0.021, # Standard deviation of contrast threshold (negative): double contrast_threshold_sigma_neg = 0.021
+			0.5, # Contrast threshold (positive): double contrast_threshold_pos
+			0.5, # Contrast threshold (negative): double contrast_threshold_neg
+			0.0, # Standard deviation of contrast threshold (positive): double contrast_threshold_sigma_pos = 0.021
+			0.0, # Standard deviation of contrast threshold (negative): double contrast_threshold_sigma_neg = 0.021
 			0, # Refractory period (time during which a pixel cannot fire events just after it fired one), in nanoseconds: int64_t refractory_period_ns
 			True, # Whether to convert images to log images in the preprocessing step: const bool use_log_image
 			0.001, # Epsilon value used to convert images to log: L = log(eps + I / 255.0): const double log_eps
