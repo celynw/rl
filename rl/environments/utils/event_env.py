@@ -10,11 +10,7 @@ import numpy as np
 import torch
 from rich import print, inspect
 
-import rospy
-from cv_bridge import CvBridge
-from sensor_msgs.msg import Image
-from dvs_msgs.msg import EventArray, Event # Requries ROS to be sourced
-
+from esimcpp import SimulatorBridge
 from rl.environments.utils import SpikeRepresentationGenerator
 
 # ==================================================================================================
@@ -38,16 +34,25 @@ class EventEnv(gym.Env):
 		else:
 			fps = self.metadata["render_fps"] # type: ignore
 
-		rospy.init_node(Path(__file__).stem, anonymous=False, log_level=rospy.DEBUG if self.debug else rospy.INFO)
-		self.bridge = CvBridge()
-		self.pub_image = rospy.Publisher("image", Image, queue_size=10)
-		self.sub_events = rospy.Subscriber("/cam0/events", EventArray, self.callback)
+		self.bridge = SimulatorBridge(
+			1.0, # Contrast threshold (positive): double contrast_threshold_pos
+			1.0, # Contrast threshold (negative): double contrast_threshold_neg
+			0.021, # Standard deviation of contrast threshold (positive): double contrast_threshold_sigma_pos = 0.021
+			0.021, # Standard deviation of contrast threshold (negative): double contrast_threshold_sigma_neg = 0.021
+			0, # Refractory period (time during which a pixel cannot fire events just after it fired one), in nanoseconds: int64_t refractory_period_ns
+			True, # Whether to convert images to log images in the preprocessing step: const bool use_log_image
+			0.001, # Epsilon value used to convert images to log: L = log(eps + I / 255.0): const double log_eps
+			False, # Whether to simulate color events or not (default: false): const bool simulate_color_events
+			# const double exposure_time_ms = 10.0, # Exposure time in milliseconds, used to simulate motion blur
+			# const bool anonymous = false, # Whether to set a random number after the /ros_publisher node name (default: false)
+			# const int32_t random_seed = 0 # Random seed used to generate the trajectories. If set to 0 the current time(0) is taken as seed.
+		)
+
 		self.generator = SpikeRepresentationGenerator(height, width, args.tsamples)
 		self.fps = self.metadata["render_fps"]
 		self.event_image = event_image
-		self.time = rospy.Time.now() # Initial timestamp for events
+		self.time = 0.0
 		self.events = None # Placeholder until messages arrive
-		self.connected = False # Waits for subscriber to listen to our published topic
 		self.updatedPolicy = False # Used for logging whenever the policy is updated
 
 		# FIX: I should normalise my observation space (well, both), but not sure how to for event tensor
@@ -82,7 +87,7 @@ class EventEnv(gym.Env):
 		info = self.get_info()
 
 		self.observe(wait=False) # Initialise ESIM; Need two frames to get a difference to generate events
-		self.observe()
+		self.events = self.observe()
 		if self.model is not None and hasattr(self.model, "reset_env"):
 			self.model.reset_env()
 
@@ -91,7 +96,7 @@ class EventEnv(gym.Env):
 	# ----------------------------------------------------------------------------------------------
 	def observe(self, rgb: Optional[np.ndarray] = None, wait: bool = True) -> Optional[torch.Tensor]:
 		"""
-		Renders the AI gym environment, pushes it through ROS and presents the event observations.
+		TODO Renders the AI gym environment, pushes it through ROS and presents the event observations.
 
 		Args:
 			rgb (np.ndarray, optional): RGB prerendered frame. Defaults to None.
@@ -102,68 +107,16 @@ class EventEnv(gym.Env):
 		if rgb is None:
 			rgb = self.render() # type: ignore
 		rgb = self.resize(rgb) # type: ignore
-		self.publish(rgb) # type: ignore
 
-		if not wait:
-			return
-
-		observation = self.events_to_tensor(self.wait_for_events())
+		observation = self.events_to_tensor(self.bridge.img2events(rgb, int(self.time * 1e9)))
+		self.time += (1 / self.fps)
 		if self.event_image:
 			observation = observation.sum(1) # Just sum the events for each pixel
 
 		return observation
 
 	# ----------------------------------------------------------------------------------------------
-	def wait_for_events(self) -> list[Event]:
-		"""
-		Waits until `self.events` is populated.
-
-		Returns:
-			list[Event]: The value of self.events: the events from the EventArray ROS message.
-		"""
-		while self.events is None:
-			# pass
-			if rospy.is_shutdown():
-				print("Node is shutting down")
-				break
-				# quit(0)
-
-		return self.events
-
-	# ----------------------------------------------------------------------------------------------
-	def publish(self, rgb: np.ndarray):
-		"""
-		Publishes the RGB image so that the events can be generated using the simulator.
-
-		Args:
-			rgb (np.ndarray): Original RGB observation from AI gym.
-		"""
-		msg = self.bridge.cv2_to_imgmsg(rgb, encoding="rgb8")
-		# msg.header.frame_id = self.params.cam_frame
-		msg.header.frame_id = "cam"
-		msg.header.stamp = self.time
-		self.events = None
-
-		# Wait for subscriber. Can be used to reveal a problem with nodes or publishing/subscribing
-		i = 0
-		while not self.connected:
-			print(f"Waiting for subscriber on '{self.pub_image.name}' topic ({i})")
-			time.sleep(1)
-			# Check that ESIM is active
-			# FIX this doesn't account for _what_ is listening, it could be just a visualiser or rosbag!
-			if self.pub_image.get_num_connections() > 0:
-				self.connected = True
-				print("Connected")
-			if rospy.is_shutdown():
-				print("Node is shutting down")
-				break
-			i += 1
-
-		self.pub_image.publish(msg)
-		self.time += rospy.Duration(nsecs=int((1 / self.fps) * 1e9))
-
-	# ----------------------------------------------------------------------------------------------
-	def events_to_tensor(self, events: list[Event]) -> torch.Tensor:
+	def events_to_tensor(self, events: list) -> torch.Tensor:
 		"""
 		Processes the raw events into an event tensor.
 
@@ -173,26 +126,15 @@ class EventEnv(gym.Env):
 		Returns:
 			torch.Tensor: Event tensor.
 		"""
-		polarities = torch.tensor([e.polarity for e in events])
+		polarities = torch.tensor([e.pol for e in events])
 		coords = torch.tensor([[e.x, e.y] for e in events])
-		stamps = torch.tensor([e.ts.to_sec() for e in events], dtype=torch.double)
+		stamps = torch.tensor([e.t / 1e9 for e in events], dtype=torch.double)
 		assert(polarities.shape[0] == coords.shape[0] == stamps.shape[0])
 
 		event_tensor = self.generator.getSlayerSpikeTensor(polarities, coords, stamps)
 		event_tensor = event_tensor.permute(0, 3, 1, 2) # CHWT -> CDHW
 
 		return event_tensor
-
-	# ----------------------------------------------------------------------------------------------
-	def callback(self, msg: EventArray):
-		"""
-		ROS callback on receiving an EventArray message.
-		Sets the class `self.events` to that data.
-
-		Args:
-			msg (EventArray): Raw ROS message from event simulator.
-		"""
-		self.events = msg.events
 
 	# ----------------------------------------------------------------------------------------------
 	def set_state(self, state: tuple):
