@@ -118,13 +118,19 @@ class EDeNN(BaseFeaturesExtractor):
 			mask = (x != 0).float()
 
 		x, mask = self.process(self.layer1, x, mask, self.layer1_out)
-		self.layer1_out = x.detach()
+		if not calc_n_flatten:
+			self.layer1_out = x.detach()
 		x, mask = self.process(self.layer2, x, mask, self.layer2_out)
-		self.layer2_out = x.detach()
+		if not calc_n_flatten:
+			self.layer2_out = x.detach()
 		x, mask = self.process(self.layer3, x, mask, self.layer3_out)
-		self.layer3_out = x.detach()
+		if not calc_n_flatten:
+			self.layer3_out = x.detach()
+		x, mask = self.process(self.layer4, x, mask, self.layer4_out)
+		if not calc_n_flatten:
+			self.layer4_out = x.detach()
 
-		x = x[:, :, -1] # FIX Is it really OK to just take the last time bin?
+		# x = x[:, :, -1] # FIX Is it really OK to just take the last time bin?
 		if calc_n_flatten:
 			return x
 		# The sizes of `x` and `mask` will diverge here, but that's OK as we don't need the mask anymore
