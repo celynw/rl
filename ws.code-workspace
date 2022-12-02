@@ -31,8 +31,22 @@
 				"name": "Python: Current File",
 				"type": "python",
 				"request": "launch",
+				"console": "integratedTerminal",
 				"program": "${file}",
-				"console": "integratedTerminal"
+			},
+			{
+				"name": "Pong Test",
+				"type": "python",
+				"request": "launch",
+				"console": "integratedTerminal",
+				"program": "${workspaceFolder}/tests/pong.py",
+				"args": ["debug", "debug"],
+				"env": {
+					// "PYTHONPATH": "${workspaceFolder}/catkin_ws_local/devel/lib/python3/dist-packages:$PYTHONPATH",
+					"PYTHONPATH": "${workspaceFolder}/catkin_ws_local/devel/lib/python3/dist-packages:/opt/ros/noetic/lib/python3/dist-packages",
+					"WANDB_API_KEY": "${env:WANDB_API_KEY}",
+					// "WANDB_BASE_URL": null,
+				}
 			}
 		]
 	}
