@@ -176,7 +176,7 @@ class PPO(SB3_PPO):
 		for epoch in range(self.n_epochs):
 			approx_kl_divs = []
 			# Do a complete pass on the rollout buffer
-			for rollout_data in self.rollout_buffer.get(self.batch_size):
+			for rollout_data in self.rollout_buffer.get(batch_size=self.n_envs): # Sampling has to be done at this size later
 				actions = rollout_data.actions
 				if isinstance(self.action_space, gym.spaces.Discrete):
 					# Convert discrete action from float to long
