@@ -174,8 +174,10 @@ class PPO(SB3_PPO):
 
 		# train for n_epochs epochs
 		for epoch in range(self.n_epochs):
+			print(f"EPOCH {epoch}")
 			approx_kl_divs = []
 			# Do a complete pass on the rollout buffer
+			all_losses = 0
 			for rollout_data in self.rollout_buffer.get(batch_size=self.n_envs): # Sampling has to be done at this size later
 				actions = rollout_data.actions
 				if isinstance(self.action_space, gym.spaces.Discrete):
@@ -186,7 +188,10 @@ class PPO(SB3_PPO):
 				if self.use_sde:
 					self.policy.reset_noise(self.batch_size)
 
+				# For bootstrap loss
 				values, log_prob, entropy, features = self.policy.evaluate_actions(rollout_data.observations, actions, rollout_data.resets)
+				# Without bootstrap loss
+				# values, log_prob, entropy = self.policy.evaluate_actions(rollout_data.observations, actions, rollout_data.resets)
 				values = values.flatten()
 				# Normalize advantage
 				advantages = rollout_data.advantages
@@ -231,6 +236,7 @@ class PPO(SB3_PPO):
 				bs_loss = F.l1_loss(features, rollout_data.states.squeeze(1).squeeze(1))
 
 				loss = (policy_loss * self.pl_coef) + (entropy_loss * self.ent_coef) + (value_loss * self.vf_coef) + (bs_loss * self.bs_coef)
+				# loss = (policy_loss * self.pl_coef) + (entropy_loss * self.ent_coef) + (value_loss * self.vf_coef)
 				# loss = policy_loss
 				# loss = entropy_loss
 				# loss = value_loss
@@ -255,12 +261,14 @@ class PPO(SB3_PPO):
 						print(f"Early stopping at step {epoch} due to reaching max kl: {approx_kl_div:.2f}")
 					break
 
-				# Optimization step
-				self.policy.optimizer.zero_grad()
-				loss.backward()
-				# Clip grad norm
-				torch.nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
-				self.policy.optimizer.step()
+				all_losses += loss
+
+			# Optimization step
+			self.policy.optimizer.zero_grad()
+			all_losses.backward()
+			# Clip grad norm
+			torch.nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
+			self.policy.optimizer.step()
 
 			if not continue_training:
 				break
