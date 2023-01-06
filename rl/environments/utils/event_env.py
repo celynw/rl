@@ -74,7 +74,7 @@ class EventEnv(gym.Env):
 	# ----------------------------------------------------------------------------------------------
 	def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None) -> tuple[np.ndarray, Optional[dict]]:
 		"""
-		Resets the environment, and also the model (if defined).
+		Resets the environment.
 
 		Args:
 			seed (int, optional): The seed that is used to initialize the environment's PRNG. Defaults to None.
@@ -88,8 +88,6 @@ class EventEnv(gym.Env):
 
 		self.observe(wait=False) # Initialise ESIM; Need two frames to get a difference to generate events
 		self.events = self.observe()
-		if self.model is not None and hasattr(self.model, "reset_env"):
-			self.model.reset_env()
 
 		return torch.zeros(*self.shape, dtype=torch.uint8).numpy(), info
 
@@ -154,16 +152,6 @@ class EventEnv(gym.Env):
 		TODO move to model. It's only in the env for program accessibility...
 		"""
 		self.updatedPolicy = True
-
-	# ----------------------------------------------------------------------------------------------
-	def set_model(self, model):
-		"""
-		Link the model and the env, so we can call a model function when the env calls `reset()`.
-
-		Args:
-			model: Model (feature extractor) object.
-		"""
-		self.model = model
 
 	# ----------------------------------------------------------------------------------------------
 	def get_info(self) -> dict:

@@ -308,8 +308,6 @@ class CartPoleRGB(CartPoleEnv):
 		rgb = self.render()
 		rgb = self.resize(rgb)
 		rgb = np.transpose(rgb, (2, 0, 1)) # HWC -> CHW
-		if self.model is not None and hasattr(self.model, "reset_env"):
-			self.model.reset_env()
 
 		return rgb, info
 
@@ -330,16 +328,6 @@ class CartPoleRGB(CartPoleEnv):
 		rgb = cv2.resize(rgb, (self.output_width, self.output_height), interpolation=cv2.INTER_AREA)
 
 		return rgb
-
-	# ----------------------------------------------------------------------------------------------
-	def set_model(self, model):
-		"""
-		Link the model and the env, so we can call a model function when the env calls `reset()`.
-
-		Args:
-			model: Model (feature extractor) object.
-		"""
-		self.model = model
 
 	# ----------------------------------------------------------------------------------------------
 	def render(self) -> np.ndarray:

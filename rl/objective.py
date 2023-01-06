@@ -119,7 +119,6 @@ class Objective():
 			clip_range=self.args.clip_range,
 			max_grad_norm=self.args.max_grad_norm,
 		) # total_timesteps will be AT LEAST self.args.n_steps
-		env.set_model(model.policy.features_extractor)
 
 		# Set up evaluation and callbacks
 		best_model_save_path = Path(run.dir) / "best_models" if not self.args.nolog else None

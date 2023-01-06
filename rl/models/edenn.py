@@ -80,7 +80,6 @@ class EDeNN(BaseFeaturesExtractor):
 		)
 
 		# Compute shape by doing one forward pass
-		self.reset_env()
 		with torch.no_grad():
 			observation = torch.as_tensor(self.observation_space.sample()[None]).float()
 			result = self(observation, calc_n_flatten=True)
@@ -182,13 +181,6 @@ class EDeNN(BaseFeaturesExtractor):
 
 		return x, mask
 
-	# ----------------------------------------------------------------------------------------------
-	def reset_env(self):
-		"""Reset temporal information, to be called when the environment resets."""
-		self.layer1_out = None
-		self.layer2_out = None
-		self.layer3_out = None
-
 
 # ==================================================================================================
 if __name__ == "__main__":
@@ -209,7 +201,6 @@ if __name__ == "__main__":
 		args=args,
 	)
 	edenn = EDeNN(observation_space=env.observation_space, features_dim=env.state_space.shape[-1], projection_head=args.projection_head)
-	edenn.reset_env()
 
 	event_tensor = torch.rand([1, 2, args.tsamples, env.output_height, env.output_width])
 	print(f"input event shape: {event_tensor.shape}")
