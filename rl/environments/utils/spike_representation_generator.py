@@ -37,7 +37,7 @@ class SpikeRepresentationGenerator:
 		if binDuration == 0:
 			return spike_tensor
 		# print(f"binDuration: {binDuration}")
-		time_idx = ((timestamps - timestamps[0]) / binDuration)
+		time_idx = ((timestamps - timestamps[0]) / binDuration) # Assumed that events are sorted ascending!
 		# print(f"timestamps[0]: {timestamps[0]}")
 		# print(f"timestamps: {timestamps}")
 		# print(f"(timestamps - timestamps[0]): {(timestamps - timestamps[0])}")
