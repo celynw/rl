@@ -13,6 +13,8 @@ class ActorCriticPolicy(SB3_ACP):
 	def __init__(self, *args, detach: bool = True, **kwargs):
 		"""Subclass `ActorCriticPolicy` to handle gradient breaks for the feature extractor."""
 		super().__init__(*args, **kwargs)
+		self.detach = detach
+
 		# Final time slices from output, len() == N layers
 		self.prev_features = [torch.tensor([0]), torch.tensor([0]), torch.tensor([0])] # First dim length is `n_envs` (vectorised environments)
 		self.prev_features_train = [torch.tensor([0]), torch.tensor([0]), torch.tensor([0])] # First dim length is `n_steps` (rollout buffer length)
@@ -64,19 +66,25 @@ class ActorCriticPolicy(SB3_ACP):
 		"""
 		features = self.extract_features(obs, resets, train=True)
 
-		features_detached = features.clone().detach()
-		latent_pi, latent_vf = self.mlp_extractor(features_detached)
+		if self.detach:
+			features_detached = features.clone().detach()
+			latent_pi, latent_vf = self.mlp_extractor(features_detached)
+		else:
+			latent_pi, latent_vf = self.mlp_extractor(features)
 		distribution = self._get_action_dist_from_latent(latent_pi)
 		log_prob = distribution.log_prob(actions)
 		values = self.value_net(latent_vf)
 		entropy = distribution.entropy()
 
+		if not self.detach:
+			return values, log_prob, entropy # As in super()
 		# `self.features_extractor` always feeds through its layers up to `layer_last` to produce `features`.
 		# If using a projection head, `features_dim` will likely be larger, with `projection_head` being the original size of `features_dim`.
 		# In this case, `self.features_extractor.project()` needs to be called manually, same with the loss based on that output.
 		# Gradients are detached from the input to the RL policy model, so the `features_extractor` is only trained using this.
 		# So `projection` is only used for `bs_loss`.
 		if isinstance(self.features_extractor, rl.models.EDeNN) and self.features_extractor.projection_head is not None:
+			projection = self.features_extractor.project(features)
 			return values, log_prob, entropy, projection
 		else:
 			return values, log_prob, entropy, features
