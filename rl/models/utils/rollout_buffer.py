@@ -1,9 +1,10 @@
-from typing import Optional, NamedTuple
+from typing import Optional, NamedTuple, Generator
 
 import numpy as np
 import torch
 from stable_baselines3.common.buffers import RolloutBuffer as SB3_ROB
 from stable_baselines3.common.vec_env import VecNormalize
+from rich import print, inspect
 
 # ==================================================================================================
 class RolloutBufferSamples(NamedTuple):
@@ -55,3 +56,38 @@ class RolloutBuffer(SB3_ROB):
 			self.states[self.pos] = state
 		self.resets[self.pos] = reset.clone().cpu().numpy()
 		super().add(obs, action, reward, episode_start, value, log_prob)
+
+	# ----------------------------------------------------------------------------------------------
+	def get(self, batch_size: Optional[int] = None) -> Generator[RolloutBufferSamples, None, None]:
+		assert self.full, ""
+		# Prepare the data
+		if not self.generator_ready:
+
+			_tensor_names = [
+				"observations",
+				"actions",
+				"values",
+				"log_probs",
+				"advantages",
+				"returns",
+				"states",
+				"resets",
+			]
+			for tensor in _tensor_names:
+				if tensor in ["observations", "actions", "resets"]:
+					shape = self.__dict__[tensor].shape
+					self.__dict__[tensor] = self.__dict__[tensor].reshape(shape[0] * shape[1], *shape[2:])
+				else: # WHY DO I NEED TO DO THIS? I do, but why?
+					self.__dict__[tensor] = self.swap_and_flatten(self.__dict__[tensor])
+
+			self.generator_ready = True
+
+		# Return everything, don't create minibatches
+		if batch_size is None:
+			batch_size = self.buffer_size * self.n_envs
+
+		start_idx = 0
+		while start_idx < self.buffer_size * self.n_envs:
+			yield self._get_samples(range(start_idx, start_idx + batch_size))
+			start_idx += batch_size
+

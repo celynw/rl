@@ -98,7 +98,7 @@ class CartPoleEvents(EventEnv, CartPoleEnv):
 		return rgb
 
 	# ----------------------------------------------------------------------------------------------
-	def render(self) -> np.ndarray:
+	def render(self, mode: str = "rgb_array") -> np.ndarray:
 		"""
 		Copied and adapted from CartPoleEnv.render() [gym==0.26.2].
 
@@ -118,7 +118,9 @@ class CartPoleEvents(EventEnv, CartPoleEnv):
 
 		if self.screen is None:
 			pygame.init()
-			if self.render_mode == "human":
+			if mode == "rgb_array": # COMPATIBILITY??
+				self.screen = pygame.Surface((self.screen_width, self.screen_height))
+			elif self.render_mode == "human":
 				pygame.display.init()
 				self.screen = pygame.display.set_mode(
 					(self.screen_width, self.screen_height)
@@ -187,7 +189,11 @@ class CartPoleEvents(EventEnv, CartPoleEnv):
 
 		self.surf = pygame.transform.flip(self.surf, False, True)
 		self.screen.blit(self.surf, (0, 0))
-		if self.render_mode == "human":
+		if mode == "rgb_array": # COMPATIBILITY??
+			return np.transpose(
+				np.array(pygame.surfarray.pixels3d(self.screen)), axes=(1, 0, 2)
+			)
+		elif self.render_mode == "human":
 			pygame.event.pump()
 			self.clock.tick(self.metadata["render_fps"])
 			pygame.display.flip()
