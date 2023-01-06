@@ -6,13 +6,14 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import gym
-from stable_baselines3.common.buffers import RolloutBuffer
 from stable_baselines3 import PPO as SB3_PPO
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.vec_env import VecEnv
 from stable_baselines3.common.utils import obs_as_tensor, explained_variance, get_system_info, check_for_correct_spaces
 from stable_baselines3.common.type_aliases import GymEnv
 from stable_baselines3.common.save_util import load_from_zip_file, recursive_setattr
+from stable_baselines3.common.vec_env.dummy_vec_env import DummyVecEnv
+from stable_baselines3.common.vec_env import VecVideoRecorder
 from rich import print, inspect
 
 from rl.models.utils import RolloutBuffer
@@ -27,6 +28,13 @@ class PPO(SB3_PPO):
 		self.bs_coef = bs_coef
 		self.save_loss = save_loss
 
+		if isinstance(env, VecVideoRecorder):
+			state_shape = env.env.envs[0].state_space.shape
+		elif isinstance(env, DummyVecEnv):
+			state_shape = env.envs[0].state_space.shape
+		else:
+			state_shape = env.state_space.shape
+
 		self.rollout_buffer = RolloutBuffer(
 			self.n_steps,
 			self.observation_space,
@@ -35,7 +43,7 @@ class PPO(SB3_PPO):
 			gamma=self.gamma,
 			gae_lambda=self.gae_lambda,
 			n_envs=self.n_envs,
-			state_shape=env.state_space.shape,
+			state_shape=state_shape,
 		)
 
 	# # ----------------------------------------------------------------------------------------------

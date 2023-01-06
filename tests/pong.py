@@ -63,6 +63,9 @@ def main(args: argparse.Namespace):
 		vec_env_kwargs=None,
 		monitor_kwargs=None,
 	)
+	if not args.nolog:
+		env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 20000 == 0, video_length=500)
+
 	# env = SkipCutscenesPong(env)
 	env = VecFrameStack(env, n_stack=4)
 	# env = VecVideoRecorder(env, "videos", record_video_trigger=lambda x: x % 100000 == 0, video_length=2000)
