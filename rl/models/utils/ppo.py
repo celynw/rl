@@ -178,7 +178,7 @@ class PPO(SB3_PPO):
 				if self.use_sde:
 					self.policy.reset_noise(self.batch_size)
 
-				values, log_prob, entropy, features = self.policy.evaluate_actions(rollout_data.observations, actions)
+				values, log_prob, entropy, features = self.policy.evaluate_actions(rollout_data.observations, actions, rollout_data.resets)
 				values = values.flatten()
 				# Normalize advantage
 				advantages = rollout_data.advantages
@@ -335,6 +335,7 @@ class PPO(SB3_PPO):
 			state = infos[0]["state"]
 			if state is not None:
 				state = torch.tensor(infos[0]["state"], device=self.device)[None, ...]
+			reset = torch.tensor(dones, device=self.device)[None, ...]
 
 			self.num_timesteps += env.num_envs
 
@@ -350,6 +351,13 @@ class PPO(SB3_PPO):
 				# Reshape in case of discrete action
 				actions = actions.reshape(-1, 1)
 
+			# Reset prev_features (for each layer) for that vectorized env in batch
+			# Setting to zero works, it's multiplied by decay and the added to first bin
+			for i, done in enumerate(dones):
+				if done:
+					for f, _ in enumerate(self.policy.prev_features):
+						self.policy.prev_features[f][i] *= 0
+
 			# Handle timeout by bootstrapping with value function
 			# see GitHub issue #633
 			for idx, done in enumerate(dones):
@@ -363,7 +371,7 @@ class PPO(SB3_PPO):
 						terminal_value = self.policy.predict_values(terminal_obs)[0]
 					rewards[idx] += self.gamma * terminal_value
 
-			rollout_buffer.add(self._last_obs, actions, rewards, self._last_episode_starts, values, log_probs, state)
+			rollout_buffer.add(self._last_obs, actions, rewards, self._last_episode_starts, values, log_probs, state, reset)
 			self._last_obs = new_obs
 			self._last_episode_starts = dones
 

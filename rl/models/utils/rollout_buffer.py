@@ -14,6 +14,7 @@ class RolloutBufferSamples(NamedTuple):
 	advantages: torch.Tensor
 	returns: torch.Tensor
 	states: torch.Tensor
+	resets: torch.Tensor
 
 
 # ==================================================================================================
@@ -24,11 +25,13 @@ class RolloutBuffer(SB3_ROB):
 		self.physics_shape = state_shape # `__init__` calls `reset()`
 		super().__init__(*args, **kwargs)
 		self.states = None
+		self.resets = None
 
 	# ----------------------------------------------------------------------------------------------
 	def reset(self) -> None:
 		super().reset()
 		self.states = np.zeros((self.buffer_size, self.n_envs) + self.physics_shape, dtype=np.float32)
+		self.resets = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
 
 	# ----------------------------------------------------------------------------------------------
 	def _get_samples(self, batch_inds: np.ndarray, env: Optional[VecNormalize] = None) -> RolloutBufferSamples:
@@ -40,13 +43,15 @@ class RolloutBuffer(SB3_ROB):
 			self.advantages[batch_inds].flatten(),
 			self.returns[batch_inds].flatten(),
 			self.states[batch_inds],
+			self.resets[batch_inds],
 		)
 		return RolloutBufferSamples(*tuple(map(self.to_torch, data)))
 
 	# ----------------------------------------------------------------------------------------------
-	def add(self, obs: np.ndarray, action: np.ndarray, reward: np.ndarray, episode_start: np.ndarray, value: torch.Tensor, log_prob: torch.Tensor, state: Optional[torch.Tensor]) -> None:
+	def add(self, obs: np.ndarray, action: np.ndarray, reward: np.ndarray, episode_start: np.ndarray, value: torch.Tensor, log_prob: torch.Tensor, state: Optional[torch.Tensor], reset: Optional[torch.Tensor]) -> None:
 		if state is not None:
 			self.states[self.pos] = state.clone().cpu().numpy()
 		else:
 			self.states[self.pos] = state
+		self.resets[self.pos] = reset.clone().cpu().numpy()
 		super().add(obs, action, reward, episode_start, value, log_prob)
