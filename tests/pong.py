@@ -194,4 +194,13 @@ def parse_args() -> argparse.Namespace:
 
 # ==================================================================================================
 if __name__ == "__main__":
+	# DEBUG
+	import random
+	random.seed(0)
+	import torch
+	torch.manual_seed(0)
+	torch.use_deterministic_algorithms(True, warn_only=True)
+	import numpy as np
+	np.random.seed(0)
+
 	main(parse_args())
