@@ -14,7 +14,6 @@ from rl.models import EDeNN, SNN, NatureCNN
 # ==================================================================================================
 class CartPoleEvents(EventEnv, CartPoleEnv):
 	state_space: spaces.Space
-	model: Optional[EDeNN | SNN] = None
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, args: argparse.Namespace, event_image: bool = False, return_rgb: bool = False, output_width: int = 126, output_height: int = 84):
 		"""

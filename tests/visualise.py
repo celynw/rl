@@ -25,7 +25,6 @@ def main(args: argparse.Namespace):
 		return_rgb=True,
 	)
 	edenn = EDeNN(observation_space=env.observation_space, features_dim=env.state_space.shape[-1], projection_head=args.projection_head)
-	edenn.reset_env()
 
 	obs = env.reset()
 	args.outDir.mkdir(parents=True, exist_ok=True)
@@ -89,7 +88,7 @@ if __name__ == "__main__":
 
 # ./toys/demo_videos.py CartPole-events-v1 demo --cpu --steps 100 --model /vol/research/reflexive3/rl/SAVED/1663173675\ cartPole_NatureCNN_eventImg/best_model.zip --eventimg
 # - Use NatureCNN
-# ./toys/demo_videos.py MountainCar-events-v0 demo --cpu --steps 100 --model /vol/research/reflexive3/rl/SAVED/1663119160\ mountainCar_test/best_model.zip --projection_head --cheat
+# ./toys/demo_videos.py MountainCar-events-v0 demo --cpu --steps 100 --model /vol/research/reflexive3/rl/SAVED/1663119160\ mountainCar_test/best_model.zip --projection_head 256 --cheat
 # - Use EDeNNPH
 
 # ffmpeg -framerate 30 -pattern_type glob -i "CartPole*_events_*.png" -c:v libx264 -pix_fmt yuv420p CartPole_events.mp4
