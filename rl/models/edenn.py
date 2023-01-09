@@ -12,9 +12,6 @@ from rl.models.utils import Decay3dPartial
 
 # ==================================================================================================
 class EDeNN(BaseFeaturesExtractor):
-	layer1_out: Optional[torch.Tensor] = None
-	layer2_out: Optional[torch.Tensor] = None
-	layer3_out: Optional[torch.Tensor] = None
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, observation_space: spaces.Box, features_dim: int, projection_head: Optional[int] = None):
 		"""
@@ -26,8 +23,9 @@ class EDeNN(BaseFeaturesExtractor):
 			features_dim (int): Output size of final layer (features) for RL policy.
 			projection_head (int, optional): Output size of projection head layer, or disable. Defaults to None.
 		"""
-		super().__init__(observation_space, features_dim)
 		self.observation_space = observation_space
+		self.num_bins = self.observation_space.shape[1]
+		super().__init__(observation_space, features_dim)
 		self.projection_head = projection_head
 		self.init_layers(self.observation_space.shape[0])
 
@@ -82,7 +80,7 @@ class EDeNN(BaseFeaturesExtractor):
 		# Compute shape by doing one forward pass
 		with torch.no_grad():
 			observation = torch.as_tensor(self.observation_space.sample()[None]).float()
-			result = self(observation, calc_n_flatten=True)
+			result = self(observation, [torch.tensor([0]), torch.tensor([0]), torch.tensor([0])], calc_n_flatten=True)
 			# self.n_flatten = result.shape[1]
 			self.n_flatten = math.prod(result.shape)
 
@@ -101,7 +99,7 @@ class EDeNN(BaseFeaturesExtractor):
 			)
 
 	# ----------------------------------------------------------------------------------------------
-	def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None, calc_n_flatten: bool = False) -> torch.Tensor:
+	def forward(self, x: torch.Tensor, prev_x: list[torch.Tensor], calc_n_flatten: bool = False) -> torch.Tensor | tuple[torch.Tensor, list[torch.Tensor]]:
 		"""
 		Forward pass of model.
 
@@ -113,30 +111,36 @@ class EDeNN(BaseFeaturesExtractor):
 		Returns:
 			torch.Tensor: Extracted features.
 		"""
-		if mask is None:
-			mask = (x != 0).float()
+		new_prev_x = []
+		mask = (x != 0).float()
 
-		x, mask = self.process(self.layer1, x, mask, self.layer1_out)
+		x, mask = self.process(self.layer1, x, mask, prev_x[0])
 		if not calc_n_flatten:
-			self.layer1_out = x.detach()
-		x, mask = self.process(self.layer2, x, mask, self.layer2_out)
+			new_prev_x.append(x.detach()[:, :, -1])
+		x, mask = self.process(self.layer2, x, mask, prev_x[1])
 		if not calc_n_flatten:
-			self.layer2_out = x.detach()
-		x, mask = self.process(self.layer3, x, mask, self.layer3_out)
+			new_prev_x.append(x.detach()[:, :, -1])
+		x, mask = self.process(self.layer3, x, mask, prev_x[2])
 		if not calc_n_flatten:
-			self.layer3_out = x.detach()
-		x, mask = self.process(self.layer4, x, mask, self.layer4_out)
-		if not calc_n_flatten:
-			self.layer4_out = x.detach()
+			new_prev_x.append(x.detach()[:, :, -1])
+		# x, mask = self.process(self.layer4, x, mask, prev_x[3])
+		# if not calc_n_flatten:
+		# 	new_prev_x.append(x.detach())
 
-		# x = x[:, :, -1] # FIX Is it really OK to just take the last time bin?
+		# x = x[:, :, -1] # Only consider the last time bin
+		x = x[:, :, self.num_bins - 1::self.num_bins] # Only consider the last time bin FOR EACH WINDOW
 		if calc_n_flatten:
 			return x
+		# Similar to `RolloutBuffer.swap_and_flatten()`, but we already did some steps
+		# Result needs to be shaped like (all time steps) * environments
+		x = x.permute(0, 2, 1, 3, 4)
+		x = x.reshape(x.shape[0] * x.shape[1], *x.shape[2:])
+
 		# The sizes of `x` and `mask` will diverge here, but that's OK as we don't need the mask anymore
-		# We only care about the final bin prediction for now...
 		x = self.layer_last(x)
 
-		return x # [1, self.features_dim]
+		# x: [1, self.features_dim]
+		return x, new_prev_x
 
 	# ----------------------------------------------------------------------------------------------
 	def project(self, x: torch.Tensor) -> torch.Tensor:
@@ -211,7 +215,4 @@ if __name__ == "__main__":
 	output = edenn(event_tensor)
 
 	print(f"model: {edenn}")
-	print(f"layer 1: {edenn.layer1_out.shape}")
-	print(f"layer 2: {edenn.layer2_out.shape}")
-	print(f"layer 3: {edenn.layer3_out.shape}")
 	print(f"output features shape: {output.shape}")
