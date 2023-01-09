@@ -432,6 +432,18 @@ class PPO(SB3_PPO):
 
 		callback.on_rollout_start()
 
+		self.policy.debug_obs1 = []
+		self.policy.debug_conv_weight1 = []
+		self.policy.debug_decay_weight1 = []
+		self.policy.debug_bias1 = []
+		self.policy.debug_features1 = []
+		self.policy.debug_latent_pi1 = []
+		self.policy.debug_latent_vf1 = []
+		self.policy.debug_values1 = []
+		self.policy.debug_actions1 = []
+		self.policy.debug_log_prob1 = []
+
+		self.policy.debug_step1 = 0
 		while n_steps < n_rollout_steps:
 			if self.use_sde and self.sde_sample_freq > 0 and n_steps % self.sde_sample_freq == 0:
 				# Sample a new noise matrix
@@ -451,7 +463,6 @@ class PPO(SB3_PPO):
 
 			new_obs, rewards, dones, infos = env.step(clipped_actions)
 
-			assert(len(infos) == 1)
 			state = infos[0]["state"]
 			if state is not None:
 				state = torch.tensor(infos[0]["state"], device=self.device)[None, ...]
