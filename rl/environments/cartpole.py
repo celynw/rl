@@ -29,6 +29,7 @@ class CartPoleEvents(EventEnv, CartPoleEnv):
 		self.output_height = output_height
 		CartPoleEnv.__init__(self, render_mode="rgb_array")
 		EventEnv.__init__(self, self.output_width, self.output_height, args, event_image) # type: ignore
+		self.iter = 0
 
 	# ----------------------------------------------------------------------------------------------
 	@staticmethod

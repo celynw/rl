@@ -89,6 +89,8 @@ class EventEnv(gym.Env):
 		self.observe(wait=False) # Initialise ESIM; Need two frames to get a difference to generate events
 		self.events = self.observe()
 
+		self.iter = 0
+
 		return torch.zeros(*self.shape, dtype=torch.uint8).numpy(), info
 
 	# ----------------------------------------------------------------------------------------------
