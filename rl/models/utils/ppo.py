@@ -172,9 +172,23 @@ class PPO(SB3_PPO):
 
 		continue_training = True
 
+		# DEBUG
+		self.policy.debug_obs2 = []
+		self.policy.debug_conv_weight2 = []
+		self.policy.debug_decay_weight2 = []
+		self.policy.debug_bias2 = []
+		self.policy.debug_features2 = []
+		self.policy.debug_latent_pi2 = []
+		self.policy.debug_latent_vf2 = []
+		self.policy.debug_values2 = []
+		self.policy.debug_actions2 = []
+		self.policy.debug_log_prob2 = []
+
 		# train for n_epochs epochs
 		for epoch in range(self.n_epochs):
 			print(f"EPOCH {epoch}")
+			self.policy.debug_step2 = 0 # DEBUG
+
 			approx_kl_divs = []
 			# Do a complete pass on the rollout buffer
 			all_losses = 0
@@ -272,6 +286,96 @@ class PPO(SB3_PPO):
 
 			if not continue_training:
 				break
+
+		# DEBUG
+		for i in [
+			"obs",
+			"features",
+			"latent_pi",
+			"latent_vf",
+			"values",
+			"actions",
+			"log_prob",
+			"conv_weight",
+			"decay_weight",
+			"bias"
+		]:
+			results = []
+			# NOTE: debug_X_2 might be longer (on account of) multiple epochs, but it'll be ignored in this function; it will only compare those from the first one anyway
+			for li, (l1, l2) in enumerate(zip(self.policy.__dict__[f'debug_{i}1'], self.policy.__dict__[f'debug_{i}2'])):
+				if i == "obs":
+					# results.append(l1 == l2)
+					results.append(torch.allclose(l1.float(), l2))
+				else:
+					results.append(torch.allclose(l1, l2))
+			print(f"{i}: {''.join([str(i)[:1] for i in results])}")
+			print(f"{i}: {len([r for r in results if r is True])} / {len(results)} -> {len([r for r in results if r is True]) == len(results)}")
+
+		# print(f"obs: {self.debug_obs1.shape} to {self.debug_obs2.shape}")
+		# print(self.debug_obs1[:2, :, :, 0, 0])
+		# print(self.debug_obs2[:2, :, :, 0, 0])
+		# print(f"features: {self.debug_features1.shape} to {self.debug_features2.shape}")
+		# print(f"latent_pi: {self.debug_latent_pi1.shape} to {self.debug_latent_pi2.shape}")
+		# print(f"latent_vf: {self.debug_latent_vf1.shape} to {self.debug_latent_vf2.shape}")
+		# print(f"values: {self.debug_values1.shape} to {self.debug_values2.shape}")
+		# print(f"actions: {self.debug_actions1.shape} to {self.debug_actions2.shape}")
+		# print(f"log_prob: {self.debug_log_prob1.shape} to {self.debug_log_prob2.shape}")
+
+		# print(f"obs: {(self.debug_obs1 == self.debug_obs2).all()}")
+		# # print(f"obs: {torch.allclose(self.debug_obs1, self.debug_obs2)}")
+		# print(f"conv_weight: {(self.debug_conv_weight1 == self.debug_conv_weight2).all()}")
+		# # print(f"conv_weight: {torch.allclose(self.debug_conv_weight1, self.debug_conv_weight2)}")
+		# print(f"decay_weight: {(self.debug_decay_weight1 == self.debug_decay_weight2).all()}")
+		# # print(f"decay_weight: {torch.allclose(self.debug_decay_weight1, self.debug_decay_weight2)}")
+		# print(f"bias: {(self.debug_bias1 == self.debug_bias2).all()}")
+		# # print(f"bias: {torch.allclose(self.debug_bias1, self.debug_bias2)}")
+
+		# print(f"features0: {torch.allclose(self.debug_features1[0], self.debug_features2[0])}")
+		# print(f"features1: {torch.allclose(self.debug_features1[1], self.debug_features2[1])}")
+		# print(f"features2: {torch.allclose(self.debug_features1[2], self.debug_features2[2])}")
+		# print(f"latent_pi: {torch.allclose(self.debug_latent_pi1, self.debug_latent_pi2)}")
+		# print(f"latent_vf: {torch.allclose(self.debug_latent_vf1, self.debug_latent_vf2)}")
+		# print(f"values: {torch.allclose(self.debug_values1, self.debug_values2)}")
+		# print(f"actions: {(self.debug_actions1 == self.debug_actions2).all()}")
+		# print(f"log_prob: {torch.allclose(self.debug_log_prob1, self.debug_log_prob2)}")
+
+
+		# print(f"obs: {self.debug_obs1.shape} to {self.debug_obs2.shape}")
+		# print(f"features: {self.debug_features1.shape} to {self.debug_features2.shape}")
+		# print(f"latent_pi: {self.debug_latent_pi1.shape} to {self.debug_latent_pi2.shape}")
+		# print(f"latent_vf: {self.debug_latent_vf1.shape} to {self.debug_latent_vf2.shape}")
+		# print(f"values: {self.debug_values1.shape} to {self.debug_values2.shape}")
+		# print(f"actions: {self.debug_actions1.shape} to {self.debug_actions2.shape}")
+		# print(f"log_prob: {self.debug_log_prob1.shape} to {self.debug_log_prob2.shape}")
+
+		# print(f"obs: {(self.debug_obs1 == self.debug_obs2[:, :, :6]).all()}")
+		# print(f"conv_weight: {(self.debug_conv_weight1 == self.debug_conv_weight2).all()}")
+		# print(f"decay_weight: {(self.debug_decay_weight1 == self.debug_decay_weight2).all()}")
+		# print(f"bias: {(self.debug_bias1 == self.debug_bias2).all()}")
+
+		# print(f"features: {torch.allclose(self.debug_features1, self.debug_features2[::128])}")
+		# print(f"features: {torch.allclose(self.debug_features1[0], self.debug_features2[0])}")
+		# # preprocessed_obs_ = preprocess_obs(self.debug_obs1, self.observation_space, normalize_images=self.normalize_images)
+		# preprocessed_obs_ = preprocess_obs(self.debug_obs2[:, :, :6], self.observation_space, normalize_images=self.normalize_images)
+		# # preprocessed_obs_ = preprocess_obs(self.debug_obs2, self.observation_space, normalize_images=self.normalize_images)
+		# features_, _ = self.features_extractor(preprocessed_obs_, [torch.tensor([0], device=self.device), torch.tensor([0], device=self.device), torch.tensor([0], device=self.device)])
+		# # features_ = features_[::128]
+		# print(f"features_: {torch.allclose(self.debug_features1, features_)}")
+		# print(f"latent_pi: {torch.allclose(self.debug_latent_pi1, self.debug_latent_pi2[::128])}")
+		# print(f"latent_vf: {torch.allclose(self.debug_latent_vf1, self.debug_latent_vf2[::128])}")
+		# print(f"values: {torch.allclose(self.debug_values1, self.debug_values2[::128])}")
+		# print(f"actions: {(self.debug_actions1 == self.debug_actions2[::128]).all()}")
+		# print(f"log_prob: {torch.allclose(self.debug_log_prob1, self.debug_log_prob2[::128])}")
+		# NOTE: log_prob won't work unless all others correct
+		# print(self.debug_features1)
+		# print(self.debug_features2[::128])
+		# print(self.debug_conv_weight1.shape) # torch.Size([32, 2, 1, 8, 8])
+		# print(self.debug_conv_weight1[0])
+		# print(self.debug_conv_weight2[0])
+		# print(self.debug_decay_weight1.shape) # torch.Size([32, 1, 1])
+		# print(self.debug_decay_weight1[0])
+		# print(self.debug_decay_weight2[0])
+		# quit(0)
 
 		self._n_updates += self.n_epochs
 		explained_var = explained_variance(self.rollout_buffer.values.flatten(), self.rollout_buffer.returns.flatten())

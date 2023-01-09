@@ -36,6 +36,15 @@ class RolloutBuffer(SB3_ROB):
 
 	# ----------------------------------------------------------------------------------------------
 	def _get_samples(self, batch_inds: np.ndarray, env: Optional[VecNormalize] = None) -> RolloutBufferSamples:
+		# DEBUG
+		# print(f"batch_inds: {batch_inds}")
+		# print(f"observations: {self.observations.shape}")
+		# print(f"actions: {self.actions.shape}")
+		# print(f"values: {self.values.shape}")
+		# print(f"log_probs: {self.log_probs.shape}")
+		# print(f"advantages: {self.advantages.shape}")
+		# print(f"returns: {self.returns.shape}")
+		# print(f"states: {self.states.shape}")
 		data = (
 			self.observations[batch_inds],
 			self.actions[batch_inds],
@@ -45,7 +54,33 @@ class RolloutBuffer(SB3_ROB):
 			self.returns[batch_inds].flatten(),
 			self.states[batch_inds],
 			self.resets[batch_inds],
+			# DEBUG
+			# self.observations,
+			# self.actions,
+			# self.values.flatten(),
+			# self.log_probs.flatten(),
+			# self.advantages.flatten(),
+			# self.returns.flatten(),
+			# self.states,
+			# self.resets,
 		)
+		# print(f"observations: {self.observations[:, :, batch_inds].shape}")
+		# print(f"observations: {self.observations[batch_inds].shape}")
+		# print(f"actions: {self.actions[batch_inds].shape}")
+		# print(f"values: {self.values[batch_inds].flatten().shape}")
+		# print(f"log_probs: {self.log_probs[batch_inds].flatten().shape}")
+		# print(f"advantages: {self.advantages[batch_inds].flatten().shape}")
+		# print(f"returns: {self.returns[batch_inds].flatten().shape}")
+		# print(f"states: {self.states[batch_inds].shape}")
+
+		# print(f"observations: {self.observations.shape}")
+		# print(f"actions: {self.actions.shape}")
+		# print(f"values: {self.values.flatten().shape}")
+		# print(f"log_probs: {self.log_probs.flatten().shape}")
+		# print(f"advantages: {self.advantages.flatten().shape}")
+		# print(f"returns: {self.returns.flatten().shape}")
+		# print(f"states: {self.states.shape}")
+
 		return RolloutBufferSamples(*tuple(map(self.to_torch, data)))
 
 	# ----------------------------------------------------------------------------------------------

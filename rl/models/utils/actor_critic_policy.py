@@ -19,6 +19,32 @@ class ActorCriticPolicy(SB3_ACP):
 		self.prev_features = [torch.tensor([0]), torch.tensor([0]), torch.tensor([0])] # First dim length is `n_envs` (vectorised environments)
 		self.prev_features_train = [torch.tensor([0]), torch.tensor([0]), torch.tensor([0])] # First dim length is `n_steps` (rollout buffer length)
 
+		# DEBUG
+		self.debug_step1 = 0
+		self.debug_step2 = 0
+
+		self.debug_obs1 = []
+		self.debug_conv_weight1 = []
+		self.debug_decay_weight1 = []
+		self.debug_bias1 = []
+		self.debug_features1 = []
+		self.debug_latent_pi1 = []
+		self.debug_latent_vf1 = []
+		self.debug_values1 = []
+		self.debug_actions1 = []
+		self.debug_log_prob1 = []
+
+		self.debug_obs2 = []
+		self.debug_conv_weight2 = []
+		self.debug_decay_weight2 = []
+		self.debug_bias2 = []
+		self.debug_features2 = []
+		self.debug_latent_pi2 = []
+		self.debug_latent_vf2 = []
+		self.debug_values2 = []
+		self.debug_actions2 = []
+		self.debug_log_prob2 = []
+
 	# ----------------------------------------------------------------------------------------------
 	def extract_features(self, obs: torch.Tensor, resets: Optional[torch.Tensor] = None, train: bool = False) -> torch.Tensor:
 		"""
@@ -75,6 +101,21 @@ class ActorCriticPolicy(SB3_ACP):
 		log_prob = distribution.log_prob(actions)
 		values = self.value_net(latent_vf)
 		entropy = distribution.entropy()
+
+		# DEBUG
+		# print(f"{self.debug_step1} {self.debug_step2}: {obs.detach().clone().unique()}")
+		self.debug_obs2.append(obs.detach().clone())
+		self.debug_features2.append(features.detach().clone())
+		# print(f"debug_features2: {self.debug_features2[0].shape} ({len(self.debug_features2)})")
+		self.debug_latent_pi2.append(latent_pi.detach().clone())
+		self.debug_latent_vf2.append(latent_vf.detach().clone())
+		self.debug_values2.append(values.detach().clone())
+		self.debug_actions2.append(actions.detach().clone())
+		self.debug_log_prob2.append(log_prob.detach().clone())
+		self.debug_conv_weight2.append(self.features_extractor.layer1[0].conv_weight.data.detach().clone())
+		self.debug_decay_weight2.append(self.features_extractor.layer1[0].decay_weight.data.detach().clone())
+		self.debug_bias2.append(self.features_extractor.layer1[0].bias.data.detach().clone())
+		self.debug_step2 += 1
 
 		if not self.detach:
 			return values, log_prob, entropy # As in super()
