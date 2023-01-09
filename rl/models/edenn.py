@@ -127,8 +127,8 @@ class EDeNN(BaseFeaturesExtractor):
 		# if not calc_n_flatten:
 		# 	new_prev_x.append(x.detach())
 
-		# x = x[:, :, -1] # Only consider the last time bin
-		x = x[:, :, self.num_bins - 1::self.num_bins] # Only consider the last time bin FOR EACH WINDOW
+		x = x[:, :, -1:] # Only consider the last time bin, but keep dimension
+		# x = x[:, :, self.num_bins - 1::self.num_bins] # Only consider the last time bin FOR EACH WINDOW
 		if calc_n_flatten:
 			return x
 		# Similar to `RolloutBuffer.swap_and_flatten()`, but we already did some steps
