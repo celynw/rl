@@ -188,6 +188,8 @@ def parse_args() -> argparse.Namespace:
 	parser.add_argument("project", type=str, help="Name for the wandb project")
 	parser.add_argument("name", type=str, help="Name for the wandb run")
 	parser.add_argument("--nolog", action="store_true", help="Don't log to wandb")
+	parser.add_argument("--fps", type=int, default=30)
+	parser.add_argument("--tsamples", type=int, default=6)
 
 	return parser.parse_args()
 
