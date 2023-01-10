@@ -75,6 +75,8 @@ class ActorCriticPolicy(SB3_ACP):
 				self.prev_features = [f.to(self.device) for f in self.prev_features]
 				features, self.prev_features = self.features_extractor(preprocessed_obs, self.prev_features)
 				self.prev_features = [f.detach().clone() for f in self.prev_features]
+		else:
+			features = self.features_extractor(preprocessed_obs)
 
 		return features
 
