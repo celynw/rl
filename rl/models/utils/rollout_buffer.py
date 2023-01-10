@@ -109,12 +109,8 @@ class RolloutBuffer(SB3_ROB):
 				"resets",
 			]
 			for tensor in _tensor_names:
-				if tensor in ["observations", "actions", "resets"]:
-					shape = self.__dict__[tensor].shape
-					self.__dict__[tensor] = self.__dict__[tensor].reshape(shape[0] * shape[1], *shape[2:])
-				else: # WHY DO I NEED TO DO THIS? I do, but why?
-					self.__dict__[tensor] = self.swap_and_flatten(self.__dict__[tensor])
-
+				shape = self.__dict__[tensor].shape
+				self.__dict__[tensor] = self.__dict__[tensor].reshape(shape[0] * shape[1], *shape[2:])
 			self.generator_ready = True
 
 		# Return everything, don't create minibatches
