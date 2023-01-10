@@ -184,6 +184,8 @@ class PPO(SB3_PPO):
 		self.policy.debug_actions2 = []
 		self.policy.debug_log_prob2 = []
 
+		self.policy.prev_features_train_orig = [f.detach().clone() for f in self.policy.prev_features_train]
+
 		# train for n_epochs epochs
 		for epoch in range(self.n_epochs):
 			print(f"EPOCH {epoch}")
@@ -286,6 +288,9 @@ class PPO(SB3_PPO):
 
 			if not continue_training:
 				break
+
+			# Reset previous features (train) to what it was before training each epoch!
+			self.policy.prev_features_train = [f.detach().clone() for f in self.policy.prev_features_train_orig]
 
 		# DEBUG
 		for i in [
