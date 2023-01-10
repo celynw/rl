@@ -56,10 +56,10 @@ class EDeNN(BaseFeaturesExtractor):
 			n_input_channels (int): Number of channels in input tensor.
 		"""
 		partial_kwargs = {}
-		conv = Decay3dPartial
-		partial_kwargs["multi_channel"] = True
-		partial_kwargs["return_mask"] = True
-		partial_kwargs["kernel_ratio"] = True
+		if isinstance(conv, Decay3dPartial):
+			partial_kwargs["multi_channel"] = True
+			partial_kwargs["return_mask"] = True
+			partial_kwargs["kernel_ratio"] = True
 
 		self.layer1 = torch.nn.Sequential(
 			conv(n_input_channels, 32, kernel_size=8, stride=4, bias=True, padding=0, **partial_kwargs),
