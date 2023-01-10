@@ -484,10 +484,10 @@ class PPO(SB3_PPO):
 
 			# Reset prev_features (for each layer) for that vectorized env in batch
 			# Setting to zero works, it's multiplied by decay and the added to first bin
-			for i, done in enumerate(dones):
+			for envNum, done in enumerate(dones):
 				if done:
-					for f, _ in enumerate(self.policy.prev_features):
-						self.policy.prev_features[f][i] *= 0
+					for layer, _ in enumerate(self.policy.prev_features):
+						self.policy.prev_features[layer][envNum] *= 0
 
 			# Handle timeout by bootstrapping with value function
 			# see GitHub issue #633
