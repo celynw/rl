@@ -202,7 +202,7 @@ class PPO(SB3_PPO):
 
 				# Re-sample the noise matrix because the log_std has changed
 				if self.use_sde:
-					self.policy.reset_noise(self.batch_size)
+					self.policy.reset_noise(self.n_epochs)
 
 				# For bootstrap loss
 				values, log_prob, entropy, features = self.policy.evaluate_actions(rollout_data.observations, actions, rollout_data.resets)
