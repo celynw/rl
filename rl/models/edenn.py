@@ -62,17 +62,17 @@ class EDeNN(BaseFeaturesExtractor):
 		partial_kwargs["kernel_ratio"] = True
 
 		self.layer1 = torch.nn.Sequential(
-			conv(n_input_channels, 32, kernel_size=8, stride=4, bias=True, padding=0, return_decay=True, **partial_kwargs),
+			conv(n_input_channels, 32, kernel_size=8, stride=4, bias=True, padding=0, **partial_kwargs),
 			torch.nn.ReLU(inplace=True),
 			# torch.nn.BatchNorm3d(num_features=32),
 		)
 		self.layer2 = torch.nn.Sequential(
-			conv(32, 64, kernel_size=4, stride=2, bias=True, padding=0, return_decay=True, **partial_kwargs),
+			conv(32, 64, kernel_size=4, stride=2, bias=True, padding=0, **partial_kwargs),
 			torch.nn.ReLU(inplace=True),
 			# torch.nn.BatchNorm3d(num_features=64),
 		)
 		self.layer3 = torch.nn.Sequential(
-			conv(64, 64, kernel_size=3, stride=1, bias=True, padding=0, return_decay=True, **partial_kwargs),
+			conv(64, 64, kernel_size=3, stride=1, bias=True, padding=0, **partial_kwargs),
 			torch.nn.ReLU(inplace=True),
 			# torch.nn.BatchNorm3d(num_features=64),
 		)
