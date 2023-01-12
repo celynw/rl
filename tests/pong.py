@@ -63,7 +63,7 @@ def main(args: argparse.Namespace):
 		vec_env_kwargs=None,
 		monitor_kwargs=None,
 	)
-	if not args.nolog:
+	if not args.nolog and not args.novid:
 		env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 20000 == 0, video_length=500)
 
 	# env = SkipCutscenesPong(env)
@@ -188,6 +188,7 @@ def parse_args() -> argparse.Namespace:
 	parser.add_argument("project", type=str, help="Name for the wandb project")
 	parser.add_argument("name", type=str, help="Name for the wandb run")
 	parser.add_argument("--nolog", action="store_true", help="Don't log to wandb")
+	parser.add_argument("--novid", action="store_true", help="Don't log videos")
 	parser.add_argument("--fps", type=int, default=30)
 	parser.add_argument("--tsamples", type=int, default=6)
 
