@@ -4,8 +4,8 @@ import time
 import argparse
 from typing import Optional
 
-import gym
-from gym import spaces
+import gymnasium as gym
+from gymnasium import spaces
 import numpy as np
 import torch
 from rich import print, inspect
@@ -84,14 +84,13 @@ class EventEnv(gym.Env):
 			tuple[np.ndarray, Optional[dict]]: First observation and optionally info about the step.
 		"""
 		super().reset(seed=seed, options=options) # NOTE: Not using the output
-		info = self.get_info()
 
 		self.observe(wait=False) # Initialise ESIM; Need two frames to get a difference to generate events
 		self.events = self.observe()
 
 		self.iter = 0
 
-		return torch.zeros(*self.shape, dtype=torch.uint8).numpy(), info
+		return torch.zeros(*self.shape, dtype=torch.uint8).numpy(), self.get_info()
 
 	# ----------------------------------------------------------------------------------------------
 	def observe(self, rgb: Optional[np.ndarray] = None, wait: bool = True) -> Optional[torch.Tensor]:
@@ -163,11 +162,9 @@ class EventEnv(gym.Env):
 		Returns:
 			dict: Key-value pairs for the step info.
 		"""
-		rgb = self.resize(self.render()) if self.return_rgb else None
 		return {
 			"state": self.state, # Used later for bootstrap loss
 			"updatedPolicy": int(self.updatedPolicy),
-			"rgb": rgb,
 		}
 
 	# ----------------------------------------------------------------------------------------------

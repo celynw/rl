@@ -23,8 +23,7 @@ kellog \
 gitpython \
 setproctitle \
 opencv-python \
-# h5py \
-gym[all]
+gymnasium \
 stable-baselines3 \
 msgpack \
 rospkg

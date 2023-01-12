@@ -6,7 +6,7 @@ import time
 from typing import Optional
 
 import torch
-import gym
+import gymnasium as gym
 import cv2
 import numpy as np
 from tqdm import tqdm

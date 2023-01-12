@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Optional
 
 from stable_baselines3.common.callbacks import EvalCallback
-import gym
+import gymnasium as gym
 import optuna
 
 # ==================================================================================================

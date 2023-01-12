@@ -6,7 +6,7 @@ from typing import Optional
 
 import numpy as np
 import torch
-from gym import spaces
+from gymnasium import spaces
 from ale_py.env.gym import AtariEnv as SB3_AtariEnv
 from atariari.benchmark.wrapper import ram2label
 

@@ -6,14 +6,14 @@ Changed colours to increase contrast.
 import argparse
 
 from stable_baselines3.common.torch_layers import NatureCNN as SB3_NatureCNN
-import gym.spaces
+import gymnasium.spaces
 from torch import nn
 import torch as th
 
 # ==================================================================================================
 class NatureCNN(SB3_NatureCNN):
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 512):
+	def __init__(self, observation_space: gymnasium.spaces.Box, features_dim: int = 512):
 		"""
 		CNN from DQN nature paper:
 			Mnih, Volodymyr, et al.
@@ -22,7 +22,7 @@ class NatureCNN(SB3_NatureCNN):
 		Subclassed to remove assertion on observation space.
 
 		Args:
-			observation_space (gym.spaces.Box): Observation space.
+			observation_space (gymnasium.spaces.Box): Observation space.
 			features_dim (int, optional): Number of features extracted. This corresponds to the number of unit for the last layer. Defaults to 512.
 		"""
 		super(SB3_NatureCNN, self).__init__(observation_space, features_dim) # Grandparent class
@@ -62,7 +62,7 @@ class NatureCNN(SB3_NatureCNN):
 
 # ==================================================================================================
 if __name__ == "__main__":
-	import gym
+	import gymnasium as gym
 	import torch
 	from rich import print, inspect
 
@@ -81,7 +81,7 @@ if __name__ == "__main__":
 	if env_choice == "CartPoleRGB-v0":
 		kwargs += dict(args=args)
 
-	# from gym.envs.classic_control.cartpole import CartPoleEnv
+	# from gymnasium.envs.classic_control.cartpole import CartPoleEnv
 	env = gym.make(
 		env_choice,
 		**kwargs,

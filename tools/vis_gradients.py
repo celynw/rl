@@ -3,7 +3,7 @@ import argparse
 from pathlib import Path
 
 import torchviz
-import gym
+import gymnasium as gym
 
 import rl
 from rl.models import Estimator, PPO_mod, A2C_mod

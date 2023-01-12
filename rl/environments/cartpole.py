@@ -1,9 +1,9 @@
 import argparse
 from typing import Optional
 
-import gym
-from gym.envs.classic_control.cartpole import CartPoleEnv
-from gym import spaces
+import gymnasium as gym
+from gymnasium.envs.classic_control.cartpole import CartPoleEnv
+from gymnasium import spaces
 import numpy as np
 import cv2
 import pygame, pygame.gfxdraw
@@ -30,6 +30,7 @@ class CartPoleEvents(EventEnv, CartPoleEnv):
 		CartPoleEnv.__init__(self, render_mode="rgb_array")
 		EventEnv.__init__(self, self.output_width, self.output_height, args, event_image) # type: ignore
 		self.iter = 0
+		self.failReason = None
 
 	# ----------------------------------------------------------------------------------------------
 	@staticmethod
@@ -57,27 +58,41 @@ class CartPoleEvents(EventEnv, CartPoleEnv):
 			action (int): Which action to perform this step.
 
 		Returns:
-			tuple[np.ndarray, float, bool, bool, dict]: Step returns.
+			tuple[np.ndarray, float, bool, bool]: Step returns.
 		"""
 		_, reward, terminated, truncated, _ = super().step(action) # type: ignore
 		events = self.observe()
 
-		info = super().get_info()
-		info["failReason"] = None
 		x, _, theta, _ = self.state
 		if x < -self.x_threshold:
-			info["failReason"] = "too_far_left"
+			self.failReason = "too_far_left"
 		elif x > self.x_threshold:
-			info["failReason"] = "too_far_right"
+			self.failReason = "too_far_right"
 		elif theta < -self.theta_threshold_radians:
-			info["failReason"] = "pole_fell_left"
+			self.failReason = "pole_fell_left"
 		elif theta > self.theta_threshold_radians:
-			info["failReason"] = "pole_fell_right"
+			self.failReason = "pole_fell_right"
+		else:
+			self.failReason = None
 
 		if terminated: # Monitor only writes a line when an episode is terminated
 			self.updatedPolicy = False
 
-		return events.numpy(), reward, terminated, truncated, info
+
+		return events.numpy(), reward, terminated, truncated, self.get_info()
+
+	# ----------------------------------------------------------------------------------------------
+	def get_info(self) -> dict:
+		"""
+		Return a created dictionary for the step info.
+
+		Returns:
+			dict: Key-value pairs for the step info.
+		"""
+		info = EventEnv.get_info(self)
+		info["failReason"] = self.failReason
+
+		return info
 
 	# ----------------------------------------------------------------------------------------------
 	def resize(self, rgb: np.ndarray) -> np.ndarray:
@@ -224,6 +239,7 @@ class CartPoleRGB(CartPoleEnv):
 		# FIX: I should normalise my observation space (well, both), but not sure how to for event tensor
 		self.shape = [3, self.output_height, self.output_width]
 		self.observation_space = spaces.Box(low=0, high=255, shape=self.shape, dtype=np.uint8)
+		self.failReason = None
 
 	# ----------------------------------------------------------------------------------------------
 	@staticmethod
@@ -251,19 +267,6 @@ class CartPoleRGB(CartPoleEnv):
 		self.updatedPolicy = True
 
 	# ----------------------------------------------------------------------------------------------
-	def get_info(self) -> dict:
-		"""
-		Return a created dictionary for the step info.
-
-		Returns:
-			dict: Key-value pairs for the step info.
-		"""
-		return {
-			"state": self.state, # Used later for bootstrap loss
-			"updatedPolicy": int(self.updatedPolicy),
-		}
-
-	# ----------------------------------------------------------------------------------------------
 	def step(self, action: int) -> tuple[np.ndarray, float, bool, bool, dict]:
 		"""
 		Perform a single environment step.
@@ -279,25 +282,38 @@ class CartPoleRGB(CartPoleEnv):
 		rgb = self.resize(rgb)
 		rgb = np.transpose(rgb, (2, 0, 1)) # HWC -> CHW
 
-		info = self.get_info()
-		info["failReason"] = None
 		x, _, theta, _ = self.state
 		if x < -self.x_threshold:
-			info["failReason"] = "too_far_left"
+			self.failReason = "too_far_left"
 		elif x > self.x_threshold:
-			info["failReason"] = "too_far_right"
+			self.failReason = "too_far_right"
 		elif theta < -self.theta_threshold_radians:
-			info["failReason"] = "pole_fell_left"
+			self.failReason = "pole_fell_left"
 		elif theta > self.theta_threshold_radians:
-			info["failReason"] = "pole_fell_right"
+			self.failReason = "pole_fell_right"
+		else:
+			self.failReason = None
 
 		if terminated: # Monitor only writes a line when an episode is terminated
 			self.updatedPolicy = False
 
-		return rgb, reward, terminated, truncated, info
+		return rgb, reward, terminated, truncated, self.get_info()
 
 	# ----------------------------------------------------------------------------------------------
-	def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None) -> tuple[np.ndarray, Optional[dict]]:
+	def get_info(self) -> dict:
+		"""
+		Return a created dictionary for the step info.
+
+		Returns:
+			dict: Key-value pairs for the step info.
+		"""
+		info = EventEnv.get_info(self)
+		info["failReason"] = self.failReason
+
+		return info
+
+	# ----------------------------------------------------------------------------------------------
+	def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None) -> np.ndarray:
 		"""
 		Resets the environment, and also the model (if defined).
 
@@ -306,16 +322,15 @@ class CartPoleRGB(CartPoleEnv):
 			options (dict, optional): Additional information to specify how the environment is reset. Defaults to None.
 
 		Returns:
-			tuple[np.ndarray, Optional[dict]]: First observation and optionally info about the step.
+			np.ndarray: First observation.
 		"""
 		super().reset(seed=seed, options=options) # NOTE: Not using the output
-		info = self.get_info()
 
 		rgb = self.render()
 		rgb = self.resize(rgb)
 		rgb = np.transpose(rgb, (2, 0, 1)) # HWC -> CHW
 
-		return rgb, info
+		return rgb, self.get_info()
 
 	# ----------------------------------------------------------------------------------------------
 	def resize(self, rgb: np.ndarray) -> np.ndarray:
@@ -361,8 +376,10 @@ class CartPoleRGB(CartPoleEnv):
 				self.screen = pygame.display.set_mode(
 					(self.screen_width, self.screen_height)
 				)
-			else: # self.render_mode == "rgb_array"
+			elif self.render_mode == "rgb_array":
 				self.screen = pygame.Surface((self.screen_width, self.screen_height))
+			else:
+				raise ValueError(f"Invalid render mode? 'self.render_mode'")
 		if self.clock is None:
 			self.clock = pygame.time.Clock()
 

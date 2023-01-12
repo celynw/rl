@@ -12,10 +12,10 @@ from stable_baselines3.common.torch_layers import NatureCNN
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.atari_wrappers import NoopResetEnv, MaxAndSkipEnv, EpisodicLifeEnv, WarpFrame, ClipRewardEnv
 from stable_baselines3.common.callbacks import EvalCallback
-import gym
+import gymnasium as gym
 import numpy as np
 import cv2
-from gym import spaces
+from gymnasium import spaces
 from rich import print, inspect
 
 import rl

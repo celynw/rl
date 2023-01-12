@@ -4,7 +4,7 @@ import dataclasses
 
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 import torch
-from gym import spaces
+from gymnasium import spaces
 from slayerSNN.slayer import spikeLayer
 from rich import print, inspect
 
@@ -147,7 +147,7 @@ class SNN(BaseFeaturesExtractor):
 
 # ==================================================================================================
 if __name__ == "__main__":
-	import gym
+	import gymnasium as gym
 	from rich import print, inspect
 
 	import rl

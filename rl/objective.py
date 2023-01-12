@@ -5,7 +5,7 @@ from typing import Optional
 
 import optuna.trial
 import optuna.exceptions
-import gym
+import gymnasium as gym
 import torch
 import wandb
 from wandb.integration.sb3 import WandbCallback

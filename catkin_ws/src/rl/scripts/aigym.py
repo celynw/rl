@@ -10,7 +10,7 @@ import tf2_ros
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 
-import gym
+import gymnasium as gym
 from rich import print, inspect
 
 import rl # Registers custom environments

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-import gym.spaces.box
+import gymnasium.spaces.box
 import stable_baselines3.common.vec_env.stacked_observations
 import torch
 
 # ==================================================================================================
 def main():
-	os = gym.spaces.box.Box(0, 1, (3, 480, 640))
+	os = gymnasium.spaces.box.Box(0, 1, (3, 480, 640))
 	# env = gym.make("CartPole-v1")
 	# env.reset()
 	# obs, _, _, _, info = env.step(0)
@@ -21,8 +21,8 @@ def main():
 # ==================================================================================================
 if __name__ == "__main__":
 	# main()
-	import gym
-	import gym.wrappers.frame_stack
+	import gymnasium as gym
+	import gymnasium.wrappers.frame_stack
 	env = gym.make("CarRacing-v2")
 
 	def get_shape():

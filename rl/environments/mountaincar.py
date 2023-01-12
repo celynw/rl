@@ -2,11 +2,11 @@ import argparse
 import math
 from typing import Optional
 
-from gym.envs.classic_control.mountain_car import MountainCarEnv
-from gym import spaces
+from gymnasium.envs.classic_control.mountain_car import MountainCarEnv
+from gymnasium import spaces
 import numpy as np
 import pygame, pygame.gfxdraw
-import gym
+import gymnasium as gym
 from rich import print, inspect
 
 from rl.environments.utils import EventEnv

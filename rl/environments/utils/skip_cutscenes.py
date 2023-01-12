@@ -1,4 +1,4 @@
-import gym
+import gymnasium as gym
 import ale_py
 import numpy as np
 from stable_baselines3.common.type_aliases import GymObs, GymStepReturn

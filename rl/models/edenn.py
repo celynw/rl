@@ -4,7 +4,7 @@ import math
 from typing import Optional
 
 import torch
-from gym import spaces
+from gymnasium import spaces
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from rich import print, inspect
 
@@ -188,7 +188,7 @@ class EDeNN(BaseFeaturesExtractor):
 
 # ==================================================================================================
 if __name__ == "__main__":
-	import gym
+	import gymnasium as gym
 	from rich import print, inspect
 
 	import rl

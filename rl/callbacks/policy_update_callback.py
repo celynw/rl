@@ -1,5 +1,5 @@
 from stable_baselines3.common.callbacks import BaseCallback
-import gym
+import gymnasium as gym
 
 # ==================================================================================================
 class PolicyUpdateCallback(BaseCallback):
