@@ -41,7 +41,7 @@ def main(args: argparse.Namespace):
 			name=args.name,
 			config=config,
 			sync_tensorboard=True, # Auto-upload tensorboard metrics to wandb
-			# monitor_gym=True, # Auto-upload the videos of agents playing the game
+			monitor_gym=True, # Auto-upload the videos of agents playing the game
 			save_code=True, # Save the code to W&B
 			dir=logdir,
 		)
