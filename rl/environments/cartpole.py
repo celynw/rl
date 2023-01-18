@@ -30,7 +30,7 @@ class CartPoleEvents(EventEnv, CartPoleEnv):
 		self.render_events = False
 		CartPoleEnv.__init__(self, render_mode="rgb_array")
 		EventEnv.__init__(self, self.output_width, self.output_height, args, event_image) # type: ignore
-		self.iter = 0
+		# self.iter = 0
 		self.failReason = None
 
 	# ----------------------------------------------------------------------------------------------
@@ -79,6 +79,8 @@ class CartPoleEvents(EventEnv, CartPoleEnv):
 		if terminated: # Monitor only writes a line when an episode is terminated
 			self.updatedPolicy = False
 
+		# self.iter += 1
+		# events = np.ones_like(events.numpy()) * self.iter
 
 		return events.numpy(), reward, terminated, truncated, self.get_info()
 
@@ -229,6 +231,7 @@ class CartPoleRGB(CartPoleEnv):
 		# FIX: I should normalise my observation space (well, both), but not sure how to for event tensor
 		self.shape = [3, self.output_height, self.output_width]
 		self.observation_space = spaces.Box(low=0, high=255, shape=self.shape, dtype=np.uint8)
+		# self.iter = 0
 		self.failReason = None
 
 	# ----------------------------------------------------------------------------------------------
