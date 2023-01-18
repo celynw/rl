@@ -8,7 +8,7 @@ from gymnasium import spaces
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from rich import print, inspect
 
-from rl.models.utils import Decay3dPartial
+from rl.models.utils import Decay3dPartial, Decay3d
 
 # ==================================================================================================
 class EDeNN(BaseFeaturesExtractor):
@@ -56,7 +56,9 @@ class EDeNN(BaseFeaturesExtractor):
 			n_input_channels (int): Number of channels in input tensor.
 		"""
 		partial_kwargs = {}
-		if isinstance(conv, Decay3dPartial):
+		conv = Decay3dPartial
+		# conv = Decay3d
+		if conv is Decay3dPartial:
 			partial_kwargs["multi_channel"] = True
 			partial_kwargs["return_mask"] = True
 			partial_kwargs["kernel_ratio"] = True
