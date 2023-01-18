@@ -3,6 +3,8 @@ from typing import Optional
 import torch
 from stable_baselines3.common.policies import ActorCriticPolicy as SB3_ACP
 from stable_baselines3.common.preprocessing import preprocess_obs
+from stable_baselines3.common.distributions import Distribution
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from rich import print, inspect
 
 import rl.models
