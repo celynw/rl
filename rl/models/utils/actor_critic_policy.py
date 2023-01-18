@@ -10,7 +10,7 @@ import rl.models
 # ==================================================================================================
 class ActorCriticPolicy(SB3_ACP):
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, *args, detach: bool = True, **kwargs):
+	def __init__(self, *args, detach: bool, **kwargs):
 		"""Subclass `ActorCriticPolicy` to handle gradient breaks for the feature extractor."""
 		super().__init__(*args, **kwargs)
 		self.detach = detach
