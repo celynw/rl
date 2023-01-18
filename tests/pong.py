@@ -31,8 +31,7 @@ def main(args: argparse.Namespace):
 	logdir = Path(__file__).parent.resolve()
 	config = {
 		# "env_name": "PongNoFrameskip-v4", # Box(0, 255, (84, 84, 4), uint8)
-		"env_name": "CartPoleRGB-v0", # Box(0, 255, (84, 84, 4), uint8)
-		"num_envs": 8,
+		"num_envs": args.n_envs,
 		"total_timesteps": int(10e6),
 		"seed": 4089164106,
 	}
@@ -196,6 +195,7 @@ def parse_args() -> argparse.Namespace:
 	parser.add_argument("--novid", action="store_true", help="Don't log videos")
 	parser.add_argument("--fps", type=int, default=30)
 	parser.add_argument("--tsamples", type=int, default=6)
+	parser.add_argument("-n", "--n_envs", type=int, default=8, help="Number of parallel environments")
 
 	return parser.parse_args()
 
