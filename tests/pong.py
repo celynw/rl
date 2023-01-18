@@ -86,7 +86,7 @@ def main(args: argparse.Namespace):
 		ent_coef=0.01,
 		gae_lambda=0.9,
 		gamma=0.99,
-		learning_rate=2.5e-4,
+		learning_rate=args.lr,
 		max_grad_norm=0.5,
 		n_epochs=4,
 		n_steps=n_steps,
@@ -195,6 +195,7 @@ def parse_args() -> argparse.Namespace:
 	parser.add_argument("--novid", action="store_true", help="Don't log videos")
 	parser.add_argument("--fps", type=int, default=30)
 	parser.add_argument("--tsamples", type=int, default=6)
+	parser.add_argument("--lr", type=float, default=2.5e-4, help="Learning rate")
 	parser.add_argument("-n", "--n_envs", type=int, default=8, help="Number of parallel environments")
 
 	return parser.parse_args()
