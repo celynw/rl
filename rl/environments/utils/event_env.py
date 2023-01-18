@@ -15,8 +15,6 @@ from rl.environments.utils import SpikeRepresentationGenerator
 
 # ==================================================================================================
 class EventEnv(gym.Env):
-	debug: bool = False # For ROS logging
-	return_rgb: bool
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, width: int, height: int, args: argparse.Namespace, event_image: bool = False):
 		"""

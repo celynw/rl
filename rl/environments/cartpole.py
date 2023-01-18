@@ -13,7 +13,6 @@ from rl.models import EDeNN, SNN, NatureCNN
 
 # ==================================================================================================
 class CartPoleEvents(EventEnv, CartPoleEnv):
-	state_space: spaces.Space
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, args: argparse.Namespace, event_image: bool = False, return_rgb: bool = False, output_width: int = 126, output_height: int = 84):
 		"""
@@ -27,6 +26,8 @@ class CartPoleEvents(EventEnv, CartPoleEnv):
 		self.return_rgb = return_rgb
 		self.output_width = output_width
 		self.output_height = output_height
+		self.updatedPolicy = False # Used for logging whenever the policy is updated
+		self.render_events = False
 		CartPoleEnv.__init__(self, render_mode="rgb_array")
 		EventEnv.__init__(self, self.output_width, self.output_height, args, event_image) # type: ignore
 		self.iter = 0
