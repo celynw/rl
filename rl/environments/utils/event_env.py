@@ -94,7 +94,7 @@ class EventEnv(gym.Env):
 		return torch.zeros(*self.shape, dtype=torch.uint8).numpy(), self.get_info()
 
 	# ----------------------------------------------------------------------------------------------
-	def observe(self, rgb: Optional[np.ndarray] = None, wait: bool = True) -> Optional[torch.Tensor]:
+	def observe(self, rgb: Optional[np.ndarray] = None) -> Optional[torch.Tensor]:
 		"""
 		TODO Renders the AI gym environment, pushes it through ROS and presents the event observations.
 
