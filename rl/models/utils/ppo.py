@@ -17,6 +17,7 @@ from stable_baselines3.common.vec_env import VecVideoRecorder
 from rich import print, inspect
 
 from rl.models.utils import RolloutBuffer
+import rl.models
 
 # ==================================================================================================
 class PPO(SB3_PPO):
@@ -168,7 +169,8 @@ class PPO(SB3_PPO):
 			clip_range_vf = self.clip_range_vf(self._current_progress_remaining)
 
 		entropy_losses = []
-		bs_losses = []
+		if isinstance(self.policy.features_extractor, rl.models.EDeNN) and self.policy.features_extractor.projection_head is not None:
+			bs_losses = []
 		pg_losses, value_losses = [], []
 		clip_fractions = []
 
@@ -206,9 +208,10 @@ class PPO(SB3_PPO):
 					self.policy.reset_noise(self.n_epochs)
 
 				# For bootstrap loss
-				values, log_prob, entropy, features = self.policy.evaluate_actions(rollout_data.observations, actions, rollout_data.resets)
-				# Without bootstrap loss
-				# values, log_prob, entropy = self.policy.evaluate_actions(rollout_data.observations, actions, rollout_data.resets)
+				if isinstance(self.policy.features_extractor, rl.models.EDeNN) and self.policy.features_extractor.projection_head is not None:
+					values, log_prob, entropy, features = self.policy.evaluate_actions(rollout_data.observations, actions, rollout_data.resets)
+				else:
+					values, log_prob, entropy = self.policy.evaluate_actions(rollout_data.observations, actions, rollout_data.resets)
 				values = values.flatten()
 				# Normalize advantage
 				advantages = rollout_data.advantages
@@ -250,15 +253,15 @@ class PPO(SB3_PPO):
 
 				entropy_losses.append(entropy_loss.item())
 
-				bs_loss = F.l1_loss(features, rollout_data.states.squeeze(1).squeeze(1))
+				if isinstance(self.policy.features_extractor, rl.models.EDeNN) and self.policy.features_extractor.projection_head is not None:
+					bs_loss = F.l1_loss(features, rollout_data.states.squeeze(1).squeeze(1))
 
-				loss = (policy_loss * self.pl_coef) + (entropy_loss * self.ent_coef) + (value_loss * self.vf_coef) + (bs_loss * self.bs_coef)
-				# loss = (policy_loss * self.pl_coef) + (entropy_loss * self.ent_coef) + (value_loss * self.vf_coef)
-				# loss = policy_loss
-				# loss = entropy_loss
-				# loss = value_loss
-				# loss = bs_loss
-				bs_losses.append(bs_loss.item())
+				if isinstance(self.policy.features_extractor, rl.models.EDeNN) and self.policy.features_extractor.projection_head is not None:
+					loss = (policy_loss * self.pl_coef) + (entropy_loss * self.ent_coef) + (value_loss * self.vf_coef) + (bs_loss * self.bs_coef)
+				else:
+					loss = (policy_loss * self.pl_coef) + (entropy_loss * self.ent_coef) + (value_loss * self.vf_coef)
+				if isinstance(self.policy.features_extractor, rl.models.EDeNN) and self.policy.features_extractor.projection_head is not None:
+					bs_losses.append(bs_loss.item())
 
 				if self.save_loss:
 					self.loss = loss.clone()
@@ -387,7 +390,8 @@ class PPO(SB3_PPO):
 
 		# Logs
 		self.logger.record("train/entropy_loss", np.mean(entropy_losses))
-		self.logger.record("train/bootstrap_loss", np.mean(bs_losses))
+		if isinstance(self.policy.features_extractor, rl.models.EDeNN) and self.policy.features_extractor.projection_head is not None:
+			self.logger.record("train/bootstrap_loss", np.mean(bs_losses))
 		self.logger.record("train/policy_gradient_loss", np.mean(pg_losses))
 		self.logger.record("train/value_loss", np.mean(value_losses))
 		self.logger.record("train/approx_kl", np.mean(approx_kl_divs))
@@ -487,12 +491,13 @@ class PPO(SB3_PPO):
 				# Reshape in case of discrete action
 				actions = actions.reshape(-1, 1)
 
-			# Reset prev_features (for each layer) for that vectorized env in batch
-			# Setting to zero works, it's multiplied by decay and the added to first bin
-			for envNum, done in enumerate(dones):
-				if done:
-					for layer, _ in enumerate(self.policy.prev_features):
-						self.policy.prev_features[layer][envNum] *= 0
+			if isinstance(self.policy.features_extractor, rl.models.EDeNN):
+				# Reset prev_features (for each layer) for that vectorized env in batch
+				# Setting to zero works, it's multiplied by decay and the added to first bin
+				for envNum, done in enumerate(dones):
+					if done:
+						for layer, _ in enumerate(self.policy.prev_features):
+							self.policy.prev_features[layer][envNum] *= 0
 
 			# Handle timeout by bootstrapping with value function
 			# see GitHub issue #633
