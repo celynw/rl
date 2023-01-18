@@ -234,7 +234,6 @@ class CartPoleRGB(CartPoleEnv):
 	# ----------------------------------------------------------------------------------------------
 	@staticmethod
 	def add_argparse_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
-		parser = EventEnv.add_argparse_args(parser)
 		# https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/hyperparams/ppo.yml#L32
 		# parser.set_defaults(steps=1e5)
 		parser.set_defaults(n_steps=32 * 8) # n_envs = 8, rollout buffer size is n_steps * n_envs
