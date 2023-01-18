@@ -24,7 +24,7 @@ import rl.models.utils
 import rl.models
 from rl.models.utils import PPO as SB3_PPO
 import rl.utils
-from rl.environments.utils import SkipCutscenesPong
+from rl.environments.utils import SkipCutscenesPong, VecVideoRecorder
 
 # ==================================================================================================
 def main(args: argparse.Namespace):
@@ -66,7 +66,9 @@ def main(args: argparse.Namespace):
 		monitor_kwargs=None,
 	)
 	if not args.nolog and not args.novid:
-		env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 20000 == 0, video_length=500)
+		# With multiple videos, name_prefix needs to match r".+(video\.\d+).+", otherwise it will go under the key "videos" in wandb
+		env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 20000 == 0, video_length=500, render_events=True, name_prefix="events-video.1")
+		env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 20000 == 0, video_length=500, name_prefix="rgb-video.2")
 
 	# env = SkipCutscenesPong(env)
 	env = VecFrameStack(env, n_stack=4)

@@ -111,6 +111,8 @@ class EventEnv(gym.Env):
 		if self.event_image:
 			observation = observation.sum(1) # Just sum the events for each pixel
 
+		self.events = observation # Only used for rendering video
+
 		return observation
 
 	# ----------------------------------------------------------------------------------------------
