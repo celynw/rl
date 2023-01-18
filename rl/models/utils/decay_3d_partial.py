@@ -30,15 +30,6 @@ class Decay3dPartial(Decay3d):
 		self.mask_ratio = None
 
 	# ----------------------------------------------------------------------------------------------
-	def reset_parameters(self):
-		torch.nn.init.kaiming_uniform_(self.conv_weight, a=math.sqrt(5))
-		torch.nn.init.kaiming_uniform_(self.decay_weight, a=math.sqrt(5))
-		if self.bias is not None:
-			fan_in, _ = torch.nn.init._calculate_fan_in_and_fan_out(self.conv_weight)
-			bound = 1 / math.sqrt(fan_in)
-			torch.nn.init.uniform_(self.bias, -bound, bound)
-
-	# ----------------------------------------------------------------------------------------------
 	def forward(self, input: torch.Tensor, mask_in: Optional[torch.Tensor] = None, previous_output: Optional[torch.Tensor] = None) -> torch.Tensor:
 		# First, propagate values from previous layer using 2D convolution
 		# Use first part of weights
