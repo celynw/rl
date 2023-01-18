@@ -46,19 +46,21 @@ class ActorCriticPolicy(SB3_ACP):
 		self.debug_log_prob2 = []
 
 	# ----------------------------------------------------------------------------------------------
-	def extract_features(self, obs: torch.Tensor, resets: Optional[torch.Tensor] = None, train: bool = False) -> torch.Tensor:
+	def extract_features(self, obs: torch.Tensor, resets: Optional[torch.Tensor] = None, train: bool = False, features_extractor: Optional[BaseFeaturesExtractor] = None) -> torch.Tensor:
 		"""
 		Preprocess the observation if needed and extract features.
 
 		:param obs:
 		:return:
 		"""
-		assert self.features_extractor is not None, "No features extractor was set"
+		features_extractor = features_extractor or self.features_extractor
+
+		assert features_extractor is not None, "No features extractor was set"
 		preprocessed_obs = preprocess_obs(obs, self.observation_space, normalize_images=self.normalize_images)
-		if isinstance(self.features_extractor, rl.models.EDeNN):
+		if isinstance(features_extractor, rl.models.EDeNN):
 			if train:
 				self.prev_features_train = [f.to(self.device) for f in self.prev_features_train]
-				features, self.prev_features_train = self.features_extractor(preprocessed_obs, self.prev_features_train)
+				features, self.prev_features_train = features_extractor(preprocessed_obs, self.prev_features_train)
 				self.prev_features_train = [f.detach().clone() for f in self.prev_features_train]
 
 				# Reset prev_features (for each layer) for that vectorized env in batch
@@ -73,10 +75,10 @@ class ActorCriticPolicy(SB3_ACP):
 				# features: 8, 2
 				# prev_features[0]: 8, 32, _, 20, 20
 				self.prev_features = [f.to(self.device) for f in self.prev_features]
-				features, self.prev_features = self.features_extractor(preprocessed_obs, self.prev_features)
+				features, self.prev_features = features_extractor(preprocessed_obs, self.prev_features)
 				self.prev_features = [f.detach().clone() for f in self.prev_features]
 		else:
-			features = self.features_extractor(preprocessed_obs)
+			features = features_extractor(preprocessed_obs)
 
 		return features
 
@@ -131,3 +133,34 @@ class ActorCriticPolicy(SB3_ACP):
 			return values, log_prob, entropy, projection
 		else:
 			return values, log_prob, entropy, features
+
+	# ----------------------------------------------------------------------------------------------
+	# Workaround for EvalCallback
+	def predict_values(self, obs: torch.Tensor) -> torch.Tensor:
+		"""
+		Get the estimated values according to the current policy given the observations.
+
+		:param obs: Observation
+		:return: the estimated values.
+		"""
+		# Added to use self, not super
+		features = self.extract_features(obs, self.vf_features_extractor)
+		latent_vf = self.mlp_extractor.forward_critic(features)
+		return self.value_net(latent_vf)
+
+	# ----------------------------------------------------------------------------------------------
+	# Workaround for EvalCallback
+	def get_distribution(self, obs: torch.Tensor) -> Distribution:
+		"""
+		Get the current policy distribution given the observations.
+
+		:param obs:
+		:return: the action distribution.
+		"""
+		# Added to use self, not super
+		features = self.extract_features(obs, features_extractor=self.pi_features_extractor)
+		# Added to ignore new_prev_x return
+		if isinstance(features, tuple):
+			features = features[0]
+		latent_pi = self.mlp_extractor.forward_actor(features)
+		return self._get_action_dist_from_latent(latent_pi)
