@@ -35,6 +35,8 @@ class PPO(SB3_PPO):
 		else:
 			state_shape = env.state_space.shape
 
+		self.normalize_advantage = False if self.n_envs == 1 else self.normalize_advantage
+
 		self.rollout_buffer = RolloutBuffer(
 			self.n_steps,
 			self.observation_space,
@@ -278,6 +280,7 @@ class PPO(SB3_PPO):
 
 				# Optimization step
 				self.policy.optimizer.zero_grad()
+				assert not torch.isnan(loss) # Catch before too late, doesn't seem to trip up the training
 				loss.backward()
 				# Clip grad norm
 				torch.nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
