@@ -47,6 +47,7 @@ def main(args: argparse.Namespace):
 			dir=logdir,
 		)
 		run.log_code(Path(__file__).parent.resolve())
+		run.log_code((Path(__file__).parent.parent / "rl").resolve())
 
 	# There already exists an environment generator
 	# that will make and wrap atari environments correctly.
