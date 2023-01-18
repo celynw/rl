@@ -52,8 +52,8 @@ class RolloutBuffer(SB3_ROB):
 			self.log_probs[batch_inds].flatten(),
 			self.advantages[batch_inds].flatten(),
 			self.returns[batch_inds].flatten(),
-			self.states[batch_inds],
-			self.resets[batch_inds],
+			self.states[batch_inds].flatten(),
+			self.resets[batch_inds].flatten(),
 			# DEBUG
 			# self.observations,
 			# self.actions,
