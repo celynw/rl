@@ -85,8 +85,9 @@ class EventEnv(gym.Env):
 		"""
 		super().reset(seed=seed, options=options) # NOTE: Not using the output
 
-		self.observe(wait=False) # Initialise ESIM; Need two frames to get a difference to generate events
-		self.events = self.observe()
+		# Initialise ESIM; Need two frames to get a difference to generate events. The first should be all zero
+		self.observe()
+		self.observe()
 
 		self.iter = 0
 
