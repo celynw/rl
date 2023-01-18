@@ -140,6 +140,8 @@ class Objective():
 					save_freq=10000,
 					save_path=Path(run.dir) / "checkpoints",
 					name_prefix=self.args.environment,
+					save_replay_buffer=True,
+					save_vecnormalize=True,
 				),
 			]
 

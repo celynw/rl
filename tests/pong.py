@@ -103,6 +103,8 @@ def main(args: argparse.Namespace):
 				save_freq=10000,
 				save_path=Path(run.dir) / "checkpoints",
 				name_prefix=config["env_name"],
+				save_replay_buffer=True,
+				save_vecnormalize=True,
 			),
 			WandbCallback(
 				gradient_save_freq=1000,
