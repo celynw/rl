@@ -101,7 +101,7 @@ class EDeNN(BaseFeaturesExtractor):
 			)
 
 	# ----------------------------------------------------------------------------------------------
-	def forward(self, x: torch.Tensor, prev_x: list[torch.Tensor], calc_n_flatten: bool = False) -> torch.Tensor | tuple[torch.Tensor, list[torch.Tensor]]:
+	def forward(self, x: torch.Tensor, prev_x: list[torch.Tensor] = None, calc_n_flatten: bool = False) -> torch.Tensor | tuple[torch.Tensor, list[torch.Tensor]]:
 		"""
 		Forward pass of model.
 
@@ -113,6 +113,10 @@ class EDeNN(BaseFeaturesExtractor):
 		Returns:
 			torch.Tensor: Extracted features.
 		"""
+		if prev_x is None:
+			print("WARNING: prev_x was None")
+			prev_x = [torch.tensor([0]), torch.tensor([0]), torch.tensor([0])]
+
 		new_prev_x = []
 		mask = (x != 0).float()
 
