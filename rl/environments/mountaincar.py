@@ -10,12 +10,10 @@ import gymnasium as gym
 from rich import print, inspect
 
 from rl.environments.utils import EventEnv
-from rl.models import EDeNN, SNN
 
 # ==================================================================================================
 class MountainCarEvents(EventEnv, MountainCarEnv):
 	state_space: spaces.Space
-	model: Optional[EDeNN | SNN] = None
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, args: argparse.Namespace, event_image: bool = False, return_rgb: bool = False):
 		"""

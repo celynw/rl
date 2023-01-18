@@ -18,6 +18,7 @@ from rich import print, inspect
 
 from rl.models.utils import RolloutBuffer
 import rl.models
+from rl.environments.utils import get_base_envs
 
 # ==================================================================================================
 class PPO(SB3_PPO):
@@ -29,12 +30,10 @@ class PPO(SB3_PPO):
 		self.bs_coef = bs_coef
 		self.save_loss = save_loss
 
-		if isinstance(env, VecVideoRecorder):
-			state_shape = env.env.envs[0].state_space.shape
-		elif isinstance(env, DummyVecEnv):
-			state_shape = env.envs[0].state_space.shape
-		else:
-			state_shape = env.state_space.shape
+		try:
+			state_shape = get_base_envs(env)[0].state_space.shape
+		except AttributeError: # CartPole-v1
+			state_shape = get_base_envs(env)[0].observation_space.shape
 
 		self.normalize_advantage = False if self.n_envs == 1 else self.normalize_advantage
 

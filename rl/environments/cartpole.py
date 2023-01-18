@@ -9,7 +9,6 @@ import cv2
 import pygame, pygame.gfxdraw
 
 from rl.environments.utils import EventEnv
-from rl.models import EDeNN, SNN, NatureCNN
 
 # ==================================================================================================
 class CartPoleEvents(EventEnv, CartPoleEnv):
