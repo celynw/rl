@@ -89,7 +89,7 @@ def main(args: argparse.Namespace):
 		learning_rate=args.lr,
 		max_grad_norm=0.5,
 		n_epochs=4,
-		n_steps=n_steps,
+		n_steps=args.n_steps,
 		vf_coef=0.5,
 		tensorboard_log=Path(run.dir) if not args.nolog else None, # Will be appended by `tb_log_name`
 		verbose=1,
@@ -110,7 +110,7 @@ def main(args: argparse.Namespace):
 				model_save_path=f"models/{run.id}",
 			),
 		]
-	callbacks += [EvalCallback(env, eval_freq=n_steps * 10, best_model_save_path=(Path(run.dir) / "checkpoints") / "best" if not args.nolog else None)]
+	callbacks += [EvalCallback(env, eval_freq=args.n_steps * 10, best_model_save_path=(Path(run.dir) / "checkpoints") / "best" if not args.nolog else None)]
 	model.learn(total_timesteps=config["total_timesteps"], callback=callbacks, tb_log_name="tensorboard")
 	if not args.nolog:
 		model.save(logdir / f"{args.project}_{args.project}.zip")
@@ -197,6 +197,7 @@ def parse_args() -> argparse.Namespace:
 	parser.add_argument("--tsamples", type=int, default=6)
 	parser.add_argument("--lr", type=float, default=2.5e-4, help="Learning rate")
 	parser.add_argument("-n", "--n_envs", type=int, default=8, help="Number of parallel environments")
+	parser.add_argument("--n_steps", type=int, default=128, help="Number of steps before each weights update")
 
 	return parser.parse_args()
 
