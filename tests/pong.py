@@ -17,10 +17,12 @@ import numpy as np
 import cv2
 from gymnasium import spaces
 from rich import print, inspect
+from stable_baselines3.common.policies import ActorCriticPolicy as SB3_ACP
 
 import rl
 import rl.models.utils
 import rl.models
+from rl.models.utils import PPO as SB3_PPO
 import rl.utils
 from rl.environments.utils import SkipCutscenesPong
 
@@ -72,10 +74,9 @@ def main(args: argparse.Namespace):
 
 	# https://github.com/DLR-RM/rl-trained-agents/blob/10a9c31e806820d59b20d8b85ca67090338ea912/ppo/PongNoFrameskip-v4_1/PongNoFrameskip-v4/config.yml
 	n_steps = 128
-	model = PPO(
-	# model = rl.models.utils.PPO(
-		policy="CnnPolicy",
-		# policy=rl.models.utils.ActorCriticPolicy,
+	# model = SB3_PPO(
+	model = rl.models.utils.PPO(
+		# policy=SB3_ACP,
 		# policy_kwargs=dict(features_extractor_class=NatureCNN),
 		policy_kwargs=dict(features_extractor_class=rl.models.NatureCNN, net_arch=[]),
 		env=env,
