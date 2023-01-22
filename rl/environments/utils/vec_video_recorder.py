@@ -34,6 +34,7 @@ class VecVideoRecorder(SB3_VecVideoRecorder):
 		video_length: int = 200,
 		name_prefix: str = "rl-video",
 		render_events: bool = False,
+		sum_events: bool = True,
 	):
 		# super().__init__(*args, **kwargs)
 		VecEnvWrapper.__init__(self, venv)
@@ -73,6 +74,7 @@ class VecVideoRecorder(SB3_VecVideoRecorder):
 		# self.env.render_mode = get_base_envs(self.env)[0].render_mode
 
 		self.render_events = render_events
+		self.sum_events = sum_events
 		if render_events:
 			self.name_prefix += "-events"
 
@@ -83,7 +85,7 @@ class VecVideoRecorder(SB3_VecVideoRecorder):
 		video_name = f"{self.name_prefix}-step-{self.step_id}-to-step-{self.step_id + self.video_length}"
 		base_path = os.path.join(self.video_folder, video_name)
 		self.video_recorder = VideoRecorder(
-			env=self.env, base_path=base_path, metadata={"step_id": self.step_id}, render_events=self.render_events
+			env=self.env, base_path=base_path, metadata={"step_id": self.step_id}, render_events=self.render_events, sum_events=self.sum_events,
 		)
 
 		self.video_recorder.capture_frame()
