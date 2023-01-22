@@ -29,8 +29,6 @@ class EventEnv(gym.Env):
 		self.state_space = self.observation_space # For access later
 		if args.fps is not None:
 			self.metadata["render_fps"] = args.fps
-		else:
-			fps = self.metadata["render_fps"] # type: ignore
 
 		self.bridge = SimulatorBridge(
 			0.5, # Contrast threshold (positive): double contrast_threshold_pos
