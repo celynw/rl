@@ -470,9 +470,12 @@ class PPO(SB3_PPO):
 
 			new_obs, rewards, dones, infos = env.step(clipped_actions)
 
-			state = infos[0]["state"]
-			if state is not None:
-				state = torch.tensor(infos[0]["state"], device=self.device)[None, ...]
+			try:
+				state = infos[0]["state"]
+				if state is not None:
+					state = torch.tensor(infos[0]["state"], device=self.device)[None, ...]
+			except KeyError:
+				state = torch.tensor(new_obs, device=self.device)[None, ...]
 			reset = torch.tensor(dones, device=self.device)[None, ...]
 
 			self.num_timesteps += env.num_envs
