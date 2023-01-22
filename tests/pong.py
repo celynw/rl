@@ -79,10 +79,11 @@ def main(args: argparse.Namespace):
 		vec_env_kwargs=None,
 		monitor_kwargs=None,
 	)
+
 	if not args.nolog and not args.novid:
 		# FIX: I think I want this to only run on the evaluation
 		# With multiple videos, name_prefix needs to match r".+(video\.\d+).+", otherwise they would all conflict under the key "videos" in wandb
-		if featex is not [FeatEx.NATURECNN, FeatEx.NATURECNNEVENTS]: # events
+		if featex not in [FeatEx.NATURECNN, FeatEx.NATURECNNEVENTS]: # events
 			env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 20000 == 0, video_length=video_length, render_events=True, name_prefix="events-video.1")
 		if featex is FeatEx.NATURECNNEVENTS: # event images
 			env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 20000 == 0, video_length=video_length, render_events=True, sum_events=False, name_prefix="events-video.1")
