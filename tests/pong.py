@@ -6,7 +6,7 @@ import wandb
 from wandb.integration.sb3 import WandbCallback
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_atari_env
-from stable_baselines3.common.vec_env import VecFrameStack, VecVideoRecorder
+from stable_baselines3.common.vec_env import VecFrameStack#, VecVideoRecorder
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.torch_layers import NatureCNN
 from stable_baselines3.common.env_util import make_vec_env
@@ -24,7 +24,25 @@ import rl.models.utils
 import rl.models
 from rl.models.utils import PPO as SB3_PPO
 import rl.utils
-from rl.environments.utils import SkipCutscenesPong, VecVideoRecorder
+from rl.environments.utils import SkipCutscenesPong, VecVideoRecorder, get_base_envs
+
+from enum import Enum, auto
+
+# ==================================================================================================
+class EnvType(Enum):
+	CARTPOLE = auto()
+	MOUNTAINCAR = auto(),
+	PONG = auto(),
+# ==================================================================================================
+class FeatEx(Enum):
+	NATURECNN = auto(),
+	NATURECNNEVENTS = auto(),
+	SNN = auto(),
+	EDENN = auto(),
+
+envtype = EnvType.CARTPOLE
+featex = FeatEx.EDENN
+
 
 # ==================================================================================================
 def main(args: argparse.Namespace):
@@ -49,45 +67,73 @@ def main(args: argparse.Namespace):
 		run.log_code(Path(__file__).parent.resolve())
 		run.log_code((Path(__file__).parent.parent / "rl").resolve())
 
-	# There already exists an environment generator
-	# that will make and wrap atari environments correctly.
-	# Here we are also multi-worker training (n_envs=8 => 8 environments)
-	# env = make_atari_env(config["env_name"], n_envs=config["num_envs"], seed=config["seed"])
 	env = make_vec_env(
 		env_id=config["env_name"],
 		n_envs=config["num_envs"],
-		seed=config["seed"],
+		# seed=config["seed"],
 		start_index=0,
 		monitor_dir=None,
-		wrapper_class=AtariWrapper,
-		env_kwargs=dict(args=args),
+		wrapper_class=wrapper_class,
+		env_kwargs=env_kwargs,
 		vec_env_cls=None,
 		vec_env_kwargs=None,
 		monitor_kwargs=None,
 	)
 	if not args.nolog and not args.novid:
-		# With multiple videos, name_prefix needs to match r".+(video\.\d+).+", otherwise it will go under the key "videos" in wandb
-		env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 20000 == 0, video_length=500, render_events=True, name_prefix="events-video.1")
-		env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 20000 == 0, video_length=500, name_prefix="rgb-video.2")
+		# FIX: I think I want this to only run on the evaluation
+		# With multiple videos, name_prefix needs to match r".+(video\.\d+).+", otherwise they would all conflict under the key "videos" in wandb
+		if featex is not [FeatEx.NATURECNN, FeatEx.NATURECNNEVENTS]: # events
+			env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 20000 == 0, video_length=video_length, render_events=True, name_prefix="events-video.1")
+		if featex is FeatEx.NATURECNNEVENTS: # event images
+			env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 20000 == 0, video_length=video_length, render_events=True, sum_events=False, name_prefix="events-video.1")
+		env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 20000 == 0, video_length=video_length, name_prefix="rgb-video.2") # RGB
 
-	# env = SkipCutscenesPong(env)
-	env = VecFrameStack(env, n_stack=4)
-	# env = VecVideoRecorder(env, "videos", record_video_trigger=lambda x: x % 100000 == 0, video_length=2000)
+	if envtype is EnvType.PONG:
+		env = VecFrameStack(env, n_stack=4)
+		# env = VecFrameStack(env, n_stack=4, channels_order="first")
+		env = SkipCutscenesPong(env)
+
+	# optimizer_kwargs = dict(
+	# )
+
+	# FIX # result_dim = env.state_space.shape[-1] if hasattr(env, "state_space") else env.observation_space.shape[0]
+	# result_dim = 4 # CartPole
+	features_extractor_kwargs = dict(
+		# features_dim=result_dim,
+		# features_dim=256,
+		features_dim=512,
+		#
+		# features_dim=256,
+		# projection_head=result_dim,
+		#
+		# # DEBUG
+		# features_dim=result_dim,
+		# projection_head=result_dim,
+	)
+	if featex is FeatEx.SNN:
+		features_extractor_kwargs["fps"] = get_base_envs(env)[0].fps
+		features_extractor_kwargs["tsamples"] = args.tsamples
 
 	# https://github.com/DLR-RM/rl-trained-agents/blob/10a9c31e806820d59b20d8b85ca67090338ea912/ppo/PongNoFrameskip-v4_1/PongNoFrameskip-v4/config.yml
-	n_steps = 128
 	# model = SB3_PPO(
 	model = rl.models.utils.PPO(
+	# model = rl.models.utils.PPO_(
+		# policy="CnnPolicy",
+		policy=rl.models.utils.ActorCriticPolicy,
 		# policy=SB3_ACP,
-		# policy_kwargs=dict(features_extractor_class=NatureCNN),
-		policy_kwargs=dict(features_extractor_class=rl.models.NatureCNN, net_arch=[]),
+		# policy_kwargs=dict(features_extractor_class=rl.models.EDeNN, features_extractor_kwargs=features_extractor_kwargs, detach=False),
+		# try:
+		# - detach=True
+		# - optimizer_kwargs=optimizer_kwargs
+		policy_kwargs=dict(features_extractor_class=features_extractor_class, net_arch=[], features_extractor_kwargs=features_extractor_kwargs, detach=False),
 		env=env,
-		batch_size=256,
+		batch_size=256, # Probably doesn't do anything, batch size is 1
 		clip_range=0.1,
 		ent_coef=0.01,
-		gae_lambda=0.9,
+		gae_lambda=0.95,
 		gamma=0.99,
 		learning_rate=args.lr,
+		# learning_rate=lambda f : f * 2.5e-4,
 		max_grad_norm=0.5,
 		n_epochs=4,
 		n_steps=args.n_steps,
@@ -205,13 +251,42 @@ def parse_args() -> argparse.Namespace:
 
 # ==================================================================================================
 if __name__ == "__main__":
-	# DEBUG
-	import random
-	random.seed(0)
-	import torch
-	torch.manual_seed(0)
-	torch.use_deterministic_algorithms(True, warn_only=True)
-	import numpy as np
-	np.random.seed(0)
+	# # DEBUG
+	# import random
+	# random.seed(0)
+	# import torch
+	# torch.manual_seed(0)
+	# torch.use_deterministic_algorithms(True, warn_only=True)
+	# import numpy as np
+	# np.random.seed(0)
 
-	main(parse_args())
+	args = parse_args()
+
+	if envtype is EnvType.CARTPOLE:
+		env_name = "CartPoleRGB-v0" if featex is FeatEx.NATURECNN else "CartPoleEvents-v0"
+		output_width = 600
+		output_height = 400
+	elif envtype is EnvType.MOUNTAINCAR:
+		env_name = "MountainCarRGB-v0" if featex is FeatEx.NATURECNN else "MountainCarEvents-v0"
+	elif envtype is EnvType.PONG:
+		# FIX event version??
+		env_name = "PongNoFrameskip-v4" if featex is FeatEx.NATURECNN else "PongEventsNoFrameskip-v4"
+
+	wrapper_class = AtariWrapper if featex is FeatEx.NATURECNN else None
+
+	env_kwargs = dict(args=args)
+	if featex is FeatEx.NATURECNNEVENTS:
+		env_kwargs["event_image"] = True
+
+	match featex:
+		case FeatEx.EDENN:
+			features_extractor_class = rl.models.EDeNN
+		case [FeatEx.NATURECNN, FeatEx.NATURECNNEVENTS]:
+			features_extractor_class = rl.models.NatureCNN
+		case FeatEx.SNN:
+			features_extractor_class = rl.models.SNN
+
+	video_length = 500
+	# if envtype is EnvType.CARTPOLE:
+
+	main(args)
