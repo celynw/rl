@@ -13,7 +13,8 @@ from rl.environments.utils import EventEnv
 # ==================================================================================================
 class CartPoleEvents(EventEnv, CartPoleEnv):
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, args: argparse.Namespace, event_image: bool = False, return_rgb: bool = False, output_width: int = 126, output_height: int = 84):
+	# def __init__(self, args: argparse.Namespace, event_image: bool = False, return_rgb: bool = False, output_width: int = 126, output_height: int = 84): # if not cropping
+	def __init__(self, args: argparse.Namespace, event_image: bool = False, return_rgb: bool = False, output_width: int = 240, output_height: int = 64): # if cropping
 		"""
 		Event version of CartPole environment.
 
@@ -108,7 +109,7 @@ class CartPoleEvents(EventEnv, CartPoleEnv):
 			np.ndarray: Resized image.
 		"""
 		# Crop
-		# rgb = rgb[int(self.screen_height * 0.4):int(self.screen_height * 0.8), :, :]
+		rgb = rgb[int(self.screen_height * 0.4):int(self.screen_height * 0.8), :, :]
 		# Resize
 		rgb = cv2.resize(rgb, (self.output_width, self.output_height), interpolation=cv2.INTER_AREA)
 
@@ -215,7 +216,8 @@ class CartPoleEvents(EventEnv, CartPoleEnv):
 # ==================================================================================================
 class CartPoleRGB(CartPoleEnv):
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, args: argparse.Namespace, output_width: int = 126, output_height: int = 84):
+	# def __init__(self, args: argparse.Namespace, output_width: int = 126, output_height: int = 84): # if not cropping
+	def __init__(self, args: argparse.Namespace, output_width: int = 240, output_height: int = 64): # if cropping
 		"""
 		RGB version of CartPole environment.
 
@@ -335,7 +337,7 @@ class CartPoleRGB(CartPoleEnv):
 			np.ndarray: Resized image.
 		"""
 		# Crop
-		# rgb = rgb[int(self.screen_height * 0.4):int(self.screen_height * 0.8), :, :]
+		rgb = rgb[int(self.screen_height * 0.4):int(self.screen_height * 0.8), :, :]
 		# Resize
 		rgb = cv2.resize(rgb, (self.output_width, self.output_height), interpolation=cv2.INTER_AREA)
 
