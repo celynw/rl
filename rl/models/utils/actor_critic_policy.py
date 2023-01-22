@@ -48,7 +48,7 @@ class ActorCriticPolicy(SB3_ACP):
 		self.debug_log_prob2 = []
 
 	# ----------------------------------------------------------------------------------------------
-	def extract_features(self, obs: torch.Tensor, resets: Optional[torch.Tensor] = None, train: bool = False, features_extractor: Optional[BaseFeaturesExtractor] = None) -> torch.Tensor:
+	def extract_features(self, obs: torch.Tensor, resets: Optional[torch.Tensor] = None, train: bool = False, features_extractor: Optional[BaseFeaturesExtractor] = None, idx: Optional[int] = None) -> torch.Tensor:
 		"""
 		Preprocess the observation if needed and extract features.
 
@@ -62,6 +62,8 @@ class ActorCriticPolicy(SB3_ACP):
 		if isinstance(features_extractor, rl.models.EDeNN):
 			if train:
 				self.prev_features_train = [f.to(self.device) for f in self.prev_features_train]
+				if idx is not None:
+					raise RuntimeError("Didn't expect to call `extract_features` in this way during policy training update")
 				features, self.prev_features_train = features_extractor(preprocessed_obs, self.prev_features_train)
 				self.prev_features_train = [f.detach().clone() for f in self.prev_features_train]
 
@@ -77,7 +79,11 @@ class ActorCriticPolicy(SB3_ACP):
 				# features: 8, 2
 				# prev_features[0]: 8, 32, _, 20, 20
 				self.prev_features = [f.to(self.device) for f in self.prev_features]
-				features, self.prev_features = features_extractor(preprocessed_obs, self.prev_features)
+				if idx is not None:
+					features, _ = features_extractor(preprocessed_obs, [f[idx:idx + 1] for f in self.prev_features]) # Keeps dim
+					# We don't care about assigning back to `prev_features`... because this should be a terminal_observation and we're about to reset `prev_features`
+				else:
+					features, self.prev_features = features_extractor(preprocessed_obs, self.prev_features)
 				self.prev_features = [f.detach().clone() for f in self.prev_features]
 		else:
 			features = features_extractor(preprocessed_obs)
@@ -97,12 +103,22 @@ class ActorCriticPolicy(SB3_ACP):
 			tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]: estimated values, log likelihood of taking those actions, entropy of the action distribution, features or projection
 		"""
 		features = self.extract_features(obs, resets, train=True)
-
 		if self.detach:
 			features_detached = features.clone().detach()
-			latent_pi, latent_vf = self.mlp_extractor(features_detached)
+			if self.share_features_extractor:
+				latent_pi, latent_vf = self.mlp_extractor(features_detached)
+			else:
+				pi_features, vf_features = features_detached
+				latent_pi = self.mlp_extractor.forward_actor(pi_features)
+				latent_vf = self.mlp_extractor.forward_critic(vf_features)
 		else:
-			latent_pi, latent_vf = self.mlp_extractor(features)
+			if self.share_features_extractor:
+				latent_pi, latent_vf = self.mlp_extractor(features)
+			else:
+				pi_features, vf_features = features
+				latent_pi = self.mlp_extractor.forward_actor(pi_features)
+				latent_vf = self.mlp_extractor.forward_critic(vf_features)
+
 		distribution = self._get_action_dist_from_latent(latent_pi)
 		log_prob = distribution.log_prob(actions)
 		values = self.value_net(latent_vf)
@@ -138,7 +154,7 @@ class ActorCriticPolicy(SB3_ACP):
 
 	# ----------------------------------------------------------------------------------------------
 	# Workaround for EvalCallback
-	def predict_values(self, obs: torch.Tensor) -> torch.Tensor:
+	def predict_values(self, obs: torch.Tensor, idx: Optional[int] = None) -> torch.Tensor:
 		"""
 		Get the estimated values according to the current policy given the observations.
 
@@ -146,7 +162,7 @@ class ActorCriticPolicy(SB3_ACP):
 		:return: the estimated values.
 		"""
 		# Added to use self, not super
-		features = self.extract_features(obs, self.vf_features_extractor)
+		features = self.extract_features(obs, self.vf_features_extractor, idx=idx)
 		latent_vf = self.mlp_extractor.forward_critic(features)
 		return self.value_net(latent_vf)
 

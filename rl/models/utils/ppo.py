@@ -49,7 +49,7 @@ class PPO(SB3_PPO):
 		)
 
 	# # ----------------------------------------------------------------------------------------------
-	# # @classmethod
+	# @classmethod
 	# def load(
 	# 	self,
 	# 	path: str | pathlib.Path, io.BufferedIOBase,
@@ -253,7 +253,7 @@ class PPO(SB3_PPO):
 				entropy_losses.append(entropy_loss.item())
 
 				if isinstance(self.policy.features_extractor, rl.models.EDeNN) and self.policy.features_extractor.projection_head is not None:
-					bs_loss = F.l1_loss(features, rollout_data.states.squeeze(1).squeeze(1))
+					bs_loss = F.l1_loss(features, rollout_data.states) # Assumed getting a single step out of the buffer at a time
 
 				if isinstance(self.policy.features_extractor, rl.models.EDeNN) and self.policy.features_extractor.projection_head is not None:
 					loss = (policy_loss * self.pl_coef) + (entropy_loss * self.ent_coef) + (value_loss * self.vf_coef) + (bs_loss * self.bs_coef)
@@ -315,8 +315,7 @@ class PPO(SB3_PPO):
 					results.append(torch.allclose(l1.float(), l2))
 				else:
 					results.append(torch.allclose(l1, l2))
-			print(f"{i}: {''.join([str(i)[:1] for i in results])}")
-			print(f"{i}: {len([r for r in results if r is True])} / {len(results)} -> {len([r for r in results if r is True]) == len(results)}")
+			# print(f"{i}: {len([r for r in results if r is True])} / {len(results)} -> {len([r for r in results if r is True]) == len(results)}")
 
 		# print(f"obs: {self.debug_obs1.shape} to {self.debug_obs2.shape}")
 		# print(self.debug_obs1[:2, :, :, 0, 0])
@@ -490,16 +489,16 @@ class PPO(SB3_PPO):
 				# Reshape in case of discrete action
 				actions = actions.reshape(-1, 1)
 
-			if isinstance(self.policy.features_extractor, rl.models.EDeNN):
-				# Reset prev_features (for each layer) for that vectorized env in batch
-				# Setting to zero works, it's multiplied by decay and the added to first bin
-				for envNum, done in enumerate(dones):
-					if done:
-						for layer, _ in enumerate(self.policy.prev_features):
-							self.policy.prev_features[layer][envNum] *= 0
-
 			# Handle timeout by bootstrapping with value function
 			# see GitHub issue #633
+			# Basically:
+			# - We've run the observation through the policy (includes feature extractor)
+			# - Worked out its value, and action to take
+			# - Ran that action through the environment step
+			# - If that is done, the next observation is actually the first in a reset environment
+			# - But we can still access that done observation with `terminal_observation`
+			# - Here, if the episode timed out, we need to use the value of that state
+			# - If using an EDeNN, we still need those `prev_features` one last time BEFORE we reset them
 			for idx, done in enumerate(dones):
 				if (
 					done
@@ -508,9 +507,16 @@ class PPO(SB3_PPO):
 				):
 					terminal_obs = self.policy.obs_to_tensor(infos[idx]["terminal_observation"])[0]
 					with torch.no_grad():
-						terminal_value = self.policy.predict_values(terminal_obs)[0]
+						terminal_value = self.policy.predict_values(terminal_obs, idx=idx)[0]
 					rewards[idx] += self.gamma * terminal_value
 
+			if isinstance(self.policy.features_extractor, rl.models.EDeNN):
+				# Reset prev_features (for each layer) for that vectorized env in batch
+				# Setting to zero works, it's multiplied by decay and the added to first bin
+				for envNum, done in enumerate(dones):
+					if done:
+						for layer, _ in enumerate(self.policy.prev_features):
+							self.policy.prev_features[layer][envNum] *= 0
 			rollout_buffer.add(self._last_obs, actions, rewards, self._last_episode_starts, values, log_probs, state, reset)
 			self._last_obs = new_obs
 			self._last_episode_starts = dones
