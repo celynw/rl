@@ -21,9 +21,7 @@ class CartPoleEvents(EventEnv, CartPoleEnv):
 		Args:
 			args (argparse.Namespace): Parsed arguments, depends on which specific env we're using.
 			event_image (bool, optional): Accuumlates events into an event image. Defaults to False.
-			return_rgb (bool, optional): _description_. Defaults to False.
 		"""
-		self.return_rgb = return_rgb
 		self.output_width = output_width
 		self.output_height = output_height
 		self.updatedPolicy = False # Used for logging whenever the policy is updated
@@ -308,7 +306,7 @@ class CartPoleRGB(CartPoleEnv):
 	# ----------------------------------------------------------------------------------------------
 	def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None) -> np.ndarray:
 		"""
-		Resets the environment, and also the model (if defined).
+		Resets the environment.
 
 		Args:
 			seed (int, optional): The seed that is used to initialize the environment's PRNG. Defaults to None.
