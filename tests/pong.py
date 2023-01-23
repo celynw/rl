@@ -48,7 +48,7 @@ featex = FeatEx.EDENN
 def main(args: argparse.Namespace):
 	logdir = Path(__file__).parent.resolve()
 	config = {
-		# "env_name": "PongNoFrameskip-v4", # Box(0, 255, (84, 84, 4), uint8)
+		"env_name": env_name,
 		"num_envs": args.n_envs,
 		"total_timesteps": int(10e6),
 		"seed": 4089164106,
@@ -128,7 +128,7 @@ def main(args: argparse.Namespace):
 		# - optimizer_kwargs=optimizer_kwargs
 		policy_kwargs=dict(features_extractor_class=features_extractor_class, net_arch=[], features_extractor_kwargs=features_extractor_kwargs, detach=False),
 		env=env,
-		batch_size=256, # Probably doesn't do anything, batch size is 1
+		batch_size=128, # Probably doesn't do anything, batch size is 1
 		clip_range=0.1,
 		ent_coef=0.01,
 		gae_lambda=0.95,
@@ -188,7 +188,7 @@ class WarpFrame_(WarpFrame):
 		:param frame: environment frame
 		:return: the observation
 		"""
-		frame = np.transpose(frame, (1, 2, 0))
+		# frame = np.transpose(frame, (1, 2, 0))
 		frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
 		frame = cv2.resize(frame, (self.width, self.height), interpolation=cv2.INTER_AREA)
 
@@ -221,16 +221,27 @@ class AtariWrapper(gym.Wrapper):
 	def __init__(
 		self,
 		env: gym.Env,
-		frame_skip: int = 1,
+		noop_max: int = 30,
+		frame_skip: int = 4,
 		screen_size: int = 84,
+		terminal_on_life_loss: bool = True,
 		clip_reward: bool = True,
-	):
+	) -> None:
+		if noop_max > 0:
+			env = NoopResetEnv(env, noop_max=noop_max)
 		if frame_skip > 0:
 			env = MaxAndSkipEnv(env, skip=frame_skip)
-		# env = WarpFrame(env, width=screen_size, height=screen_size)
-		env = WarpFrame_(env, width=screen_size, height=screen_size)
+		# if terminal_on_life_loss:
+		# 	env = EpisodicLifeEnv(env)
+		# if "FIRE" in env.unwrapped.get_action_meanings():  # type: ignore[attr-defined]
+		# 	env = FireResetEnv(env)
+		env = WarpFrame(env, width=screen_size, height=screen_size)
+		# env = WarpFrame(env, width=screen_size, height=screen_size) if featex is FeatEx.NATURECNN else WarpFrame_(env, width=screen_size, height=screen_size)
+		# env = WarpFrame_(env, width=screen_size, height=screen_size)
+		# env = WarpFrame_(env, width=screen_size, height=screen_size) if featex is FeatEx.NATURECNN else WarpFrame__(env, width=screen_size, height=screen_size)
 		if clip_reward:
 			env = ClipRewardEnv(env)
+
 		super().__init__(env)
 
 
@@ -246,6 +257,7 @@ def parse_args() -> argparse.Namespace:
 	parser.add_argument("--lr", type=float, default=2.5e-4, help="Learning rate")
 	parser.add_argument("-n", "--n_envs", type=int, default=8, help="Number of parallel environments")
 	parser.add_argument("--n_steps", type=int, default=128, help="Number of steps before each weights update")
+	parser.add_argument("--map_ram", action="store_true", help="Use RAM mappings rather than full RAM state")
 
 	return parser.parse_args()
 
@@ -270,10 +282,10 @@ if __name__ == "__main__":
 	elif envtype is EnvType.MOUNTAINCAR:
 		env_name = "MountainCarRGB-v0" if featex is FeatEx.NATURECNN else "MountainCarEvents-v0"
 	elif envtype is EnvType.PONG:
-		# FIX event version??
-		env_name = "PongNoFrameskip-v4" if featex is FeatEx.NATURECNN else "PongEventsNoFrameskip-v4"
+		env_name = "PongRGB-v0" if featex is FeatEx.NATURECNN else "PongEvents-v0"
 
-	wrapper_class = AtariWrapper if featex is FeatEx.NATURECNN else None
+	# wrapper_class = AtariWrapper if envtype is EnvType.PONG and featex is FeatEx.NATURECNN else None
+	wrapper_class = AtariWrapper if envtype is EnvType.PONG else None
 
 	env_kwargs = dict(args=args)
 	if featex is FeatEx.NATURECNNEVENTS:
@@ -282,7 +294,7 @@ if __name__ == "__main__":
 	match featex:
 		case FeatEx.EDENN:
 			features_extractor_class = rl.models.EDeNN
-		case [FeatEx.NATURECNN, FeatEx.NATURECNNEVENTS]:
+		case FeatEx.NATURECNN | FeatEx.NATURECNNEVENTS:
 			features_extractor_class = rl.models.NatureCNN
 		case FeatEx.SNN:
 			features_extractor_class = rl.models.SNN
