@@ -9,20 +9,20 @@ import torch
 from gymnasium import spaces
 from ale_py.env.gym import AtariEnv as SB3_AtariEnv
 from atariari.benchmark.wrapper import ram2label
+import cv2
 
 from rl.environments.utils import EventEnv
 
 # ==================================================================================================
-class AtariEnv(EventEnv, SB3_AtariEnv):
-	state_space: spaces.Space
-	wanted_states: list[str] = [] # Placeholder, to be overridden in child classes
-	output_width: int = 160 # self.ale.getScreenDims()[1]
-	output_height: int = 210 # self.ale.getScreenDims()[0]
+class AtariEventEnv(EventEnv, SB3_AtariEnv):
+	wanted_states: list[str] # Placeholder, to be overridden in child classes
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, game: str, args: argparse.Namespace, event_image: bool = False,
 		frameskip: int | tuple[int, int] = (2, 5), repeat_action_probability: float = 0.0,
 		full_action_space: bool = False, max_num_frames_per_episode: int = 108_000,
-		return_rgb: bool = False):
+		output_width: int = 160, output_height: int = 210):
+		# self.ale.getScreenDims()[1]
+		# self.ale.getScreenDims()[0]
 		"""
 		Event version of Atari environment.
 
@@ -34,22 +34,17 @@ class AtariEnv(EventEnv, SB3_AtariEnv):
 			repeat_action_probability (float, optional): Probability to repeat actions, see Machado et al., 2018. Defaults to 0.0.
 			full_action_space (bool, optional): Use full action space? Defaults to False.
 			max_num_frames_per_episode (int, optional): Max number of frame per epsiode. Once `max_num_frames_per_episode` is reached the episode is truncated. Defaults to 108_000.
-			return_rgb (bool, optional): _description_. Defaults to False.
 		"""
+		self.output_width = output_width
+		self.output_height = output_height
 		self.game = game
-		self.return_rgb = return_rgb
 		SB3_AtariEnv.__init__(self, game=game, render_mode="rgb_array",
 			frameskip=frameskip,
 			repeat_action_probability=repeat_action_probability,
 			full_action_space=full_action_space,
 			max_num_frames_per_episode=max_num_frames_per_episode,
 		)
-		self.metadata = { # Compatibility
-			# Not sure about this??
-			# FIX variable frame_skip will change this too...
-			# "render_fps": 30 / float(frameskip)
-			"render_fps": 30
-		}
+		self.render_mode = self._render_mode # Stupid compatibility
 		try:
 			EventEnv.__init__(self, self.output_width, self.output_height, args, event_image) # type: ignore
 		except AttributeError:
@@ -81,11 +76,10 @@ class AtariEnv(EventEnv, SB3_AtariEnv):
 
 		return parser
 
-
 	# ----------------------------------------------------------------------------------------------
 	def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None) -> tuple[np.ndarray, Optional[dict]]:
 		"""
-		Resets the environment, and also the model (if defined).
+		Resets the environment.
 
 		Args:
 			seed (int, optional): The seed that is used to initialize the environment's PRNG. Defaults to None.
@@ -94,7 +88,8 @@ class AtariEnv(EventEnv, SB3_AtariEnv):
 		Returns:
 			tuple[np.ndarray, Optional[dict]]: First observation and optionally info about the step.
 		"""
-		output = super().reset(seed=seed, options=options) # NOTE: Not using the output
+		output, info = super().reset(seed=seed, options=options) # NOTE: Not using the output
+		# output = self.resize(output)
 		ram = self.ale.getRAM()
 		if self.map_ram:
 			state = ram2label(self.game, ram)
@@ -104,7 +99,7 @@ class AtariEnv(EventEnv, SB3_AtariEnv):
 			self.state = torch.tensor(ram)
 		self.state = (self.state / 128.0) - 1
 
-		return output
+		return output, info
 
 	# ----------------------------------------------------------------------------------------------
 	def step(self, action: int) -> tuple[np.ndarray, float, bool, bool, dict]:
@@ -130,9 +125,26 @@ class AtariEnv(EventEnv, SB3_AtariEnv):
 			self.state = torch.tensor(ram)
 		self.state = (self.state / 128.0) - 1
 
-		info = super().get_info()
-
 		if terminated: # Monitor only writes a line when an episode is terminated
 			self.updatedPolicy = False
 
-		return events.numpy(), reward, terminated, truncated, info
+		return events.numpy(), reward, terminated, truncated, self.get_info()
+
+	# ----------------------------------------------------------------------------------------------
+	def get_info(self) -> dict:
+		"""
+		Return a created dictionary for the step info.
+
+		Returns:
+			dict: Key-value pairs for the step info.
+		"""
+		info = EventEnv.get_info(self)
+
+		return info
+
+	# ----------------------------------------------------------------------------------------------
+	def resize(self, frame: np.ndarray) -> np.ndarray:
+		frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+		frame = cv2.resize(frame, (self.output_width, self.output_height), interpolation=cv2.INTER_AREA)
+
+		return frame

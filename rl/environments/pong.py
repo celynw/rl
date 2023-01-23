@@ -8,10 +8,10 @@ from gymnasium import spaces
 from ale_py.env.gym import AtariEnv as SB3_AtariEnv
 from atariari.benchmark.wrapper import ram2label
 
-from rl.environments.utils import AtariEnv
+from rl.environments.utils import AtariEventEnv
 
 # ==================================================================================================
-class PongEvents(AtariEnv):
+class PongEvents(AtariEventEnv):
 	# FIX X and Y??
 	wanted_states: list[str] = ["player_y", "player_x", "enemy_y", "enemy_x", "ball_x", "ball_y"]
 	# ----------------------------------------------------------------------------------------------
@@ -135,7 +135,7 @@ class PongRGB(SB3_AtariEnv):
 	# ----------------------------------------------------------------------------------------------
 	@staticmethod
 	def add_argparse_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
-		parser = AtariEnv.add_argparse_args(parser)
+		parser = AtariEventEnv.add_argparse_args(parser)
 
 		# group = [g for g in parser._action_groups if g.title == "Environment"][0]
 
