@@ -1,6 +1,6 @@
 from .cartpole import CartPoleEvents, CartPoleRGB
 from .mountaincar import MountainCarEvents, MountainCarRGB
-from .pong import PongEvents
+from .pong import PongEvents, PongRGB
 from .freeway import FreewayEvents
 from .skiing import SkiingEvents
 
@@ -39,6 +39,17 @@ register(
 	kwargs=dict(
 		# frameskip=(2, 5), # XXXXXX-v4
 		frameskip=1,
+		repeat_action_probability=0.0, # XXXXXX-v4
+		full_action_space=False, # XXXXXX-v4
+		max_num_frames_per_episode=108_000, # XXXXXX-v4
+	),
+)
+register(
+	id=f"{PongRGB.__qualname__}-{version}",
+	entry_point=PongRGB,
+	kwargs=dict(
+		# frameskip=(2, 5), # XXXXXX-v4
+		frameskip=1, # XXXXXXNoFrameSkip-v4
 		repeat_action_probability=0.0, # XXXXXX-v4
 		full_action_space=False, # XXXXXX-v4
 		max_num_frames_per_episode=108_000, # XXXXXX-v4
