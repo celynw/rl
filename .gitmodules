@@ -7,3 +7,6 @@
 [submodule "submodules/slayerPytorch"]
 	path = submodules/slayerPytorch
 	url = git@github.com:bamsumit/slayerPytorch.git
+[submodule "catkin_ws/src/esimcpp"]
+	path = catkin_ws/src/esimcpp
+	url = git@github.com:celynw/esimcpp.git
