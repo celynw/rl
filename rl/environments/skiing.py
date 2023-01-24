@@ -2,10 +2,10 @@ import argparse
 
 import numpy as np
 
-from rl.environments.utils import AtariEnv
+from rl.environments.utils import AtariEventEnv
 
 # ==================================================================================================
-class SkiingEvents(AtariEnv):
+class SkiingEvents(AtariEventEnv):
 	# FIX object_y=range(87, 94) # object_y_1 is y position of whatever topmost object on the screen is
 	wanted_states: list[str] = ["player_x"]
 	# ----------------------------------------------------------------------------------------------
@@ -15,7 +15,7 @@ class SkiingEvents(AtariEnv):
 	# ----------------------------------------------------------------------------------------------
 	@staticmethod
 	def add_argparse_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
-		parser = AtariEnv.add_argparse_args(parser)
+		parser = AtariEventEnv.add_argparse_args(parser)
 
 		# group = [g for g in parser._action_groups if g.title == "Environment"][0]
 

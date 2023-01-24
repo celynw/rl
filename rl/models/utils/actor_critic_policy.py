@@ -22,30 +22,30 @@ class ActorCriticPolicy(SB3_ACP):
 		self.prev_features_train = [torch.tensor([0]), torch.tensor([0]), torch.tensor([0])] # First dim length is `n_steps` (rollout buffer length)
 
 		# DEBUG
-		self.debug_step1 = 0
-		self.debug_step2 = 0
+		# self.debug_step1 = 0
+		# self.debug_step2 = 0
 
-		self.debug_obs1 = []
-		self.debug_conv_weight1 = []
-		self.debug_decay_weight1 = []
-		self.debug_bias1 = []
-		self.debug_features1 = []
-		self.debug_latent_pi1 = []
-		self.debug_latent_vf1 = []
-		self.debug_values1 = []
-		self.debug_actions1 = []
-		self.debug_log_prob1 = []
+		# self.debug_obs1 = []
+		# # self.debug_conv_weight1 = []
+		# # self.debug_decay_weight1 = []
+		# # self.debug_bias1 = []
+		# self.debug_features1 = []
+		# self.debug_latent_pi1 = []
+		# self.debug_latent_vf1 = []
+		# self.debug_values1 = []
+		# self.debug_actions1 = []
+		# self.debug_log_prob1 = []
 
-		self.debug_obs2 = []
-		self.debug_conv_weight2 = []
-		self.debug_decay_weight2 = []
-		self.debug_bias2 = []
-		self.debug_features2 = []
-		self.debug_latent_pi2 = []
-		self.debug_latent_vf2 = []
-		self.debug_values2 = []
-		self.debug_actions2 = []
-		self.debug_log_prob2 = []
+		# self.debug_obs2 = []
+		# # self.debug_conv_weight2 = []
+		# # self.debug_decay_weight2 = []
+		# # self.debug_bias2 = []
+		# self.debug_features2 = []
+		# self.debug_latent_pi2 = []
+		# self.debug_latent_vf2 = []
+		# self.debug_values2 = []
+		# self.debug_actions2 = []
+		# self.debug_log_prob2 = []
 
 	# ----------------------------------------------------------------------------------------------
 	def extract_features(self, obs: torch.Tensor, resets: Optional[torch.Tensor] = None, train: bool = False, features_extractor: Optional[BaseFeaturesExtractor] = None, idx: Optional[int] = None) -> torch.Tensor:
@@ -57,10 +57,44 @@ class ActorCriticPolicy(SB3_ACP):
 		"""
 		features_extractor = features_extractor or self.features_extractor
 
+		if not self.share_features_extractor:
+			raise NotImplementedError()
+
 		assert features_extractor is not None, "No features extractor was set"
 		preprocessed_obs = preprocess_obs(obs, self.observation_space, normalize_images=self.normalize_images)
 		if isinstance(features_extractor, rl.models.EDeNN):
 			if train:
+			# 	# input: 8, 2, 768, 84, 84
+			# 	# features: 1024, 2
+			# 	# prev_features[0]: 8, 32, _, 20, 20
+			# 	self.prev_features_train = [f.to(self.device) for f in self.prev_features_train]
+			# 	# Need to use 8x previous features, 128 elements apart, in the first dimension
+			# 	# Also need to do the same each time, for each epoch in the policy update
+
+			# 	features, self.prev_features_train = self.features_extractor(preprocessed_obs, self.prev_features_train)
+			# 	# self.prev_features_train = [f.detach().clone() for f in self.prev_features]
+			# 	self.prev_features_train = [f.detach().clone() for f in self.prev_features_train]
+			# 	# features, _ = self.features_extractor(preprocessed_obs[:, :, :6], [torch.tensor([0], device=self.device), torch.tensor([0], device=self.device), torch.tensor([0], device=self.device)])
+
+			# 	# Reset should apply to NEXT time, so we do it after this features_extractor run
+			# 	# if resets is not None:
+			# 	for i, r in enumerate(resets):
+			# 		if r != 0:
+			# 			# print(r)
+			# 			for p in range(len(self.prev_features_train)):
+			# 				self.prev_features_train[p][i] *= 0
+
+
+				# # Reset prev_features (for each layer) for that vectorized env in batch
+				# # Setting to zero works, it's multiplied by decay and the added to first bin
+				# for i, done in enumerate(resets):
+				# 	if done:
+				# 		for f, _ in enumerate(self.prev_features_train):
+				# 			self.prev_features_train[f][i] *= 0
+
+				# input: 8, 2, 6, 84, 84
+				# features: 8, 2
+				# prev_features_train[0]: 8, 32, _, 20, 20
 				self.prev_features_train = [f.to(self.device) for f in self.prev_features_train]
 				if idx is not None:
 					raise RuntimeError("Didn't expect to call `extract_features` in this way during policy training update")
@@ -91,7 +125,8 @@ class ActorCriticPolicy(SB3_ACP):
 		return features
 
 	# ----------------------------------------------------------------------------------------------
-	def evaluate_actions(self, obs: torch.Tensor, actions: torch.Tensor, resets: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+	# def evaluate_actions(self, obs: torch.Tensor, actions: torch.Tensor, resets: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+	def evaluate_actions(self, obs: torch.Tensor, actions: torch.Tensor, resets: Optional[torch.Tensor] = None) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
 		"""
 		Evaluate actions according to the current policy, given the observations.
 
@@ -126,21 +161,23 @@ class ActorCriticPolicy(SB3_ACP):
 
 		# DEBUG
 		# print(f"{self.debug_step1} {self.debug_step2}: {obs.detach().clone().unique()}")
-		self.debug_obs2.append(obs.detach().clone())
-		self.debug_features2.append(features.detach().clone())
+		# self.debug_obs2.append(obs.detach().clone())
+		# self.debug_features2.append(features.detach().clone())
 		# print(f"debug_features2: {self.debug_features2[0].shape} ({len(self.debug_features2)})")
-		self.debug_latent_pi2.append(latent_pi.detach().clone())
-		self.debug_latent_vf2.append(latent_vf.detach().clone())
-		self.debug_values2.append(values.detach().clone())
-		self.debug_actions2.append(actions.detach().clone())
-		self.debug_log_prob2.append(log_prob.detach().clone())
-		self.debug_conv_weight2.append(self.features_extractor.layer1[0].conv_weight.data.detach().clone())
-		self.debug_decay_weight2.append(self.features_extractor.layer1[0].decay_weight.data.detach().clone())
-		self.debug_bias2.append(self.features_extractor.layer1[0].bias.data.detach().clone())
-		self.debug_step2 += 1
+		# self.debug_latent_pi2.append(latent_pi.detach().clone())
+		# self.debug_latent_vf2.append(latent_vf.detach().clone())
+		# self.debug_values2.append(values.detach().clone())
+		# self.debug_actions2.append(actions.detach().clone())
+		# self.debug_log_prob2.append(log_prob.detach().clone())
+		# self.debug_conv_weight2.append(self.features_extractor.layer1[0].conv_weight.data.detach().clone())
+		# self.debug_decay_weight2.append(self.features_extractor.layer1[0].decay_weight.data.detach().clone())
+		# self.debug_bias2.append(self.features_extractor.layer1[0].bias.data.detach().clone())
+		# self.debug_step2 += 1
 
-		if not self.detach:
+
+		if not self.detach: # FIX - remove?? replace with check for EDeNN and projection head? Actually, replace detach with that check in the first place?
 			return values, log_prob, entropy # As in super()
+
 		# `self.features_extractor` always feeds through its layers up to `layer_last` to produce `features`.
 		# If using a projection head, `features_dim` will likely be larger, with `projection_head` being the original size of `features_dim`.
 		# In this case, `self.features_extractor.project()` needs to be called manually, same with the loss based on that output.

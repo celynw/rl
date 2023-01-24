@@ -10,6 +10,7 @@ import torch
 import wandb
 from wandb.integration.sb3 import WandbCallback
 from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
+from stable_baselines3.common.env_util import make_vec_env
 from rich import print, inspect
 
 import rl.models
@@ -47,14 +48,12 @@ class Objective():
 		"""
 		# Setup logging
 		if not self.args.nolog:
-			print(f"Logging to {self.log_dir}")
-			self.log_dir.mkdir(parents=True, exist_ok=True)
 			run = wandb.init(
 				project=self.args.project,
 				name=self.args.name,
 				config=self.args,
 				sync_tensorboard=True, # Auto-upload tensorboard metrics to wandb
-				# monitor_gym=True, # Auto-upload the videos of agents playing the game
+				monitor_gym=True, # Auto-upload the videos of agents playing the game
 				save_code=True, # Save the code to W&B
 				dir=self.log_dir,
 			)
@@ -64,12 +63,16 @@ class Objective():
 		features_extractor_class = getattr(rl.models, self.args.model)
 
 		env_kwargs = dict()
-		if self.args.environment not in ["CartPoleRGB"]: # TODO replace str with variable
+		env_kwargs["args"] = self.args
+		if self.args.environment in ["CartPoleEvents", "MountainCarEvents", "PongEvents"]: # TODO replace str with variable, exhaustive list
 			env_kwargs["event_image"] = features_extractor_class is rl.models.NatureCNN
-		env = gym.make(
-			f"{self.args.environment}-v0",
-			args=self.args,
-			**env_kwargs,
+		# env_kwargs["output_width"] = 84 # CartPole?
+		# env_kwargs["output_height"] = 84 # CartPole?
+		env = make_vec_env(
+			env_id=f"{self.args.environment}-v0",
+			n_envs=self.args.n_envs,
+			start_index=0,
+			env_kwargs=env_kwargs,
 		)
 
 		# Set up feature extractor
@@ -95,7 +98,8 @@ class Objective():
 			features_extractor_class=features_extractor_class,
 			optimizer_class=torch.optim.Adam,
 			features_extractor_kwargs=features_extractor_kwargs,
-			net_arch=[], # Important!
+			# net_arch=[], # Important! # FIX I think if I do this, it will never work well! Tried in vanilla CartPole!
+			detach=False,
 		)
 
 		# Set up RL model

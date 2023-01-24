@@ -22,7 +22,6 @@ def main(args: argparse.Namespace):
 	env = gym.make(
 		"CartPoleEvents-v0",
 		args=args,
-		return_rgb=True,
 	)
 	edenn = EDeNN(observation_space=env.observation_space, features_dim=env.state_space.shape[-1], projection_head=args.projection_head)
 

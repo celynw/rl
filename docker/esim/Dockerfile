@@ -16,6 +16,7 @@ RUN sudo apt-get install -y --no-install-recommends \
 	ros-noetic-hector-trajectory-server \
 	ros-noetic-tf-conversions \
 	python3-catkin-tools \
+	ros-noetic-pybind11-catkin \
 	libtool
 RUN mkdir $HOME/.ssh
 RUN ssh-keyscan github.com >> $HOME/.ssh/known_hosts
@@ -37,7 +38,7 @@ RUN apt-get autoremove -y && \
 RUN rm -rf /var/lib/apt/lists/*
 
 # NVIDIA
-FROM nvidia/cuda:11.3.1-cudnn8-runtime-ubuntu20.04
+FROM nvidia/cuda:11.7.1-cudnn8-runtime-ubuntu20.04
 # Create a user
 ARG USERNAME=docker
 ARG USERID=1000
@@ -50,7 +51,7 @@ COPY --from=ros /usr/ /usr/
 COPY --from=ros /lib/ /lib/
 COPY --from=ros /etc/alternatives/ /etc/alternatives/
 COPY --from=ros /opt/ros/ /opt/ros/
-COPY --from=ros /home/$USERNAME/catkin_ws/ /home/$USERNAME/catkin_ws/
+COPY --from=ros --chown=$USERNAME /home/$USERNAME/catkin_ws/ /home/$USERNAME/catkin_ws/
 
 # Miniconda
 ARG CONDA_DIR=/opt/conda

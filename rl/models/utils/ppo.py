@@ -1,6 +1,8 @@
 import pathlib
 import io
 from typing import Optional, Dict, Any
+from typing import Type, TypeVar
+import warnings
 
 import numpy as np
 import torch
@@ -13,22 +15,25 @@ from stable_baselines3.common.utils import obs_as_tensor, explained_variance, ge
 from stable_baselines3.common.type_aliases import GymEnv
 from stable_baselines3.common.save_util import load_from_zip_file, recursive_setattr
 from stable_baselines3.common.vec_env.dummy_vec_env import DummyVecEnv
-from stable_baselines3.common.vec_env import VecVideoRecorder
+from stable_baselines3.common.vec_env import VecVideoRecorder, VecFrameStack
 from rich import print, inspect
 
 from rl.models.utils import RolloutBuffer
 import rl.models
 from rl.environments.utils import get_base_envs
 
+SelfBaseAlgorithm = TypeVar("SelfBaseAlgorithm", bound="BaseAlgorithm")
+
 # ==================================================================================================
 class PPO(SB3_PPO):
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, policy, env, pl_coef: float = 1.0, bs_coef: float = 1.0, save_loss: bool = False, **kwargs):
+	# def __init__(self, policy, env, pl_coef: float = 1.0, bs_coef: float = 1.0, save_loss: bool = False, **kwargs):
+	def __init__(self, policy, env, pl_coef: float = 1.0, bs_coef: float = 1.0, **kwargs):
 		"""Subclassed to include physics states in the rollout buffer and bootstrap loss."""
 		super().__init__(policy, env, **kwargs)
 		self.pl_coef = pl_coef
 		self.bs_coef = bs_coef
-		self.save_loss = save_loss
+		# self.save_loss = save_loss
 
 		try:
 			state_shape = get_base_envs(env)[0].state_space.shape
@@ -47,6 +52,152 @@ class PPO(SB3_PPO):
 			n_envs=self.n_envs,
 			state_shape=state_shape,
 		)
+
+	# ----------------------------------------------------------------------------------------------
+	@classmethod # noqa: C901
+	def load(
+		cls: Type[SelfBaseAlgorithm],
+		path: str | pathlib.Path | io.BufferedIOBase,
+		env: Optional[GymEnv] = None,
+		device: torch.device | str = "auto",
+		custom_objects: Optional[Dict[str, Any]] = None,
+		print_system_info: bool = False,
+		force_reset: bool = True,
+		**kwargs,
+	) -> SelfBaseAlgorithm:
+		"""
+		Load the model from a zip-file.
+		Warning: ``load`` re-creates the model from scratch, it does not update it in-place!
+		For an in-place load use ``set_parameters`` instead.
+
+		:param path: path to the file (or a file-like) where to
+			load the agent from
+		:param env: the new environment to run the loaded model on
+			(can be None if you only need prediction from a trained model) has priority over any saved environment
+		:param device: Device on which the code should run.
+		:param custom_objects: Dictionary of objects to replace
+			upon loading. If a variable is present in this dictionary as a
+			key, it will not be deserialized and the corresponding item
+			will be used instead. Similar to custom_objects in
+			``keras.models.load_model``. Useful when you have an object in
+			file that can not be deserialized.
+		:param print_system_info: Whether to print system info from the saved model
+			and the current system info (useful to debug loading issues)
+		:param force_reset: Force call to ``reset()`` before training
+			to avoid unexpected behavior.
+			See https://github.com/DLR-RM/stable-baselines3/issues/597
+		:param kwargs: extra arguments to change the model when loading
+		:return: new model instance with loaded parameters
+		"""
+		if print_system_info:
+			print("== CURRENT SYSTEM INFO ==")
+			get_system_info()
+
+		data, params, pytorch_variables = load_from_zip_file(
+			path,
+			device=device,
+			custom_objects=custom_objects,
+			print_system_info=print_system_info,
+		)
+
+		# Remove stored device information and replace with ours
+		if "policy_kwargs" in data:
+			if "device" in data["policy_kwargs"]:
+				del data["policy_kwargs"]["device"]
+
+		# DEBUG
+		# if "policy_kwargs" in kwargs and kwargs["policy_kwargs"] != data["policy_kwargs"]:
+		# 	raise ValueError(
+		# 		f"The specified policy kwargs do not equal the stored policy kwargs."
+		# 		f"Stored kwargs: {data['policy_kwargs']}, specified kwargs: {kwargs['policy_kwargs']}"
+		# 	)
+
+		if "observation_space" not in data or "action_space" not in data:
+			raise KeyError("The observation_space and action_space were not given, can't verify new environments")
+
+		if env is not None:
+			# Wrap first if needed
+			env = cls._wrap_env(env, data["verbose"])
+			# Check if given env is valid
+			# DEBUG
+			# check_for_correct_spaces(env, data["observation_space"], data["action_space"])
+			# Discard `_last_obs`, this will force the env to reset before training
+			# See issue https://github.com/DLR-RM/stable-baselines3/issues/597
+			if force_reset and data is not None:
+				data["_last_obs"] = None
+			# `n_envs` must be updated. See issue https://github.com/DLR-RM/stable-baselines3/issues/1018
+			if data is not None:
+				data["n_envs"] = env.num_envs
+		else:
+			# Use stored env, if one exists. If not, continue as is (can be used for predict)
+			if "env" in data:
+				env = data["env"]
+
+		# DEBUG
+		del data["observation_space"]
+		del data["_n_updates"]
+
+		# noinspection PyArgumentList
+		model = cls(  # pytype: disable=not-instantiable,wrong-keyword-args
+			policy=data["policy_class"],
+			env=env,
+			device=device,
+			_init_setup_model=False,  # pytype: disable=not-instantiable,wrong-keyword-args
+		)
+
+		# load parameters
+		model.__dict__.update(data)
+		model.__dict__.update(kwargs)
+		model._setup_model()
+
+		# DEBUG
+		print(f"Original num. params to load: {len(params['policy'])}")
+		params["policy"] = {k: params["policy"][k] for k in ["action_net.weight", "action_net.bias", "value_net.weight", "value_net.bias"] if k in params["policy"]}
+		del params["policy.optimizer"]
+		print(f"New num. params to load: {len(params['policy'])}")
+
+		try:
+			# put state_dicts back in place
+			# model.set_parameters(params, exact_match=True, device=device)
+			model.set_parameters(params, exact_match=False, device=device) # DEBUG
+		except RuntimeError as e:
+			# Patch to load Policy saved using SB3 < 1.7.0
+			# the error is probably due to old policy being loaded
+			# See https://github.com/DLR-RM/stable-baselines3/issues/1233
+			if "pi_features_extractor" in str(e) and "Missing key(s) in state_dict" in str(e):
+				model.set_parameters(params, exact_match=False, device=device)
+				warnings.warn(
+					"You are probably loading a model saved with SB3 < 1.7.0, "
+					"we deactivated exact_match so you can save the model "
+					"again to avoid issues in the future "
+					"(see https://github.com/DLR-RM/stable-baselines3/issues/1233 for more info). "
+					f"Original error: {e} \n"
+					"Note: the model should still work fine, this only a warning."
+				)
+			else:
+				raise e
+
+		# put other pytorch variables back in place
+		if pytorch_variables is not None:
+			for name in pytorch_variables:
+				# Skip if PyTorch variable was not defined (to ensure backward compatibility).
+				# This happens when using SAC/TQC.
+				# SAC has an entropy coefficient which can be fixed or optimized.
+				# If it is optimized, an additional PyTorch variable `log_ent_coef` is defined,
+				# otherwise it is initialized to `None`.
+				if pytorch_variables[name] is None:
+					continue
+				# Set the data attribute directly to avoid issue when using optimizers
+				# See https://github.com/DLR-RM/stable-baselines3/issues/391
+				recursive_setattr(model, name + ".data", pytorch_variables[name].data)
+
+		# Sample gSDE exploration matrix, so it uses the right device
+		# see issue #44
+		if model.use_sde:
+			model.policy.reset_noise()  # pytype: disable=attribute-error
+		return model
+
+
 
 	# # ----------------------------------------------------------------------------------------------
 	# @classmethod
@@ -151,6 +302,129 @@ class PPO(SB3_PPO):
 	# 	if self.use_sde:
 	# 		self.policy.reset_noise()  # pytype: disable=attribute-error
 
+	# # ----------------------------------------------------------------------------------------------
+	# def train(self) -> None:
+	# 	"""
+	# 	Update policy using the currently gathered rollout buffer.
+	# 	"""
+	# 	# Switch to train mode (this affects batch norm / dropout)
+	# 	self.policy.set_training_mode(True)
+	# 	# Update optimizer learning rate
+	# 	self._update_learning_rate(self.policy.optimizer)
+	# 	# Compute current clip range
+	# 	clip_range = self.clip_range(self._current_progress_remaining)
+	# 	# Optional: clip range for the value function
+	# 	if self.clip_range_vf is not None:
+	# 		clip_range_vf = self.clip_range_vf(self._current_progress_remaining)
+
+	# 	entropy_losses = []
+	# 	pg_losses, value_losses = [], []
+	# 	clip_fractions = []
+
+	# 	continue_training = True
+
+	# 	# train for n_epochs epochs
+	# 	for epoch in range(self.n_epochs):
+	# 		approx_kl_divs = []
+	# 		# Do a complete pass on the rollout buffer
+	# 		for rollout_data in self.rollout_buffer.get(self.batch_size):
+	# 			actions = rollout_data.actions
+	# 			if isinstance(self.action_space, spaces.Discrete):
+	# 				# Convert discrete action from float to long
+	# 				actions = rollout_data.actions.long().flatten()
+
+	# 			# Re-sample the noise matrix because the log_std has changed
+	# 			if self.use_sde:
+	# 				self.policy.reset_noise(self.batch_size)
+
+	# 			values, log_prob, entropy = self.policy.evaluate_actions(rollout_data.observations, actions)
+	# 			values = values.flatten()
+	# 			# Normalize advantage
+	# 			advantages = rollout_data.advantages
+	# 			# Normalization does not make sense if mini batchsize == 1, see GH issue #325
+	# 			if self.normalize_advantage and len(advantages) > 1:
+	# 				advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+
+	# 			# ratio between old and new policy, should be one at the first iteration
+	# 			ratio = th.exp(log_prob - rollout_data.old_log_prob)
+
+	# 			# clipped surrogate loss
+	# 			policy_loss_1 = advantages * ratio
+	# 			policy_loss_2 = advantages * th.clamp(ratio, 1 - clip_range, 1 + clip_range)
+	# 			policy_loss = -th.min(policy_loss_1, policy_loss_2).mean()
+
+	# 			# Logging
+	# 			pg_losses.append(policy_loss.item())
+	# 			clip_fraction = th.mean((th.abs(ratio - 1) > clip_range).float()).item()
+	# 			clip_fractions.append(clip_fraction)
+
+	# 			if self.clip_range_vf is None:
+	# 				# No clipping
+	# 				values_pred = values
+	# 			else:
+	# 				# Clip the difference between old and new value
+	# 				# NOTE: this depends on the reward scaling
+	# 				values_pred = rollout_data.old_values + th.clamp(
+	# 					values - rollout_data.old_values, -clip_range_vf, clip_range_vf
+	# 				)
+	# 			# Value loss using the TD(gae_lambda) target
+	# 			value_loss = F.mse_loss(rollout_data.returns, values_pred)
+	# 			value_losses.append(value_loss.item())
+
+	# 			# Entropy loss favor exploration
+	# 			if entropy is None:
+	# 				# Approximate entropy when no analytical form
+	# 				entropy_loss = -th.mean(-log_prob)
+	# 			else:
+	# 				entropy_loss = -th.mean(entropy)
+
+	# 			entropy_losses.append(entropy_loss.item())
+
+	# 			loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
+
+	# 			# Calculate approximate form of reverse KL Divergence for early stopping
+	# 			# see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417
+	# 			# and discussion in PR #419: https://github.com/DLR-RM/stable-baselines3/pull/419
+	# 			# and Schulman blog: http://joschu.net/blog/kl-approx.html
+	# 			with th.no_grad():
+	# 				log_ratio = log_prob - rollout_data.old_log_prob
+	# 				approx_kl_div = th.mean((th.exp(log_ratio) - 1) - log_ratio).cpu().numpy()
+	# 				approx_kl_divs.append(approx_kl_div)
+
+	# 			if self.target_kl is not None and approx_kl_div > 1.5 * self.target_kl:
+	# 				continue_training = False
+	# 				if self.verbose >= 1:
+	# 					print(f"Early stopping at step {epoch} due to reaching max kl: {approx_kl_div:.2f}")
+	# 				break
+
+	# 			# Optimization step
+	# 			self.policy.optimizer.zero_grad()
+	# 			loss.backward()
+	# 			# Clip grad norm
+	# 			th.nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
+	# 			self.policy.optimizer.step()
+
+	# 		if not continue_training:
+	# 			break
+
+	# 	self._n_updates += self.n_epochs
+	# 	explained_var = explained_variance(self.rollout_buffer.values.flatten(), self.rollout_buffer.returns.flatten())
+
+	# 	# Logs
+	# 	self.logger.record("train/entropy_loss", np.mean(entropy_losses))
+	# 	self.logger.record("train/policy_gradient_loss", np.mean(pg_losses))
+	# 	self.logger.record("train/value_loss", np.mean(value_losses))
+	# 	self.logger.record("train/approx_kl", np.mean(approx_kl_divs))
+	# 	self.logger.record("train/clip_fraction", np.mean(clip_fractions))
+	# 	self.logger.record("train/loss", loss.item())
+	# 	self.logger.record("train/explained_variance", explained_var)
+	# 	if hasattr(self.policy, "log_std"):
+	# 		self.logger.record("train/std", th.exp(self.policy.log_std).mean().item())
+
+	# 	self.logger.record("train/n_updates", self._n_updates, exclude="tensorboard")
+	# 	self.logger.record("train/clip_range", clip_range)
+	# 	if self.clip_range_vf is not None:
+	# 		self.logger.record("train/clip_range_vf", clip_range_vf)
 	# ----------------------------------------------------------------------------------------------
 	def train(self) -> None:
 		"""
@@ -175,28 +449,37 @@ class PPO(SB3_PPO):
 
 		continue_training = True
 
-		# DEBUG
-		self.policy.debug_obs2 = []
-		self.policy.debug_conv_weight2 = []
-		self.policy.debug_decay_weight2 = []
-		self.policy.debug_bias2 = []
-		self.policy.debug_features2 = []
-		self.policy.debug_latent_pi2 = []
-		self.policy.debug_latent_vf2 = []
-		self.policy.debug_values2 = []
-		self.policy.debug_actions2 = []
-		self.policy.debug_log_prob2 = []
+		# # DEBUG
+		# self.policy.debug_obs2 = []
+		# # self.policy.debug_conv_weight2 = []
+		# # self.policy.debug_decay_weight2 = []
+		# # self.policy.debug_bias2 = []
+		# self.policy.debug_features2 = []
+		# self.policy.debug_latent_pi2 = []
+		# self.policy.debug_latent_vf2 = []
+		# self.policy.debug_values2 = []
+		# self.policy.debug_actions2 = []
+		# self.policy.debug_log_prob2 = []
 
-		self.policy.prev_features_train_orig = [f.detach().clone() for f in self.policy.prev_features_train]
+		if isinstance(self.policy.features_extractor, rl.models.EDeNN):
+			self.policy.prev_features_train_orig = [f.detach().clone() for f in self.policy.prev_features_train]
+
+		accumulation_steps = self.batch_size / self.n_envs
+		if int(accumulation_steps) != float(accumulation_steps):
+			raise RuntimeError(f"n_envs ({self.n_envs}) must go into batch_size ({self.batch_size})")
+		accumulation_steps = int(accumulation_steps)
+		accumulate_iterations = 0
 
 		# train for n_epochs epochs
 		for epoch in range(self.n_epochs):
-			print(f"EPOCH {epoch}")
-			self.policy.debug_step2 = 0 # DEBUG
+			# print(f"EPOCH {epoch}")
+			# self.policy.debug_step2 = 0 # DEBUG
 
 			approx_kl_divs = []
 			# Do a complete pass on the rollout buffer
 			for rollout_data in self.rollout_buffer.get(batch_size=self.n_envs): # Sampling has to be done at this size later
+			# for rollout_data in self.rollout_buffer.get(batch_size=None): # Sampling has to be done at this size later
+			# for rollout_data in self.rollout_buffer.get(batch_size=self.batch_size):
 				actions = rollout_data.actions
 				if isinstance(self.action_space, gym.spaces.Discrete):
 					# Convert discrete action from float to long
@@ -214,7 +497,8 @@ class PPO(SB3_PPO):
 				values = values.flatten()
 				# Normalize advantage
 				advantages = rollout_data.advantages
-				if self.normalize_advantage:
+				# Normalization does not make sense if mini batchsize == 1, see GH issue #325
+				if self.normalize_advantage and len(advantages) > 1:
 					advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
 				# ratio between old and new policy, should be one at the first iteration
@@ -234,7 +518,7 @@ class PPO(SB3_PPO):
 					# No clipping
 					values_pred = values
 				else:
-					# Clip the different between old and new value
+					# Clip the difference between old and new value
 					# NOTE: this depends on the reward scaling
 					values_pred = rollout_data.old_values + torch.clamp(
 						values - rollout_data.old_values, -clip_range_vf, clip_range_vf
@@ -262,8 +546,8 @@ class PPO(SB3_PPO):
 				if isinstance(self.policy.features_extractor, rl.models.EDeNN) and self.policy.features_extractor.projection_head is not None:
 					bs_losses.append(bs_loss.item())
 
-				if self.save_loss:
-					self.loss = loss.clone()
+				# if self.save_loss:
+				# 	self.loss = loss.clone()
 
 				# Calculate approximate form of reverse KL Divergence for early stopping
 				# see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417
@@ -280,41 +564,47 @@ class PPO(SB3_PPO):
 						print(f"Early stopping at step {epoch} due to reaching max kl: {approx_kl_div:.2f}")
 					break
 
+				accumulate_iterations += 1
 				# Optimization step
-				self.policy.optimizer.zero_grad()
+				if (accumulate_iterations) % accumulation_steps == 0:
+					self.policy.optimizer.zero_grad()
+
+				# self.policy.optimizer.zero_grad()
 				assert not torch.isnan(loss) # Catch before too late, doesn't seem to trip up the training
 				loss.backward()
-				# Clip grad norm
-				torch.nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
-				self.policy.optimizer.step()
+				if (accumulate_iterations) % accumulation_steps == 0:
+					# Clip grad norm
+					torch.nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
+					self.policy.optimizer.step()
 
 			if not continue_training:
 				break
 
-			# Reset previous features (train) to what it was before training each epoch!
-			self.policy.prev_features_train = [f.detach().clone() for f in self.policy.prev_features_train_orig]
+			if isinstance(self.policy.features_extractor, rl.models.EDeNN):
+				# Reset previous features (train) to what it was before training each epoch!
+				self.policy.prev_features_train = [f.detach().clone() for f in self.policy.prev_features_train_orig]
 
-		# DEBUG
-		for i in [
-			"obs",
-			"features",
-			"latent_pi",
-			"latent_vf",
-			"values",
-			"actions",
-			"log_prob",
-			"conv_weight",
-			"decay_weight",
-			"bias"
-		]:
-			results = []
-			# NOTE: debug_X_2 might be longer (on account of) multiple epochs, but it'll be ignored in this function; it will only compare those from the first one anyway
-			for li, (l1, l2) in enumerate(zip(self.policy.__dict__[f'debug_{i}1'], self.policy.__dict__[f'debug_{i}2'])):
-				if i == "obs":
-					# results.append(l1 == l2)
-					results.append(torch.allclose(l1.float(), l2))
-				else:
-					results.append(torch.allclose(l1, l2))
+		# # DEBUG
+		# for i in [
+		# 	"obs",
+		# 	"features",
+		# 	"latent_pi",
+		# 	"latent_vf",
+		# 	"values",
+		# 	"actions",
+		# 	"log_prob",
+		# 	# "conv_weight",
+		# 	# "decay_weight",
+		# 	# "bias",
+		# ]:
+		# 	results = []
+		# 	# NOTE: debug_X_2 might be longer (on account of) multiple epochs, but it'll be ignored in this function; it will only compare those from the first one anyway
+		# 	for li, (l1, l2) in enumerate(zip(self.policy.__dict__[f'debug_{i}1'], self.policy.__dict__[f'debug_{i}2'])):
+		# 		if i == "obs":
+		# 			# results.append(l1 == l2)
+		# 			results.append(torch.allclose(l1.float(), l2))
+		# 		else:
+		# 			results.append(torch.allclose(l1, l2))
 			# print(f"{i}: {len([r for r in results if r is True])} / {len(results)} -> {len([r for r in results if r is True]) == len(results)}")
 
 		# print(f"obs: {self.debug_obs1.shape} to {self.debug_obs2.shape}")
@@ -439,18 +729,18 @@ class PPO(SB3_PPO):
 
 		callback.on_rollout_start()
 
-		self.policy.debug_obs1 = []
-		self.policy.debug_conv_weight1 = []
-		self.policy.debug_decay_weight1 = []
-		self.policy.debug_bias1 = []
-		self.policy.debug_features1 = []
-		self.policy.debug_latent_pi1 = []
-		self.policy.debug_latent_vf1 = []
-		self.policy.debug_values1 = []
-		self.policy.debug_actions1 = []
-		self.policy.debug_log_prob1 = []
+		# self.policy.debug_obs1 = []
+		# self.policy.debug_conv_weight1 = []
+		# # self.policy.debug_decay_weight1 = []
+		# self.policy.debug_bias1 = []
+		# self.policy.debug_features1 = []
+		# self.policy.debug_latent_pi1 = []
+		# self.policy.debug_latent_vf1 = []
+		# self.policy.debug_values1 = []
+		# self.policy.debug_actions1 = []
+		# self.policy.debug_log_prob1 = []
 
-		self.policy.debug_step1 = 0
+		# self.policy.debug_step1 = 0
 		while n_steps < n_rollout_steps:
 			if self.use_sde and self.sde_sample_freq > 0 and n_steps % self.sde_sample_freq == 0:
 				# Sample a new noise matrix
@@ -518,8 +808,33 @@ class PPO(SB3_PPO):
 				# Setting to zero works, it's multiplied by decay and the added to first bin
 				for envNum, done in enumerate(dones):
 					if done:
+						# FIX seems that in layer 0, first channels are fine,
+						# In layer 1, channel 1 is nearly alawys zero,
+						# In layer 2, channel 0 is nearly ALWAYS zero???
+						# print(envNum)
+						# print(0)
+						# print(self.policy.prev_features[0].shape)
+						# print(self.policy.prev_features[0][:, 0].unique())
+						# print(self.policy.prev_features[0][:, 1].unique())
+						# print(1)
+						# print(self.policy.prev_features[1].shape)
+						# print(self.policy.prev_features[1][:, 0].unique())
+						# print(self.policy.prev_features[1][:, 1].unique())
+						# print(2)
+						# print(self.policy.prev_features[2].shape)
+						# print(self.policy.prev_features[2][:, 0].unique())
+						# print(self.policy.prev_features[2][:, 1].unique())
+
+						# print(self.policy.prev_features[0][:, :2, :3, :3])
+						# print(self.policy.prev_features[1][:, :2, :3, :3])
+						# print(self.policy.prev_features[2][:, :2, :3, :3])
 						for layer, _ in enumerate(self.policy.prev_features):
 							self.policy.prev_features[layer][envNum] *= 0
+						# print(self.policy.prev_features[0][:, :2, :3, :3])
+						# print(self.policy.prev_features[1][:, :2, :3, :3])
+						# print(self.policy.prev_features[2][:, :2, :3, :3])
+						# quit(0)
+
 			rollout_buffer.add(self._last_obs, actions, rewards, self._last_episode_starts, values, log_probs, state, reset)
 			self._last_obs = new_obs
 			self._last_episode_starts = dones
@@ -533,3 +848,156 @@ class PPO(SB3_PPO):
 		callback.on_rollout_end()
 
 		return True
+
+
+
+
+
+# ==================================================================================================
+class PPO_(SB3_PPO):
+	# ----------------------------------------------------------------------------------------------
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+
+	# ----------------------------------------------------------------------------------------------
+	@classmethod # noqa: C901
+	def load(
+		cls: Type[SelfBaseAlgorithm],
+		path: str | pathlib.Path | io.BufferedIOBase,
+		env: Optional[GymEnv] = None,
+		device: torch.device | str = "auto",
+		custom_objects: Optional[Dict[str, Any]] = None,
+		print_system_info: bool = False,
+		force_reset: bool = True,
+		**kwargs,
+	) -> SelfBaseAlgorithm:
+		"""
+		Load the model from a zip-file.
+		Warning: ``load`` re-creates the model from scratch, it does not update it in-place!
+		For an in-place load use ``set_parameters`` instead.
+
+		:param path: path to the file (or a file-like) where to
+			load the agent from
+		:param env: the new environment to run the loaded model on
+			(can be None if you only need prediction from a trained model) has priority over any saved environment
+		:param device: Device on which the code should run.
+		:param custom_objects: Dictionary of objects to replace
+			upon loading. If a variable is present in this dictionary as a
+			key, it will not be deserialized and the corresponding item
+			will be used instead. Similar to custom_objects in
+			``keras.models.load_model``. Useful when you have an object in
+			file that can not be deserialized.
+		:param print_system_info: Whether to print system info from the saved model
+			and the current system info (useful to debug loading issues)
+		:param force_reset: Force call to ``reset()`` before training
+			to avoid unexpected behavior.
+			See https://github.com/DLR-RM/stable-baselines3/issues/597
+		:param kwargs: extra arguments to change the model when loading
+		:return: new model instance with loaded parameters
+		"""
+		if print_system_info:
+			print("== CURRENT SYSTEM INFO ==")
+			get_system_info()
+
+		data, params, pytorch_variables = load_from_zip_file(
+			path,
+			device=device,
+			custom_objects=custom_objects,
+			print_system_info=print_system_info,
+		)
+
+		# Remove stored device information and replace with ours
+		if "policy_kwargs" in data:
+			if "device" in data["policy_kwargs"]:
+				del data["policy_kwargs"]["device"]
+
+		# DEBUG
+		# if "policy_kwargs" in kwargs and kwargs["policy_kwargs"] != data["policy_kwargs"]:
+		# 	raise ValueError(
+		# 		f"The specified policy kwargs do not equal the stored policy kwargs."
+		# 		f"Stored kwargs: {data['policy_kwargs']}, specified kwargs: {kwargs['policy_kwargs']}"
+		# 	)
+
+		if "observation_space" not in data or "action_space" not in data:
+			raise KeyError("The observation_space and action_space were not given, can't verify new environments")
+
+		if env is not None:
+			# Wrap first if needed
+			env = cls._wrap_env(env, data["verbose"])
+			# Check if given env is valid
+			# DEBUG
+			# check_for_correct_spaces(env, data["observation_space"], data["action_space"])
+			# Discard `_last_obs`, this will force the env to reset before training
+			# See issue https://github.com/DLR-RM/stable-baselines3/issues/597
+			if force_reset and data is not None:
+				data["_last_obs"] = None
+			# `n_envs` must be updated. See issue https://github.com/DLR-RM/stable-baselines3/issues/1018
+			if data is not None:
+				data["n_envs"] = env.num_envs
+		else:
+			# Use stored env, if one exists. If not, continue as is (can be used for predict)
+			if "env" in data:
+				env = data["env"]
+
+		# DEBUG
+		del data["observation_space"]
+		del data["_n_updates"]
+
+		# noinspection PyArgumentList
+		model = cls(  # pytype: disable=not-instantiable,wrong-keyword-args
+			policy=data["policy_class"],
+			env=env,
+			device=device,
+			_init_setup_model=False,  # pytype: disable=not-instantiable,wrong-keyword-args
+		)
+
+		# load parameters
+		model.__dict__.update(data)
+		model.__dict__.update(kwargs)
+		model._setup_model()
+
+		# DEBUG
+		print(f"Original num. params to load: {len(params['policy'])}")
+		params["policy"] = {k: params["policy"][k] for k in ["action_net.weight", "action_net.bias", "value_net.weight", "value_net.bias"] if k in params["policy"]}
+		print(f"New num. params to load: {len(params['policy'])}")
+
+		try:
+			# put state_dicts back in place
+			# model.set_parameters(params, exact_match=True, device=device)
+			model.set_parameters(params, exact_match=False, device=device) # DEBUG
+		except RuntimeError as e:
+			# Patch to load Policy saved using SB3 < 1.7.0
+			# the error is probably due to old policy being loaded
+			# See https://github.com/DLR-RM/stable-baselines3/issues/1233
+			if "pi_features_extractor" in str(e) and "Missing key(s) in state_dict" in str(e):
+				model.set_parameters(params, exact_match=False, device=device)
+				warnings.warn(
+					"You are probably loading a model saved with SB3 < 1.7.0, "
+					"we deactivated exact_match so you can save the model "
+					"again to avoid issues in the future "
+					"(see https://github.com/DLR-RM/stable-baselines3/issues/1233 for more info). "
+					f"Original error: {e} \n"
+					"Note: the model should still work fine, this only a warning."
+				)
+			else:
+				raise e
+
+		# put other pytorch variables back in place
+		if pytorch_variables is not None:
+			for name in pytorch_variables:
+				# Skip if PyTorch variable was not defined (to ensure backward compatibility).
+				# This happens when using SAC/TQC.
+				# SAC has an entropy coefficient which can be fixed or optimized.
+				# If it is optimized, an additional PyTorch variable `log_ent_coef` is defined,
+				# otherwise it is initialized to `None`.
+				if pytorch_variables[name] is None:
+					continue
+				# Set the data attribute directly to avoid issue when using optimizers
+				# See https://github.com/DLR-RM/stable-baselines3/issues/391
+				recursive_setattr(model, name + ".data", pytorch_variables[name].data)
+
+		# Sample gSDE exploration matrix, so it uses the right device
+		# see issue #44
+		if model.use_sde:
+			model.policy.reset_noise()  # pytype: disable=attribute-error
+		return model

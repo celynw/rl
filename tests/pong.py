@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 import argparse
 from pathlib import Path
+# from collections import deque
 
+# import envpool
 import wandb
 from wandb.integration.sb3 import WandbCallback
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_atari_env
-from stable_baselines3.common.vec_env import VecFrameStack#, VecVideoRecorder
+from stable_baselines3.common.vec_env import VecFrameStack, VecTransposeImage#, VecVideoRecorder
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.torch_layers import NatureCNN
 from stable_baselines3.common.env_util import make_vec_env
@@ -35,12 +37,12 @@ class EnvType(Enum):
 	PONG = auto(),
 # ==================================================================================================
 class FeatEx(Enum):
-	NATURECNN = auto(),
+	NATURECNNRGB = auto(),
 	NATURECNNEVENTS = auto(),
 	SNN = auto(),
 	EDENN = auto(),
 
-envtype = EnvType.CARTPOLE
+envtype = EnvType.PONG
 featex = FeatEx.EDENN
 
 
@@ -79,20 +81,35 @@ def main(args: argparse.Namespace):
 		vec_env_kwargs=None,
 		monitor_kwargs=None,
 	)
+	# env = envpool.make(
+	# 	task_id=config["env_name"], # v5??
+	# 	env_type="gymnasium",
+	# 	num_envs=config["num_envs"],
+	# 	# seed=config["seed"],
+	# 	max_episode_steps=108_000, # Pong (Atari)
+	# 	**env_kwargs,
+	# )
+	# # envs.num_envs = args.num_envs
+	# # envs.single_action_space = envs.action_space
+	# # envs.single_observation_space = envs.observation_space
+	# # envs = RecordEpisodeStatistics(envs)
+	# # assert isinstance(envs.action_space, gym.spaces.Discrete), "only discrete action space is supported"
+	# env = wrapper_class(env)
 
 	if not args.nolog and not args.novid:
 		# FIX: I think I want this to only run on the evaluation
 		# With multiple videos, name_prefix needs to match r".+(video\.\d+).+", otherwise they would all conflict under the key "videos" in wandb
-		if featex not in [FeatEx.NATURECNN, FeatEx.NATURECNNEVENTS]: # events
-			env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 20000 == 0, video_length=video_length, render_events=True, name_prefix="events-video.1")
+		if featex not in [FeatEx.NATURECNNRGB, FeatEx.NATURECNNEVENTS]: # events
+			env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 200000 == 0, video_length=video_length, render_events=True, name_prefix="events-video.1")
 		if featex is FeatEx.NATURECNNEVENTS: # event images
-			env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 20000 == 0, video_length=video_length, render_events=True, sum_events=False, name_prefix="events-video.1")
-		env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 20000 == 0, video_length=video_length, name_prefix="rgb-video.2") # RGB
+			env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 200000 == 0, video_length=video_length, render_events=True, sum_events=False, name_prefix="events-video.1")
+		env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 200000 == 0, video_length=video_length, name_prefix="rgb-video.2") # RGB
 
-	if envtype is EnvType.PONG:
-		env = VecFrameStack(env, n_stack=4)
-		# env = VecFrameStack(env, n_stack=4, channels_order="first")
-		env = SkipCutscenesPong(env)
+	# if envtype is EnvType.PONG:
+	# 	# env = SkipCutscenesPong(env)
+	# 	env = VecFrameStack(env, n_stack=4)
+	# 	# env = VecFrameStack(env, n_stack=4, channels_order="first")
+	# 	# env = VecTransposeImage(env) # Used to stop it complaining that train and eval envs are different (it is auto applied to one of them if not there) - for PongNoFrameSkip-v4?
 
 	# optimizer_kwargs = dict(
 	# )
@@ -118,7 +135,6 @@ def main(args: argparse.Namespace):
 	# https://github.com/DLR-RM/rl-trained-agents/blob/10a9c31e806820d59b20d8b85ca67090338ea912/ppo/PongNoFrameskip-v4_1/PongNoFrameskip-v4/config.yml
 	# model = SB3_PPO(
 	model = rl.models.utils.PPO(
-	# model = rl.models.utils.PPO_(
 		# policy="CnnPolicy",
 		policy=rl.models.utils.ActorCriticPolicy,
 		# policy=SB3_ACP,
@@ -127,14 +143,14 @@ def main(args: argparse.Namespace):
 		# - detach=True
 		# - optimizer_kwargs=optimizer_kwargs
 		policy_kwargs=dict(features_extractor_class=features_extractor_class, net_arch=[], features_extractor_kwargs=features_extractor_kwargs, detach=False),
+		# policy_kwargs=dict(features_extractor_class=features_extractor_class, net_arch=[], features_extractor_kwargs=features_extractor_kwargs),
 		env=env,
-		batch_size=128, # Probably doesn't do anything, batch size is 1
+		batch_size=256, # Probably doesn't do anything, batch size is 1
 		clip_range=0.1,
 		ent_coef=0.01,
 		gae_lambda=0.95,
 		gamma=0.99,
-		learning_rate=args.lr,
-		# learning_rate=lambda f : f * 2.5e-4,
+		learning_rate=lambda f : f * 2.5e-4 if envtype is EnvType.PONG else args.lr,
 		max_grad_norm=0.5,
 		n_epochs=4,
 		n_steps=args.n_steps,
@@ -142,6 +158,117 @@ def main(args: argparse.Namespace):
 		tensorboard_log=Path(run.dir) if not args.nolog else None, # Will be appended by `tb_log_name`
 		verbose=1,
 	)
+	# # print([s.shape for s in list(model.policy.parameters())])
+	# for name, param in model.policy.named_parameters():
+	# 	# print(f"{name}: {param}")
+	# 	if name in [
+	# 		"action_net.weight",
+	# 		"action_net.bias",
+	# 		"value_net.weight",
+	# 		"value_net.bias",
+	# 	# ] or name.startswith("mlp_extractor.policy_net") or name.startswith("mlp_extractor.value_net"):
+	# 	]:
+	# 		print(name, param.shape)
+
+	# # LOAD known working model
+	# print("BEFORE LOADING: POLICY")
+	# for name, param in model.policy.named_parameters():
+	# 	print(f"{name}: {param.shape}")
+	# print("BEFORE LOADING: FEATURE EXTRACTOR")
+	# for name, param in model.policy.features_extractor.named_parameters():
+	# 	print(f"{name}: {param.shape}")
+
+	# rollout_buffer = model.rollout_buffer
+	# model = rl.models.utils.PPO.load(
+	# # model = rl.models.utils.PPO_.load(
+	# # model = PPO.load(
+	# 	"/home/cw0071/dev/python/rl/tests/wandb/run-20230113_010629-5rlwyuni/files/checkpoints/best/best_model.zip", # My PPO and ACP
+	# 	# "/home/cw0071/dev/python/rl/tests/wandb/run-20230113_100256-qurqas1s/files/checkpoints/best/best_model.zip", # Vanilla
+	# 	# env=env
+	# 	# policy="CnnPolicy",
+	# 	policy=rl.models.utils.ActorCriticPolicy,
+	# 	# policy=SB3_ACP,
+	# 	# policy_kwargs=dict(features_extractor_class=NatureCNN),
+	# 	# policy_kwargs=dict(features_extractor_class=NatureCNN, detach=False, net_arch=dict(pi=[64, 64], vf=[64, 64]), features_extractor_kwargs={"features_dim": result_dim}),
+	# 	# policy_kwargs=dict(features_extractor_class=NatureCNN, detach=False, features_extractor_kwargs={"features_dim": result_dim}),
+	# 	policy_kwargs=dict(features_extractor_class=rl.models.EDeNN, features_extractor_kwargs=features_extractor_kwargs, detach=False),
+	# 	# policy_kwargs=dict(features_extractor_class=rl.models.EDeNN, features_extractor_kwargs=features_extractor_kwargs, detach=True),
+	# 	# policy_kwargs=dict(detach=False),
+	# 	env=env,
+	# 	batch_size=256, # probably doesn't do anything, batch size is 1
+	# 	clip_range=0.1,
+	# 	ent_coef=0.01,
+	# 	gae_lambda=0.9,
+	# 	gamma=0.99,
+	# 	learning_rate=2.5e-4,
+	# 	max_grad_norm=0.5,
+	# 	n_epochs=4,
+	# 	n_steps=args.n_steps,
+	# 	vf_coef=0.5,
+	# 	tensorboard_log=Path(run.dir) if not args.nolog else None, # Will be appended by `tb_log_name`
+	# 	verbose=1,
+	# )
+	# # model.load_replay_buffer("sac_pendulum_buffer")
+	# model.rollout_buffer = rollout_buffer
+
+	# # Freeze RL model, but not the feature extractor
+	# for name, param in model.policy.named_parameters():
+	# 	# print(f"{name}: {param}")
+	# 	if name in [
+	# 		"action_net.weight",
+	# 		"action_net.bias",
+	# 		"value_net.weight",
+	# 		"value_net.bias",
+	# 	# ] or name.startswith("mlp_extractor.policy_net") or name.startswith("mlp_extractor.value_net"):
+	# 	]:
+	# 		param.requires_grad = False
+
+	# print(f"Original num. params in optimiser: {len(model.policy.optimizer.param_groups[0]['params'])}")
+	# elements = model.policy.optimizer.param_groups[0]
+	# del elements["params"]
+	# model.policy.optimizer = type(model.policy.optimizer)(params=filter(lambda p: p.requires_grad, model.policy.parameters()), **elements)
+	# print(f"New num. params in optimiser: {len(model.policy.optimizer.param_groups[0]['params'])}")
+
+	# print("Requires grad:")
+	# for name, param in model.policy.named_parameters():
+	# 	if param.requires_grad:
+	# 		print(f"{name}: {param.shape}")
+	# print("Doesn't require grad:")
+	# for name, param in model.policy.named_parameters():
+	# 	if not param.requires_grad:
+	# 		print(f"{name}: {param.shape}")
+
+
+
+
+
+	# print("Loading from pretrained feature extractor")
+	# import torch
+	# checkpoint = torch.load("tools/runs/train_estimator_edenn/version_0/checkpoints/epoch=41-step=52500.ckpt")
+	# model.policy.features_extractor.load_state_dict(checkpoint["state_dict"])
+	# print("loaded")
+
+	# print("Freezing pretrained feature extractor")
+	# for name, param in model.policy.named_parameters():
+	# 	if name.startswith("features_extractor"):
+	# 		param.requires_grad = False
+	# print(f"Original num. params in optimiser: {len(model.policy.optimizer.param_groups[0]['params'])}")
+	# elements = model.policy.optimizer.param_groups[0]
+	# del elements["params"]
+	# model.policy.optimizer = type(model.policy.optimizer)(params=filter(lambda p: p.requires_grad, model.policy.parameters()), **elements)
+	# print(f"New num. params in optimiser: {len(model.policy.optimizer.param_groups[0]['params'])}")
+	# print("Requires grad:")
+	# for name, param in model.policy.named_parameters():
+	# 	if param.requires_grad:
+	# 		print(f"{name}: {param.shape}")
+	# print("Doesn't require grad:")
+	# for name, param in model.policy.named_parameters():
+	# 	if not param.requires_grad:
+	# 		print(f"{name}: {param.shape}")
+
+
+
+
 
 	callbacks = []
 	if not args.nolog:
@@ -188,11 +315,79 @@ class WarpFrame_(WarpFrame):
 		:param frame: environment frame
 		:return: the observation
 		"""
-		# frame = np.transpose(frame, (1, 2, 0))
-		frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+		frame = np.transpose(frame, (1, 2, 0))
+		# frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY) # For PongNoFrameSkip but not PongRGB?
 		frame = cv2.resize(frame, (self.width, self.height), interpolation=cv2.INTER_AREA)
 
 		return frame[None, :, :]
+
+
+# ==================================================================================================
+class WarpFrame__(WarpFrame_):
+	# ----------------------------------------------------------------------------------------------
+	def __init__(self, env: gym.Env, width: int = 84, height: int = 84):
+		super().__init__(env, width, height)
+		self.observation_space = spaces.Box(low=0, high=255, shape=(1, self.height, self.width), dtype=env.observation_space.dtype)
+
+	# ----------------------------------------------------------------------------------------------
+	def observation(self, frame: np.ndarray) -> np.ndarray:
+		# CDHW
+		# print(np.unique(frame[0]), np.unique(frame[1]))
+		frame = np.sum(frame, 1) # D
+		# print(np.unique(frame[0]), np.unique(frame[1]))
+		frame = np.sum(frame, 0) # C
+		# print(np.unique(frame))
+		frame = ((frame / 6.0) / 2) * 255
+		# print(np.unique(frame))
+		frame = frame.astype(np.uint8)
+		# print(np.unique(frame))
+		# print(frame.shape)
+		# quit(0)
+
+		return frame[None, :, :]
+
+
+
+# ==================================================================================================
+class WarpFrameEDeNN(gym.ObservationWrapper):
+	# ----------------------------------------------------------------------------------------------
+	def __init__(self, env: gym.Env, width: int = 84, height: int = 84):
+		gym.ObservationWrapper.__init__(self, env)
+		self.width = width
+		self.height = height
+		# self.observation_space = spaces.Box(low=0, high=255, shape=(self.height, self.width, 1), dtype=env.observation_space.dtype)
+		# self.observation_space = spaces.Box(low=0, high=255, shape=(2, 6, 1, self.height, self.width), dtype=env.observation_space.dtype)
+		# print(self.observation_space)
+
+	# # ----------------------------------------------------------------------------------------------
+	# def observation(self, frame: np.ndarray) -> np.ndarray:
+	# 	"""
+	# 	returns the current observation from a frame
+
+	# 	:param frame: environment frame
+	# 	:return: the observation
+	# 	"""
+
+	# 	# frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+	# 	# frame = cv2.resize(frame, (self.width, self.height), interpolation=cv2.INTER_AREA)
+	# 	return frame[:, :, None]
+
+	# # ----------------------------------------------------------------------------------------------
+	# def observation(self, frame: np.ndarray) -> np.ndarray:
+	# 	# CDHW
+	# 	# print(np.unique(frame[0]), np.unique(frame[1]))
+	# 	frame = np.sum(frame, 1) # D
+	# 	# print(np.unique(frame[0]), np.unique(frame[1]))
+	# 	frame = np.sum(frame, 0) # C
+	# 	# print(np.unique(frame))
+	# 	frame = ((frame / 6.0) / 2) * 255
+	# 	# print(np.unique(frame))
+	# 	frame = frame.astype(np.uint8)
+	# 	# print(np.unique(frame))
+	# 	# print(frame.shape)
+	# 	# quit(0)
+
+	# 	return frame[None, :, :]
 
 
 # ==================================================================================================
@@ -235,10 +430,18 @@ class AtariWrapper(gym.Wrapper):
 		# 	env = EpisodicLifeEnv(env)
 		# if "FIRE" in env.unwrapped.get_action_meanings():  # type: ignore[attr-defined]
 		# 	env = FireResetEnv(env)
-		env = WarpFrame(env, width=screen_size, height=screen_size)
-		# env = WarpFrame(env, width=screen_size, height=screen_size) if featex is FeatEx.NATURECNN else WarpFrame_(env, width=screen_size, height=screen_size)
+		# env = WarpFrame(env, width=screen_size, height=screen_size) if featex is FeatEx.NATURECNNRGB else WarpFrame_(env, width=screen_size, height=screen_size)
 		# env = WarpFrame_(env, width=screen_size, height=screen_size)
-		# env = WarpFrame_(env, width=screen_size, height=screen_size) if featex is FeatEx.NATURECNN else WarpFrame__(env, width=screen_size, height=screen_size)
+		# env = WarpFrame_(env, width=screen_size, height=screen_size) if featex is FeatEx.NATURECNNRGB else WarpFrame__(env, width=screen_size, height=screen_size)
+
+
+
+		# env = WarpFrame(env, width=screen_size, height=screen_size) if env_name == "PongNoFrameskip-v4" else WarpFrame_(env, width=screen_size, height=screen_size) if env_name == "PongRGB-v0" else env
+		env = WarpFrame(env, width=screen_size, height=screen_size) if env_name == "PongNoFrameskip-v4" else env
+		# FIX check that env.resize() works in all cases
+
+
+
 		if clip_reward:
 			env = ClipRewardEnv(env)
 
@@ -276,25 +479,27 @@ if __name__ == "__main__":
 	args = parse_args()
 
 	if envtype is EnvType.CARTPOLE:
-		env_name = "CartPoleRGB-v0" if featex is FeatEx.NATURECNN else "CartPoleEvents-v0"
+		env_name = "CartPoleRGB-v0" if featex is FeatEx.NATURECNNRGB else "CartPoleEvents-v0"
 		output_width = 600
 		output_height = 400
 	elif envtype is EnvType.MOUNTAINCAR:
-		env_name = "MountainCarRGB-v0" if featex is FeatEx.NATURECNN else "MountainCarEvents-v0"
+		env_name = "MountainCarRGB-v0" if featex is FeatEx.NATURECNNRGB else "MountainCarEvents-v0"
 	elif envtype is EnvType.PONG:
-		env_name = "PongRGB-v0" if featex is FeatEx.NATURECNN else "PongEvents-v0"
+		# env_name = "PongNoFrameskip-v4" if featex is FeatEx.NATURECNNRGB else "PongEvents-v0"
+		env_name = "PongRGB-v0" if featex is FeatEx.NATURECNNRGB else "PongEvents-v0"
 
-	# wrapper_class = AtariWrapper if envtype is EnvType.PONG and featex is FeatEx.NATURECNN else None
+	# wrapper_class = AtariWrapper if envtype is EnvType.PONG and featex is FeatEx.NATURECNNRGB else None
 	wrapper_class = AtariWrapper if envtype is EnvType.PONG else None
 
 	env_kwargs = dict(args=args)
+	# env_kwargs = {}
 	if featex is FeatEx.NATURECNNEVENTS:
 		env_kwargs["event_image"] = True
 
 	match featex:
 		case FeatEx.EDENN:
 			features_extractor_class = rl.models.EDeNN
-		case FeatEx.NATURECNN | FeatEx.NATURECNNEVENTS:
+		case FeatEx.NATURECNNRGB | FeatEx.NATURECNNEVENTS:
 			features_extractor_class = rl.models.NatureCNN
 		case FeatEx.SNN:
 			features_extractor_class = rl.models.SNN

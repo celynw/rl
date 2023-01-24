@@ -53,20 +53,25 @@ class PongEvents(AtariEventEnv):
 		Returns:
 			np.ndarray: Resized image.
 		"""
-		frame = super().resize(frame)
+		# frame = super().resize(frame)
+
 		# SIMON - Crop
-		# rgb = rgb[35:-15, :, :]
-		# # SIMON - Naively convert to greyscale (shit way to do it but don't want extra imports)
-		# rgb[:, :, 0] = rgb[:, :, 0] / 3 + rgb[:, :, 1] / 3 + rgb[:, :, 2] / 3
-		# # SIMON - Make it 3 channel again
-		# rgb[:, :, 1] = rgb[:, :, 0]
-		# rgb[:, :, 2] = rgb[:, :, 0]
-		# # # SIMON - rescale contrast
-		# # rgb = rgb - np.min(rgb)
-		# # rgb = np.clip(rgb * (255 / np.max(rgb)), 0, 255).astype("uint8")
+		# frame = frame[35:-15, :, :]
+		# SIMON - Naively convert to greyscale (shit way to do it but don't want extra imports)
+		frame[:, :, 0] = frame[:, :, 0] / 3 + frame[:, :, 1] / 3 + frame[:, :, 2] / 3
+		# SIMON - Make it 3 channel again
+		frame[:, :, 1] = frame[:, :, 0]
+		frame[:, :, 2] = frame[:, :, 0]
 		# # SIMON - rescale contrast
-		# rgb = rgb - 57
-		# rgb = np.clip(rgb * (255 / 89), 0, 255).astype("uint8")
+		# frame = frame - np.min(frame)
+		# frame = np.clip(frame * (255 / np.max(frame)), 0, 255).astype("uint8")
+		# SIMON - rescale contrast
+		frame = frame - 57
+		frame = np.clip(frame * (255 / 89), 0, 255).astype("uint8")
+
+		# frame = np.transpose(frame, (1, 2, 0))
+		# frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY) # For PongNoFrameSkip but not PongRGB?
+		frame = cv2.resize(frame, (self.output_width, self.output_height), interpolation=cv2.INTER_AREA)
 
 		return frame
 

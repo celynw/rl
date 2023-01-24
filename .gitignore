@@ -18,3 +18,9 @@ train_estimator_RL_estimator/
 *.gv
 docker_stderror
 esim_node*
+old/
+# TEMPORARY!
+rl/environments/spacerobot_v1/
+videos/
+tests/wandb/
+wandb/

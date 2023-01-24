@@ -13,8 +13,8 @@ from rl.environments.utils import EventEnv
 # ==================================================================================================
 class CartPoleEvents(EventEnv, CartPoleEnv):
 	# ----------------------------------------------------------------------------------------------
-	# def __init__(self, args: argparse.Namespace, event_image: bool = False, return_rgb: bool = False, output_width: int = 126, output_height: int = 84): # if not cropping
-	def __init__(self, args: argparse.Namespace, event_image: bool = False, return_rgb: bool = False, output_width: int = 240, output_height: int = 64): # if cropping
+	# def __init__(self, args: argparse.Namespace, event_image: bool = False, output_width: int = 126, output_height: int = 84): # if not cropping
+	def __init__(self, args: argparse.Namespace, event_image: bool = False, output_width: int = 240, output_height: int = 64): # if cropping
 		"""
 		Event version of CartPole environment.
 

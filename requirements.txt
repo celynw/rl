@@ -8,10 +8,13 @@ rich
 kellog
 gitpython
 setproctitle
-opencv-python
-gym[all]==0.25.1
+# opencv-python
+opencv-python-headless
+# ==0.25.1?
+gymnasium[accept-rom-license]
 stable-baselines3==1.6.0
 msgpack
 wandb
 rospkg
 psycopg2-binary
+envpool

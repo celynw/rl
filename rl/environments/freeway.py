@@ -2,10 +2,10 @@ import argparse
 
 import numpy as np
 
-from rl.environments.utils import AtariEnv
+from rl.environments.utils import AtariEventEnv
 
 # ==================================================================================================
-class FreewayEvents(AtariEnv):
+class FreewayEvents(AtariEventEnv):
 	# FIX enemy_car_x=range(108, 118) # which lane the car collided with player
 	wanted_states: list[str] = ["player_y"]
 	# ----------------------------------------------------------------------------------------------
@@ -15,7 +15,7 @@ class FreewayEvents(AtariEnv):
 	# ----------------------------------------------------------------------------------------------
 	@staticmethod
 	def add_argparse_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
-		parser = AtariEnv.add_argparse_args(parser)
+		parser = AtariEventEnv.add_argparse_args(parser)
 
 		# group = [g for g in parser._action_groups if g.title == "Environment"][0]
 

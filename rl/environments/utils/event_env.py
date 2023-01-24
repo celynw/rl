@@ -135,17 +135,6 @@ class EventEnv(gym.Env):
 		return event_tensor
 
 	# ----------------------------------------------------------------------------------------------
-	def set_state(self, state: tuple):
-		"""
-		Manually set the state of the environment.
-		Not to be used under normal training circumstances.
-
-		Args:
-			state (tuple): State of the particular environment.
-		"""
-		self.state = state
-
-	# ----------------------------------------------------------------------------------------------
 	def set_updatedPolicy(self):
 		"""
 		Set a boolean flag. Used for logging whenever the policy is updated.

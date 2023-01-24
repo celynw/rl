@@ -96,30 +96,50 @@ class Decay3dPartial(Decay3d):
 		else:
 			output = raw_out * self.mask_ratio
 
-		# Now, propagate decay values from resulting tensor
-		output = output.permute(2, 0, 1, 3, 4) # NCDHW -> DNCHW
-		# Combine signals from previous layers, and residual signals from current layer but earlier in time
+		# Propagate decay values from resulting tensor
 		# Only want positive values for the decay factor
 		decay = self.decay_weight / (1 + abs(self.decay_weight))
-		for i, d in enumerate(output):
-			if i == 0:
-				if previous_output is not None:
-					# TODO move this somewhere else or clean up somehow!
-					previous_output = previous_output.permute(2, 0, 1, 3, 4) # NCDHW -> DNCHW
+		# for i, d in enumerate(output):
+		# if i == 0:
+		# print(f"output: {output.unique()}")
+		if previous_output is not None:
+			# # TODO move this somewhere else or clean up somehow!
+			# previous_output = previous_output.permute(2, 0, 1, 3, 4) # NCDHW -> DNCHW
 
-					# FIX Not sure why sometimes during policy update, N == 1 rather than full (64)
-					# Dodgy hack
-					if previous_output.shape[1] != output.shape[1]:
-						previous_output = previous_output[:, -output.shape[1]:]
-					try:
-						output[i] = previous_output[-1].clone() * decay
-					except RuntimeError:
-						print(f"output: {output.shape}, previous_output: {previous_output.shape}, decay: {decay.shape}")
-						raise
-				else:
-					continue
-			output[i] = output[i].clone() + output[i - 1].clone() * decay
-		output = output.permute(1, 2, 0, 3, 4) # DNCHW -> NCDHW
+			# # During policy update
+			# # output: [6, 128, 32, 20, 20], previous_output: [6, 1, 32, 20, 20], decay: [32, 1, 1]
+
+			# # FIX Not sure why sometimes during policy update, N == 1 rather than full (64)
+			# # if previous_output.shape[1] != output.shape[1]:
+			# # 	previous_output = previous_output[:, -output.shape[1]:]
+			# if previous_output.shape[1] != output.shape[1] and previous_output.shape[1] != 1:
+			# 	# print(f"WARNING: previous output ({previous_output.shape}) can't be multiplied with output ({output.shape}), treating as if it was not provided!")
+			# 	previous_output = None
+			# else:
+			# 	try:
+			# 		output[i] = previous_output[-1].clone() * decay
+			# 	except RuntimeError:
+			# 		print(f"output: {output.shape}, previous_output: {previous_output.shape}, decay: {decay.shape}")
+			# 		raise
+
+
+			# Combine signals from previous layers, and residual signals from current layer but earlier in time
+			# print(f"out: {list(output.shape)}, prev: {list(previous_output.shape)}")
+			# 8, 32, 6, 20, 20		or		256, 32, 6, 20, 20
+			# output[:, :, 0] *= previous_output
+			# output = previous_output * decay
+			# output = output.permute(2, 0, 1, 3, 4) # NCDHW -> DNCHW
+			# print(f"-------------------{output.shape}, {previous_output.shape}")
+			# print(f"  Add {output.shape} (first bin {output[:, :, 0].shape}) to prev {previous_output.shape} mult with {decay.shape} -> {(previous_output * decay).shape}")
+			output[:, :, 0] = output[:, :, 0] + (previous_output * decay)
+		# else:
+		# 	continue
+		# output[i] = output[i].clone() + output[i - 1].clone() * decay
+		# TODO could probably roll and batch multiply!
+		for i in range(1, list(output.shape)[2]):
+			output[:, :, i] = output[:, :, i].clone() + output[:, :, i - 1].clone() * decay
+
+		# output = output.permute(1, 2, 0, 3, 4) # DNCHW -> NCDHW
 		if self.bias is not None:
 			output = output + self.bias.view(1, self.out_channels, 1, 1, 1)
 

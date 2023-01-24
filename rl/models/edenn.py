@@ -8,7 +8,7 @@ from gymnasium import spaces
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from rich import print, inspect
 
-from rl.models.utils import Decay3dPartial, Decay3d
+from rl.models.utils import Decay3dPartial, Decay3d#, RolloutBuffer
 
 # ==================================================================================================
 class EDeNN(BaseFeaturesExtractor):
@@ -61,20 +61,44 @@ class EDeNN(BaseFeaturesExtractor):
 		if conv is Decay3dPartial:
 			partial_kwargs["multi_channel"] = True
 			partial_kwargs["return_mask"] = True
-			partial_kwargs["kernel_ratio"] = True
+			# partial_kwargs["kernel_ratio"] = True
+			partial_kwargs["kernel_ratio"] = False
+
+		# kernel_size = 3
+		# stride = 2
+		# padding = 0
+
+		# self.layer1 = torch.nn.Sequential(
+		# 	conv(n_input_channels, 16, kernel_size=kernel_size, stride=stride, bias=True, padding=padding, **partial_kwargs),
+		# 	torch.nn.ReLU(inplace=True),
+		# 	# torch.nn.BatchNorm3d(num_features=32),
+		# )
+		# self.layer2 = torch.nn.Sequential(
+		# 	conv(16, 32, kernel_size=kernel_size, stride=stride, bias=True, padding=padding, **partial_kwargs),
+		# 	torch.nn.ReLU(inplace=True),
+		# 	# torch.nn.BatchNorm3d(num_features=64),
+		# )
+		# self.layer3 = torch.nn.Sequential(
+		# 	conv(32, 64, kernel_size=kernel_size, stride=stride, bias=True, padding=padding, **partial_kwargs),
+		# 	torch.nn.ReLU(inplace=True),
+		# 	# torch.nn.BatchNorm3d(num_features=64),
+		# )
+		# self.layer4 = torch.nn.Sequential(
+		# 	conv(64, 64, kernel_size=(1, 1, 1), stride=1, bias=True, padding=0, **partial_kwargs),
+		# )
 
 		self.layer1 = torch.nn.Sequential(
-			conv(n_input_channels, 32, kernel_size=8, stride=4, bias=True, padding=0, **partial_kwargs),
+			conv(n_input_channels, 32, kernel_size=3, stride=2, bias=True, padding=0, **partial_kwargs),
 			torch.nn.ReLU(inplace=True),
 			# torch.nn.BatchNorm3d(num_features=32),
 		)
 		self.layer2 = torch.nn.Sequential(
-			conv(32, 64, kernel_size=4, stride=2, bias=True, padding=0, **partial_kwargs),
+			conv(32, 64, kernel_size=3, stride=2, bias=True, padding=0, **partial_kwargs),
 			torch.nn.ReLU(inplace=True),
 			# torch.nn.BatchNorm3d(num_features=64),
 		)
 		self.layer3 = torch.nn.Sequential(
-			conv(64, 64, kernel_size=3, stride=1, bias=True, padding=0, **partial_kwargs),
+			conv(64, 128, kernel_size=3, stride=2, bias=True, padding=0, **partial_kwargs),
 			torch.nn.ReLU(inplace=True),
 			# torch.nn.BatchNorm3d(num_features=64),
 		)
@@ -120,30 +144,52 @@ class EDeNN(BaseFeaturesExtractor):
 		new_prev_x = []
 		mask = (x != 0).float()
 
+		# print(f"Input: {x.shape}")
 		x, mask = self.process(self.layer1, x, mask, prev_x[0])
 		if not calc_n_flatten:
 			new_prev_x.append(x.detach()[:, :, -1])
+		# print(f"After layer 1: {x.shape}")
 		x, mask = self.process(self.layer2, x, mask, prev_x[1])
 		if not calc_n_flatten:
 			new_prev_x.append(x.detach()[:, :, -1])
+		# print(f"After layer 2: {x.shape}")
 		x, mask = self.process(self.layer3, x, mask, prev_x[2])
 		if not calc_n_flatten:
 			new_prev_x.append(x.detach()[:, :, -1])
+		# print(f"After layer 3: {x.shape}")
 		# x, mask = self.process(self.layer4, x, mask, prev_x[3])
 		# if not calc_n_flatten:
 		# 	new_prev_x.append(x.detach())
 
 		x = x[:, :, -1:] # Only consider the last time bin, but keep dimension
+		# print(f"After flatten: {x.shape}")
 		# x = x[:, :, self.num_bins - 1::self.num_bins] # Only consider the last time bin FOR EACH WINDOW
 		if calc_n_flatten:
 			return x
+
+		# # x = RolloutBuffer.unflatten_and_swap_feat(x, self.num_bins)
+		# x = RolloutBuffer.unflatten_and_swap_feat(x, 1)
+		# print(f"edenn after again: {x.shape}")
+		# # x = RolloutBuffer.swap_and_flatten(x[None, ...])
+		# x = RolloutBuffer.swap_and_flatten(x)
+		# print(f"edenn after again...: {x.shape}")
+
 		# Similar to `RolloutBuffer.swap_and_flatten()`, but we already did some steps
+		# t = torch.ones([8, 64, 768, 7, 7])
+		# torch.nn.Linear(64*7*7, 2)(torch.nn.Flatten()(t[:, :, 5::6].permute(2, 0, 1, 3, 4).reshape(128 * 8, 64, 7, 7))).shape
+		#
+		# x = x.permute(2, 0, 1, 3, 4)
 		# Result needs to be shaped like (all time steps) * environments
-		x = x.permute(0, 2, 1, 3, 4)
-		x = x.reshape(x.shape[0] * x.shape[1], *x.shape[2:])
+		# x = x.permute(0, 2, 1, 3, 4)
+		# x = x.reshape(128 * 8, 64, 7, 7)
+		# x = x.reshape(x.shape[0] * x.shape[1], *x.shape[2:])
+		# print(f"edenn after again: {x.shape}")
+		# quit(0)
 
 		# The sizes of `x` and `mask` will diverge here, but that's OK as we don't need the mask anymore
 		x = self.layer_last(x)
+		# print(f"After last: {x.shape}")
+		# quit(0)
 
 		# x: [1, self.features_dim]
 		return x, new_prev_x
@@ -180,12 +226,16 @@ class EDeNN(BaseFeaturesExtractor):
 		for module in sequential:
 			if isinstance(module, torch.nn.Linear):
 				x = x.mean(dim=(3, 4)) # NCDHW -> NCD
+				# print(f"x.shape1: {x.shape}")
 				x = x.permute(0, 2, 1) # NCD -> NDC
+				# print(f"x.shape2: {x.shape}")
 				x = module(x)
+				# print(f"x.shape3: {x.shape}")
 				x = x.permute(0, 2, 1) # NDC -> NCD
+				# print(f"x.shape4: {x.shape}")
 			elif isinstance(module, Decay3dPartial):
 				if mask is not None:
-					x, mask, weights = module(x, mask, previous_output)
+					x, mask = module(x, mask, previous_output)
 			else:
 				x = module(x)
 
