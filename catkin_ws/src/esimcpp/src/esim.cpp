@@ -104,7 +104,7 @@ event_camera_simulator::Events SimulatorBridge::img2events(pybind11::array_t<uin
 
 //==================================================================================================
 PYBIND11_MODULE(esimcpp, m) {
-	m.doc() = "pybind11 example plugin"; // optional module docstring
+	m.doc() = "ESIM simulator bridge for python"; // optional module docstring
 
 	pybind11::class_<SimulatorBridge>(m, "SimulatorBridge")
 		.def(pybind11::init<const double &, const double &, const double &, const double &, const int64_t &, const bool &, const double &, const bool &>())

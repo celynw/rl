@@ -21,11 +21,6 @@ catkin_install_python(
 	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
-# DEBUG
-# FIX undefined reference to `PyCMethod_New' when catkin building
-# add_executable(${PROJECT_NAME}_node src/esim.cpp)
-# target_link_libraries(${PROJECT_NAME}_node ${catkin_LIBRARIES})
-
 install(
 	TARGETS ${PROJECT_NAME}
 	LIBRARY DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
