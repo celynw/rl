@@ -36,7 +36,8 @@ class MountainCarEvents(EventEnv, MountainCarEnv):
 		parser = EventEnv.add_argparse_args(parser)
 		# https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/hyperparams/ppo.yml#L45
 		# parser.set_defaults(steps=1e6)
-		parser.set_defaults(n_steps=16 * 16) # n_envs = 16, rollout buffer size is n_steps * n_envs
+		parser.set_defaults(n_envs=16) # n_envs = 16, rollout buffer size is n_steps * n_envs
+		parser.set_defaults(n_steps=16) # n_envs = 16, rollout buffer size is n_steps * n_envs
 		parser.set_defaults(gae_lambda=0.95)
 		parser.set_defaults(gamma=0.99)
 		parser.set_defaults(n_epochs=4)
