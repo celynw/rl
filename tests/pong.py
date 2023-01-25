@@ -145,15 +145,16 @@ def main(args: argparse.Namespace):
 		policy_kwargs=dict(features_extractor_class=features_extractor_class, net_arch=[], features_extractor_kwargs=features_extractor_kwargs, detach=False),
 		# policy_kwargs=dict(features_extractor_class=features_extractor_class, net_arch=[], features_extractor_kwargs=features_extractor_kwargs),
 		env=env,
-		batch_size=256, # Probably doesn't do anything, batch size is 1
-		clip_range=0.1,
-		ent_coef=0.01,
-		gae_lambda=0.95,
-		gamma=0.99,
-		learning_rate=lambda f : f * 2.5e-4 if envtype is EnvType.PONG else args.lr,
+		batch_size=batch_size, # 256, # Probably doesn't do anything, batch size is 1
+		clip_range=clip_range, # 0.1
+		ent_coef=ent_coef, # 0.01
+		gae_lambda=gae_lambda, # 0.95
+		gamma=gamma, # 0.99
+		# learning_rate=lambda f : f * 2.5e-4 if envtype is EnvType.PONG else args.lr,
+		learning_rate=lr,
 		max_grad_norm=0.5,
-		n_epochs=4,
-		n_steps=args.n_steps,
+		n_epochs=n_epochs, # 4
+		n_steps=n_steps, # args.n_steps,
 		vf_coef=0.5,
 		tensorboard_log=Path(run.dir) if not args.nolog else None, # Will be appended by `tb_log_name`
 		verbose=1,
