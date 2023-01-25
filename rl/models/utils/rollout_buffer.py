@@ -16,6 +16,7 @@ class RolloutBufferSamples(NamedTuple):
 	returns: torch.Tensor
 	states: torch.Tensor
 	resets: torch.Tensor
+	# indices: torch.Tensor
 
 
 # ==================================================================================================
@@ -27,12 +28,14 @@ class RolloutBuffer(SB3_ROB):
 		super().__init__(*args, **kwargs)
 		self.states = None
 		self.resets = None
+		# self.indices = None
 
 	# ----------------------------------------------------------------------------------------------
 	def reset(self) -> None:
 		super().reset()
 		self.states = np.zeros((self.buffer_size, self.n_envs) + self.physics_shape, dtype=np.float32)
 		self.resets = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
+		# self.indices = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
 
 	# ----------------------------------------------------------------------------------------------
 	def _get_samples(self, batch_inds: np.ndarray, env: Optional[VecNormalize] = None) -> RolloutBufferSamples:
@@ -56,6 +59,7 @@ class RolloutBuffer(SB3_ROB):
 			self.returns[batch_inds],
 			self.states[batch_inds],
 			self.resets[batch_inds],
+			# self.indices[batch_inds],
 		)
 
 		return RolloutBufferSamples(*tuple(map(self.to_torch, data)))
@@ -67,6 +71,7 @@ class RolloutBuffer(SB3_ROB):
 		else:
 			self.states[self.pos] = state
 		self.resets[self.pos] = reset.clone().cpu().numpy()
+		# self.indices[self.pos] = [float(f"{self.pos}.{e + 1}") for e in range(obs.shape[0])]
 		super().add(obs, action, reward, episode_start, value, log_prob)
 
 	# ----------------------------------------------------------------------------------------------
@@ -113,8 +118,10 @@ class RolloutBuffer(SB3_ROB):
 				"returns",
 				"states",
 				"resets",
+				# "indices",
 			]
 			for tensor in _tensor_names:
+				# self.__dict__[tensor] = self.swap_and_flatten(self.__dict__[tensor])???
 				shape = self.__dict__[tensor].shape
 				self.__dict__[tensor] = self.__dict__[tensor].reshape(shape[0] * shape[1], *shape[2:])
 			self.generator_ready = True
