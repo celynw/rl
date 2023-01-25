@@ -112,14 +112,13 @@ def main(args: argparse.Namespace):
 	# )
 
 	# FIX # result_dim = env.state_space.shape[-1] if hasattr(env, "state_space") else env.observation_space.shape[0]
-	# result_dim = 4 # CartPole
 	features_extractor_kwargs = dict(
 		# features_dim=result_dim,
 		# features_dim=256,
-		features_dim=512,
+		features_dim=result_dim if (args.bs and not args.ph) else 512,
 		#
 		# features_dim=256,
-		# projection_head=result_dim,
+		projection_head=result_dim if args.ph else None,
 		#
 		# # DEBUG
 		# features_dim=result_dim,
@@ -128,6 +127,8 @@ def main(args: argparse.Namespace):
 	if featex is FeatEx.SNN:
 		features_extractor_kwargs["fps"] = get_base_envs(env)[0].fps
 		features_extractor_kwargs["tsamples"] = args.tsamples
+	elif featex is FeatEx.EDENN:
+		features_extractor_kwargs["use_bootstrap"] = args.bs
 
 	# https://github.com/DLR-RM/rl-trained-agents/blob/10a9c31e806820d59b20d8b85ca67090338ea912/ppo/PongNoFrameskip-v4_1/PongNoFrameskip-v4/config.yml
 	# model = SB3_PPO(
@@ -139,7 +140,7 @@ def main(args: argparse.Namespace):
 		# try:
 		# - detach=True
 		# - optimizer_kwargs=optimizer_kwargs
-		policy_kwargs=dict(features_extractor_class=features_extractor_class, net_arch=[], features_extractor_kwargs=features_extractor_kwargs, detach=False),
+		policy_kwargs=dict(features_extractor_class=features_extractor_class, net_arch=[], features_extractor_kwargs=features_extractor_kwargs, detach=args.ph or args.bs),
 		# policy_kwargs=dict(features_extractor_class=features_extractor_class, net_arch=[], features_extractor_kwargs=features_extractor_kwargs),
 		env=env,
 		batch_size=batch_size, # 256, # Probably doesn't do anything, batch size is 1
@@ -461,6 +462,8 @@ def parse_args() -> argparse.Namespace:
 	parser.add_argument("-n", "--n_envs", type=int, default=8, help="Number of parallel environments")
 	parser.add_argument("--n_steps", type=int, default=128, help="Number of steps before each weights update")
 	parser.add_argument("--map_ram", action="store_true", help="Use RAM mappings rather than full RAM state")
+	parser.add_argument("--ph", action="store_true", help="Use projection head")
+	parser.add_argument("--bs", action="store_true", help="Use bootstrap loss")
 
 	args = parser.parse_args()
 
@@ -478,7 +481,13 @@ def parse_args() -> argparse.Namespace:
 	elif args.name == "EDeNN":
 		featex = FeatEx.EDENN
 
-	return parser.parse_args()
+	if args.name != "EDeNN":
+		args.ph = False
+		args.bs = False
+
+	assert not (args.ph and not args.bs)
+
+	return args
 
 
 # ==================================================================================================
@@ -507,6 +516,8 @@ if __name__ == "__main__":
 		lr = 0.001
 		clip_range = 0.2
 		batch_size = 256
+
+		result_dim = 4
 	elif envtype is EnvType.MOUNTAINCAR:
 		env_name = "MountainCarRGB-v0" if featex is FeatEx.NATURECNNRGB else "MountainCarEvents-v0"
 	elif envtype is EnvType.PONG:
@@ -524,6 +535,7 @@ if __name__ == "__main__":
 		gae_lambda = 0.8
 		gamma = 0.98
 
+		result_dim = 6
 	# wrapper_class = AtariWrapper if envtype is EnvType.PONG and featex is FeatEx.NATURECNNRGB else None
 	wrapper_class = AtariWrapper if envtype is EnvType.PONG else None
 

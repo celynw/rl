@@ -175,7 +175,8 @@ class ActorCriticPolicy(SB3_ACP):
 		# self.debug_step2 += 1
 
 
-		if not self.detach: # FIX - remove?? replace with check for EDeNN and projection head? Actually, replace detach with that check in the first place?
+		# if not self.detach: # FIX - remove?? replace with check for EDeNN and projection head? Actually, replace detach with that check in the first place?
+		if not self.features_extractor.use_bootstrap:
 			return values, log_prob, entropy # As in super()
 
 		# `self.features_extractor` always feeds through its layers up to `layer_last` to produce `features`.

@@ -13,7 +13,7 @@ from rl.models.utils import Decay3dPartial, Decay3d#, RolloutBuffer
 # ==================================================================================================
 class EDeNN(BaseFeaturesExtractor):
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, observation_space: spaces.Box, features_dim: int, projection_head: Optional[int] = None):
+	def __init__(self, observation_space: spaces.Box, features_dim: int, projection_head: Optional[int] = None, use_bootstrap: bool = False):
 		"""
 		Feature extractor using "EDeNN: Event Decay Neural Networks for low latency vision" (Celyn Walters, Simon Hadfield).
 		https://arxiv.org/abs/2209.04362
@@ -22,11 +22,13 @@ class EDeNN(BaseFeaturesExtractor):
 			observation_space (spaces.Box): Observation space from environment.
 			features_dim (int): Output size of final layer (features) for RL policy.
 			projection_head (int, optional): Output size of projection head layer, or disable. Defaults to None.
+			use_bootstrap (bool): Use bootstrap loss. Defaults to False.
 		"""
 		self.observation_space = observation_space
 		self.num_bins = self.observation_space.shape[1]
 		super().__init__(observation_space, features_dim)
 		self.projection_head = projection_head
+		self.use_bootstrap = use_bootstrap
 		self.init_layers(self.observation_space.shape[0])
 
 	# ----------------------------------------------------------------------------------------------

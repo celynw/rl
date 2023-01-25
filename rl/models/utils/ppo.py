@@ -442,7 +442,7 @@ class PPO(SB3_PPO):
 			clip_range_vf = self.clip_range_vf(self._current_progress_remaining)
 
 		entropy_losses = []
-		if isinstance(self.policy.features_extractor, rl.models.EDeNN) and self.policy.features_extractor.projection_head is not None:
+		if isinstance(self.policy.features_extractor, rl.models.EDeNN) and self.policy.features_extractor.use_bootstrap:
 			bs_losses = []
 		pg_losses, value_losses = [], []
 		clip_fractions = []
@@ -491,7 +491,8 @@ class PPO(SB3_PPO):
 					self.policy.reset_noise(self.n_epochs)
 
 				# For bootstrap loss
-				if isinstance(self.policy.features_extractor, rl.models.EDeNN) and self.policy.features_extractor.projection_head is not None:
+				# if isinstance(self.policy.features_extractor, rl.models.EDeNN) and self.policy.features_extractor.projection_head is not None:
+				if isinstance(self.policy.features_extractor, rl.models.EDeNN) and self.policy.features_extractor.use_bootstrap:
 					values, log_prob, entropy, features = self.policy.evaluate_actions(rollout_data.observations, actions, rollout_data.resets)
 				else:
 					values, log_prob, entropy = self.policy.evaluate_actions(rollout_data.observations, actions, rollout_data.resets)
@@ -537,14 +538,14 @@ class PPO(SB3_PPO):
 
 				entropy_losses.append(entropy_loss.item())
 
-				if isinstance(self.policy.features_extractor, rl.models.EDeNN) and self.policy.features_extractor.projection_head is not None:
+				if isinstance(self.policy.features_extractor, rl.models.EDeNN) and self.policy.features_extractor.use_bootstrap:
 					bs_loss = F.l1_loss(features, rollout_data.states) # Assumed getting a single step out of the buffer at a time
 
-				if isinstance(self.policy.features_extractor, rl.models.EDeNN) and self.policy.features_extractor.projection_head is not None:
+				if isinstance(self.policy.features_extractor, rl.models.EDeNN) and self.policy.features_extractor.use_bootstrap:
 					loss = (policy_loss * self.pl_coef) + (entropy_loss * self.ent_coef) + (value_loss * self.vf_coef) + (bs_loss * self.bs_coef)
 				else:
 					loss = (policy_loss * self.pl_coef) + (entropy_loss * self.ent_coef) + (value_loss * self.vf_coef)
-				if isinstance(self.policy.features_extractor, rl.models.EDeNN) and self.policy.features_extractor.projection_head is not None:
+				if isinstance(self.policy.features_extractor, rl.models.EDeNN) and self.policy.features_extractor.use_bootstrap:
 					bs_losses.append(bs_loss.item())
 
 				# if self.save_loss:
