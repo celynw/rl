@@ -9,3 +9,9 @@
 1.	```bash
 	docker build -t esim_rl --ssh default .
 	```
+	...
+
+	```bash
+	cd ../../../ # Where `./venv/` is
+	docker build -t esim_rl --ssh default -f docker/esim/esim_rl/Dockerfile .
+	```

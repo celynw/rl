@@ -4,16 +4,21 @@ ARG USERNAME=docker
 ADD --chown=$USERNAME venv /home/docker/venv
 WORKDIR /home/$USERNAME
 ENV LD_LIBRARY_PATH=/home/docker/venv/lib:$LD_LIBRARY_PATH
+ADD --chown=$USERNAME catkin_ws_local/devel/.private/esimcpp/lib/python3/dist-packages/esimcpp.cpython-310-x86_64-linux-gnu.so /home/docker/catkin_ws/devel/lib/python3/dist-packages/
 
 
 # Then
 #
-# dr -ti --runtime=nvidia -v $HOME/Work/dev/py/rl:/home/docker/rl esim_rl
+dr -ti --runtime=nvidia -v $HOME/Work/dev/py/rl:/home/docker/rl esim_rl
 # dr -ti --gpus=all -v $HOME/Work/dev/py/rl:/home/docker/rl esim_rl
+# podman run --user 1000:1000 --security-opt=no-new-privileges --cap-drop=ALL --security-opt label=type:nvidia_container_t docker.io/mirrorgooglecontainers/cuda-vector-add:v0.1
+# podman run --user 1000:1000 --security-opt=no-new-privileges --cap-drop=ALL --security-opt label=type:nvidia_container_t celynw/esim_rl:v5
+# podman run --user 1000:1000 --security-opt=no-new-privileges --cap-drop=ALL --security-opt label=type:nvidia_container_t celynw/esim_rl:v5
+
 #
 # ./venv/bin/python -m pip install -e rl/
-# ./venv/bin/python ./rl/tests/pong.py
 # export WANDB_API_KEY=023a97fec4d807d5c9af2fd9418c9dccfa0cba5c
+# ./venv/bin/python ./rl/tests/pong.py
 
 
 
