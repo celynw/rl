@@ -482,11 +482,31 @@ if __name__ == "__main__":
 		env_name = "CartPoleRGB-v0" if featex is FeatEx.NATURECNNRGB else "CartPoleEvents-v0"
 		output_width = 600
 		output_height = 400
+
+		n_steps = 32
+		gae_lambda = 0.8
+		gamma = 0.98
+		n_epochs = 20
+		ent_coef = 0.0
+		lr = 0.001
+		clip_range = 0.2
+		batch_size = 256
 	elif envtype is EnvType.MOUNTAINCAR:
 		env_name = "MountainCarRGB-v0" if featex is FeatEx.NATURECNNRGB else "MountainCarEvents-v0"
 	elif envtype is EnvType.PONG:
 		# env_name = "PongNoFrameskip-v4" if featex is FeatEx.NATURECNNRGB else "PongEvents-v0"
 		env_name = "PongRGB-v0" if featex is FeatEx.NATURECNNRGB else "PongEvents-v0"
+
+		n_steps = 128
+		n_epochs = 4
+		ent_coef = 0.01
+		lr = 2.5e-4
+		clip_range = 0.1
+		batch_size = 256
+
+		# ?
+		gae_lambda = 0.8
+		gamma = 0.98
 
 	# wrapper_class = AtariWrapper if envtype is EnvType.PONG and featex is FeatEx.NATURECNNRGB else None
 	wrapper_class = AtariWrapper if envtype is EnvType.PONG else None

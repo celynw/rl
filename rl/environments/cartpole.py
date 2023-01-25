@@ -37,7 +37,8 @@ class CartPoleEvents(EventEnv, CartPoleEnv):
 		parser = EventEnv.add_argparse_args(parser)
 		# https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/hyperparams/ppo.yml#L32
 		# parser.set_defaults(steps=1e5)
-		parser.set_defaults(n_steps=32 * 8) # n_envs = 8, rollout buffer size is n_steps * n_envs
+		parser.set_defaults(n_envs=8)
+		parser.set_defaults(n_steps=32)
 		parser.set_defaults(gae_lambda=0.8)
 		parser.set_defaults(gamma=0.98)
 		parser.set_defaults(n_epochs=20)

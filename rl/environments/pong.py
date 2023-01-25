@@ -33,7 +33,8 @@ class PongEvents(AtariEventEnv):
 		# https://github.com/DLR-RM/rl-trained-agents/blob/1e2a45e5d06efd6cc15da6cf2d1939d72dcbdf87/ppo/PongNoFrameskip-v4_1/PongNoFrameskip-v4/config.yml
 		# and refer to https://github.com/DLR-RM/rl-trained-agents/blob/1e2a45e5d06efd6cc15da6cf2d1939d72dcbdf87/ppo/PongNoFrameskip-v4_1/PongNoFrameskip-v4/args.yml
 		# # parser.set_defaults(steps=10000000)
-		parser.set_defaults(n_steps=128) # rollout buffer full size is n_steps * n_envs
+		parser.set_defaults(n_envs=8)
+		parser.set_defaults(n_steps=128)
 		parser.set_defaults(n_epochs=4)
 		parser.set_defaults(ent_coef=0.01)
 		parser.set_defaults(lr=2.5e-4)
