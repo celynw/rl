@@ -41,9 +41,6 @@ class FeatEx(Enum):
 	SNN = auto(),
 	EDENN = auto(),
 
-envtype = EnvType.PONG
-featex = FeatEx.EDENN
-
 
 # ==================================================================================================
 def main(args: argparse.Namespace):
@@ -451,9 +448,11 @@ class AtariWrapper(gym.Wrapper):
 
 # ==================================================================================================
 def parse_args() -> argparse.Namespace:
+	global envtype
+	global featex
 	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, allow_abbrev=False)
-	parser.add_argument("project", type=str, help="Name for the wandb project")
-	parser.add_argument("name", type=str, help="Name for the wandb run")
+	parser.add_argument("project", type=str, help="Name for the wandb project", choices=["CartPole2", "Pong"])
+	parser.add_argument("name", type=str, help="Name for the wandb run", choices=["NatureCNN_RGB", "NatureCNN_events", "SNN", "EDeNN"])
 	parser.add_argument("--nolog", action="store_true", help="Don't log to wandb")
 	parser.add_argument("--novid", action="store_true", help="Don't log videos")
 	parser.add_argument("--fps", type=int, default=30)
@@ -462,6 +461,22 @@ def parse_args() -> argparse.Namespace:
 	parser.add_argument("-n", "--n_envs", type=int, default=8, help="Number of parallel environments")
 	parser.add_argument("--n_steps", type=int, default=128, help="Number of steps before each weights update")
 	parser.add_argument("--map_ram", action="store_true", help="Use RAM mappings rather than full RAM state")
+
+	args = parser.parse_args()
+
+	if args.project == "CartPole2":
+		envtype = EnvType.CARTPOLE
+	elif args.project == "Pong":
+		envtype = EnvType.PONG
+
+	if args.name == "NatureCNN_RGB":
+		featex = FeatEx.NATURECNNRGB
+	elif args.name == "NatureCNN_events":
+		featex = FeatEx.NATURECNNEVENTS
+	elif args.name == "SNN":
+		featex = FeatEx.SNN
+	elif args.name == "EDeNN":
+		featex = FeatEx.EDENN
 
 	return parser.parse_args()
 
