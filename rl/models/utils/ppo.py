@@ -539,7 +539,7 @@ class PPO(SB3_PPO):
 				entropy_losses.append(entropy_loss.item())
 
 				if isinstance(self.policy.features_extractor, rl.models.EDeNN) and self.policy.features_extractor.use_bootstrap:
-					bs_loss = F.l1_loss(features, rollout_data.states) # Assumed getting a single step out of the buffer at a time
+					bs_loss = F.l1_loss(features, rollout_data.states.squeeze(1)) # Assumed getting a single step out of the buffer at a time
 
 				if isinstance(self.policy.features_extractor, rl.models.EDeNN) and self.policy.features_extractor.use_bootstrap:
 					loss = (policy_loss * self.pl_coef) + (entropy_loss * self.ent_coef) + (value_loss * self.vf_coef) + (bs_loss * self.bs_coef)
