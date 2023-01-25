@@ -104,11 +104,12 @@ def main(args: argparse.Namespace):
 			env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 200000 == 0, video_length=video_length, render_events=True, sum_events=False, name_prefix="events-video.1")
 		env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 200000 == 0, video_length=video_length, name_prefix="rgb-video.2") # RGB
 
+	if featex is FeatEx.NATURECNNRGB:
 	# if envtype is EnvType.PONG:
-	# 	# env = SkipCutscenesPong(env)
-	# 	env = VecFrameStack(env, n_stack=4)
-	# 	# env = VecFrameStack(env, n_stack=4, channels_order="first")
-	# 	# env = VecTransposeImage(env) # Used to stop it complaining that train and eval envs are different (it is auto applied to one of them if not there) - for PongNoFrameSkip-v4?
+		# env = SkipCutscenesPong(env)
+		env = VecFrameStack(env, n_stack=4)
+		# env = VecFrameStack(env, n_stack=4, channels_order="first")
+		# env = VecTransposeImage(env) # Used to stop it complaining that train and eval envs are different (it is auto applied to one of them if not there) - for PongNoFrameSkip-v4?
 
 	# optimizer_kwargs = dict(
 	# )
