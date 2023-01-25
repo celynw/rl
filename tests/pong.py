@@ -484,8 +484,7 @@ if __name__ == "__main__":
 		output_width = 600
 		output_height = 400
 
-		# n_steps = 32
-		n_steps = 256
+		n_steps = 32
 		gae_lambda = 0.8
 		gamma = 0.98
 		n_epochs = 20
