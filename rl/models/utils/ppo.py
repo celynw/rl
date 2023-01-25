@@ -469,6 +469,7 @@ class PPO(SB3_PPO):
 			raise RuntimeError(f"n_envs ({self.n_envs}) must go into batch_size ({self.batch_size})")
 		accumulation_steps = int(accumulation_steps)
 		accumulate_iterations = 0
+		losses = 0
 
 		# train for n_epochs epochs
 		for epoch in range(self.n_epochs):
@@ -564,15 +565,23 @@ class PPO(SB3_PPO):
 						print(f"Early stopping at step {epoch} due to reaching max kl: {approx_kl_div:.2f}")
 					break
 
+				assert not torch.isnan(loss) # Catch before too late, doesn't seem to trip up the training
+				losses = losses + loss
+
 				accumulate_iterations += 1
 				# Optimization step
 				if (accumulate_iterations) % accumulation_steps == 0:
 					self.policy.optimizer.zero_grad()
 
 				# self.policy.optimizer.zero_grad()
-				assert not torch.isnan(loss) # Catch before too late, doesn't seem to trip up the training
-				loss.backward()
+				# assert not torch.isnan(loss) # Catch before too late, doesn't seem to trip up the training
+				# loss = loss / accumulation_steps
+				# loss.backward()
 				if (accumulate_iterations) % accumulation_steps == 0:
+					# print(f"effective batch size: {self.n_envs * accumulate_iterations}")
+					accumulate_iterations = 0
+					losses.backward()
+					losses = 0
 					# Clip grad norm
 					torch.nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
 					self.policy.optimizer.step()
