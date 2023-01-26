@@ -31,7 +31,8 @@ from enum import Enum, auto
 
 # ==================================================================================================
 class EnvType(Enum):
-	CARTPOLE = auto()
+	CARTPOLE = auto(),
+	PENDULUM = auto(),
 	MOUNTAINCAR = auto(),
 	PONG = auto(),
 # ==================================================================================================
@@ -452,7 +453,7 @@ def parse_args() -> argparse.Namespace:
 	global envtype
 	global featex
 	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, allow_abbrev=False)
-	parser.add_argument("project", type=str, help="Name for the wandb project", choices=["CartPole2", "Pong"])
+	parser.add_argument("project", type=str, help="Name for the wandb project", choices=["CartPole2", "Pendulum", "Pong"])
 	parser.add_argument("name", type=str, help="Name for the wandb run", choices=["NatureCNN_RGB", "NatureCNN_events", "SNN", "EDeNN"])
 	parser.add_argument("--nolog", action="store_true", help="Don't log to wandb")
 	parser.add_argument("--novid", action="store_true", help="Don't log videos")
@@ -469,6 +470,8 @@ def parse_args() -> argparse.Namespace:
 
 	if args.project == "CartPole2":
 		envtype = EnvType.CARTPOLE
+	if args.project == "Pendulum":
+		envtype = EnvType.PENDULUM
 	elif args.project == "Pong":
 		envtype = EnvType.PONG
 
@@ -518,6 +521,21 @@ if __name__ == "__main__":
 		batch_size = 256
 
 		result_dim = 4
+	elif envtype is EnvType.PENDULUM:
+		env_name = "PendulumRGB-v0" if featex is FeatEx.NATURECNNRGB else "PendulumEvents-v0"
+		output_width = 500 # ?
+		output_height = 500 # ?
+
+		n_steps = 1024
+		gae_lambda = 0.95
+		gamma = 0.9
+		n_epochs = 10
+		ent_coef = 0.0
+		lr = 1e-3
+		clip_range = 0.2
+
+		batch_size = 256
+		result_dim = 2
 	elif envtype is EnvType.MOUNTAINCAR:
 		env_name = "MountainCarRGB-v0" if featex is FeatEx.NATURECNNRGB else "MountainCarEvents-v0"
 	elif envtype is EnvType.PONG:

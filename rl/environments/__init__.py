@@ -1,4 +1,5 @@
 from .cartpole import CartPoleEvents, CartPoleRGB
+from .pendulum import PendulumEvents
 from .mountaincar import MountainCarEvents, MountainCarRGB
 from .pong import PongEvents, PongRGB
 from .freeway import FreewayEvents
@@ -14,6 +15,12 @@ register(
 	entry_point=CartPoleEvents,
 	max_episode_steps=500, # CartPole-v1
 	reward_threshold=475.0, # CartPole-v1
+)
+register(
+	id=f"{PendulumEvents.__qualname__}-{version}",
+	entry_point=PendulumEvents,
+	max_episode_steps=200, # Pendulum-v1
+	reward_threshold=0, # Pendulum-v1
 )
 register(
 	id=f"{CartPoleRGB.__qualname__}-{version}",
