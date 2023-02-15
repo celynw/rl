@@ -38,7 +38,7 @@ RUN apt-get autoremove -y && \
 RUN rm -rf /var/lib/apt/lists/*
 
 # NVIDIA
-FROM nvidia/cuda:11.7.1-cudnn8-runtime-ubuntu20.04
+FROM nvidia/cuda:11.6.2-cudnn8-runtime-ubuntu20.04
 # Create a user
 ARG USERNAME=docker
 ARG USERID=1000
