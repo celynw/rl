@@ -11,13 +11,25 @@ from atariari.benchmark.wrapper import ram2label
 from rl.environments.utils import AtariEventEnv
 
 # ==================================================================================================
-class PongEvents(AtariEventEnv):
+class MsPacmanEvents(AtariEventEnv):
 	# FIX X and Y??
-	wanted_states: list[str] = ["player_y", "player_x", "enemy_y", "enemy_x", "ball_x", "ball_y"]
+	wanted_states: list[str] = [
+		"player_x", "player_y",
+		"player_direction",
+		"player_score",
+		"dots_eaten_count",
+		"num_lives",
+		"enemy_inky_x", "enemy_inky_y",
+		"enemy_pinky_x", "enemy_pinky_y",
+		"enemy_blinky_x", "enemy_blinky_y",
+		"enemy_sue_x", "enemy_sue_y",
+		"ghosts_count",
+		"fruit_x", "fruit_y",
+	] # TODO choose from these
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, *args, **kwargs):
 		# self.output_height -= (35 + 15) # For `self.resize()`
-		super().__init__(*args, game="pong", output_width=84, output_height=84, **kwargs)
+		super().__init__(*args, game="ms_pacman", output_width=84, output_height=84, **kwargs)
 
 	# ----------------------------------------------------------------------------------------------
 	@staticmethod
@@ -26,12 +38,12 @@ class PongEvents(AtariEventEnv):
 
 		# group = [g for g in parser._action_groups if g.title == "Environment"][0]
 
-		# PongNoFrameskip-v4
+		# MsPacmanNoFrameskip-v4
 		# NOTE: I'm using a frameskip
 		# NOTE: They also use a frame stack of 4
 		# https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/hyperparams/ppo.yml#L1
-		# https://github.com/DLR-RM/rl-trained-agents/blob/1e2a45e5d06efd6cc15da6cf2d1939d72dcbdf87/ppo/PongNoFrameskip-v4_1/PongNoFrameskip-v4/config.yml
-		# and refer to https://github.com/DLR-RM/rl-trained-agents/blob/1e2a45e5d06efd6cc15da6cf2d1939d72dcbdf87/ppo/PongNoFrameskip-v4_1/PongNoFrameskip-v4/args.yml
+		# https://github.com/DLR-RM/rl-trained-agents/blob/1e2a45e5d06efd6cc15da6cf2d1939d72dcbdf87/ppo/MsPacmanNoFrameskip-v4_1/MsPacmanNoFrameskip-v4/config.yml
+		# and refer to https://github.com/DLR-RM/rl-trained-agents/blob/1e2a45e5d06efd6cc15da6cf2d1939d72dcbdf87/ppo/MsPacmanNoFrameskip-v4_1/MsPacmanNoFrameskip-v4/args.yml
 		# # parser.set_defaults(steps=10000000)
 		parser.set_defaults(n_envs=8)
 		parser.set_defaults(n_steps=128)
@@ -71,7 +83,7 @@ class PongEvents(AtariEventEnv):
 		frame = np.clip(frame * (255 / 89), 0, 255).astype("uint8")
 
 		# frame = np.transpose(frame, (1, 2, 0))
-		# frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY) # For PongNoFrameSkip but not PongRGB?
+		# frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY) # For MsPacmanNoFrameSkip but not MsPacmanRGB?
 		frame = cv2.resize(frame, (self.output_width, self.output_height), interpolation=cv2.INTER_AREA)
 
 		return frame
@@ -79,10 +91,22 @@ class PongEvents(AtariEventEnv):
 
 
 # ==================================================================================================
-class PongRGB(SB3_AtariEnv):
+class MsPacmanRGB(SB3_AtariEnv):
 	# TODO this has lots of overlap with AtariEventEnv...
 	# FIX X and Y??
-	wanted_states: list[str] = ["player_y", "player_x", "enemy_y", "enemy_x", "ball_x", "ball_y"]
+	wanted_states: list[str] = [
+		"player_x", "player_y",
+		"player_direction",
+		"player_score",
+		"dots_eaten_count",
+		"num_lives",
+		"enemy_inky_x", "enemy_inky_y",
+		"enemy_pinky_x", "enemy_pinky_y",
+		"enemy_blinky_x", "enemy_blinky_y",
+		"enemy_sue_x", "enemy_sue_y",
+		"ghosts_count",
+		"fruit_x", "fruit_y",
+	] # TODO choose from these
 	# ----------------------------------------------------------------------------------------------
 	def __init__(
 		self,
@@ -100,7 +124,7 @@ class PongRGB(SB3_AtariEnv):
 			self.metadata["render_fps"] = args.fps
 		# self.output_height -= (35 + 15) # For `self.resize()`
 		self.updatedPolicy = False # Used for logging whenever the policy is updated
-		self.game = "pong"
+		self.game = "ms_pacman"
 		self.output_width = output_width
 		self.output_height = output_height
 		super().__init__(
@@ -145,12 +169,12 @@ class PongRGB(SB3_AtariEnv):
 
 		# group = [g for g in parser._action_groups if g.title == "Environment"][0]
 
-		# PongNoFrameskip-v4
+		# MsPacmanNoFrameskip-v4
 		# NOTE: I'm using a frameskip
 		# NOTE: They also use a frame stack of 4
 		# https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/hyperparams/ppo.yml#L1
-		# https://github.com/DLR-RM/rl-trained-agents/blob/1e2a45e5d06efd6cc15da6cf2d1939d72dcbdf87/ppo/PongNoFrameskip-v4_1/PongNoFrameskip-v4/config.yml
-		# and refer to https://github.com/DLR-RM/rl-trained-agents/blob/1e2a45e5d06efd6cc15da6cf2d1939d72dcbdf87/ppo/PongNoFrameskip-v4_1/PongNoFrameskip-v4/args.yml
+		# https://github.com/DLR-RM/rl-trained-agents/blob/1e2a45e5d06efd6cc15da6cf2d1939d72dcbdf87/ppo/MsPacmanNoFrameskip-v4_1/MsPacmanNoFrameskip-v4/config.yml
+		# and refer to https://github.com/DLR-RM/rl-trained-agents/blob/1e2a45e5d06efd6cc15da6cf2d1939d72dcbdf87/ppo/MsPacmanNoFrameskip-v4_1/MsPacmanNoFrameskip-v4/args.yml
 		# # parser.set_defaults(steps=10000000)
 		parser.set_defaults(n_envs=8)
 		parser.set_defaults(n_steps=128)

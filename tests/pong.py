@@ -35,6 +35,7 @@ class EnvType(Enum):
 	PENDULUM = auto(),
 	MOUNTAINCAR = auto(),
 	PONG = auto(),
+	MSPACMAN = auto(),
 # ==================================================================================================
 class FeatEx(Enum):
 	NATURECNNRGB = auto(),
@@ -453,7 +454,7 @@ def parse_args() -> argparse.Namespace:
 	global envtype
 	global featex
 	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, allow_abbrev=False)
-	parser.add_argument("project", type=str, help="Name for the wandb project", choices=["CartPole2", "Pendulum", "Pong"])
+	parser.add_argument("project", type=str, help="Name for the wandb project", choices=["CartPole2", "Pendulum", "Pong", "MsPacman"])
 	parser.add_argument("name", type=str, help="Name for the wandb run", choices=["NatureCNN_RGB", "NatureCNN_events", "SNN", "EDeNN"])
 	parser.add_argument("--nolog", action="store_true", help="Don't log to wandb")
 	parser.add_argument("--novid", action="store_true", help="Don't log videos")
@@ -474,6 +475,8 @@ def parse_args() -> argparse.Namespace:
 		envtype = EnvType.PENDULUM
 	elif args.project == "Pong":
 		envtype = EnvType.PONG
+	elif args.project == "MsPacman":
+		envtype = EnvType.MSPACMAN
 
 	if args.name == "NatureCNN_RGB":
 		featex = FeatEx.NATURECNNRGB
@@ -538,9 +541,13 @@ if __name__ == "__main__":
 		result_dim = 2
 	elif envtype is EnvType.MOUNTAINCAR:
 		env_name = "MountainCarRGB-v0" if featex is FeatEx.NATURECNNRGB else "MountainCarEvents-v0"
-	elif envtype is EnvType.PONG:
+	elif envtype in [EnvType.PONG, EnvType.MSPACMAN]:
 		# env_name = "PongNoFrameskip-v4" if featex is FeatEx.NATURECNNRGB else "PongEvents-v0"
-		env_name = "PongRGB-v0" if featex is FeatEx.NATURECNNRGB else "PongEvents-v0"
+
+		if envtype is EnvType.PONG:
+			env_name = "PongRGB-v0" if featex is FeatEx.NATURECNNRGB else "PongEvents-v0"
+		elif envtype is EnvType.MSPACMAN:
+			env_name = "MsPacmanRGB-v0" if featex is FeatEx.NATURECNNRGB else "MsPacmanEvents-v0"
 
 		n_steps = 128
 		n_epochs = 4
@@ -555,7 +562,7 @@ if __name__ == "__main__":
 
 		result_dim = 6
 	# wrapper_class = AtariWrapper if envtype is EnvType.PONG and featex is FeatEx.NATURECNNRGB else None
-	wrapper_class = AtariWrapper if envtype is EnvType.PONG else None
+	wrapper_class = AtariWrapper if envtype in [EnvType.PONG, EnvType.MSPACMAN] else None
 
 	env_kwargs = dict(args=args)
 	# env_kwargs = {}
