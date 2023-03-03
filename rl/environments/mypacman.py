@@ -5,7 +5,7 @@ import tcod
 import random
 from enum import Enum
 
-unified_size = 32
+unified_size = 8
 
 # ==================================================================================================
 class Direction(Enum):
@@ -121,9 +121,6 @@ class GameRenderer:
 		self._hero: Hero = None
 		self._lives = 3
 		self._score = 0
-		self._score_cookie_pickup = 10
-		self._score_ghost_eaten = 400
-		self._score_powerup_pickup = 50
 		self._kokoro_active = False # powerup, special ability
 		self._current_mode = GhostBehaviour.SCATTER
 		self._mode_switch_event = pygame.USEREVENT + 1 # custom event
@@ -487,6 +484,7 @@ class Ghost(MovableObject):
 		self.game_controller = in_game_controller
 		# self.sprite_normal = pygame.image.load(sprite_path)
 		# self.sprite_fright = pygame.image.load("images/ghost_fright.png")
+		self.padding = unified_size // 8
 
 	# ----------------------------------------------------------------------------------------------
 	def reached_target(self):
@@ -548,9 +546,9 @@ class Ghost(MovableObject):
 
 	# ----------------------------------------------------------------------------------------------
 	def draw(self):
-		rect_object = pygame.Rect(self.x + 4, self.y + 4, self._size, self._size)
+		rect_object = pygame.Rect(self.x + self.padding, self.y + self.padding, self._size, self._size)
 		color = (0, 255, 255) if self._renderer.is_kokoro_active() else self._color
-		pygame.draw.rect(self._surface, color, rect_object, border_radius=4)
+		pygame.draw.rect(self._surface, color, rect_object, border_radius=0)
 		# self.image = self.sprite_fright if self._renderer.is_kokoro_active() else self.sprite_normal
 		# super(Ghost, self).draw()
 
@@ -559,14 +557,14 @@ class Ghost(MovableObject):
 class Cookie(GameObject):
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, in_surface, x, y):
-		super().__init__(in_surface, x, y, 4, (255, 185, 175), True)
+		super().__init__(in_surface, x, y, unified_size // 8, (255, 185, 175), True)
 
 
 # ==================================================================================================
 class Powerup(GameObject):
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, in_surface, x, y):
-		super().__init__(in_surface, x, y, 16, (255, 185, 175), True)
+		super().__init__(in_surface, x, y, unified_size // 2, (255, 185, 175), True)
 
 
 # ==================================================================================================
@@ -673,6 +671,8 @@ class PacmanGameController:
 
 # ==================================================================================================
 if __name__ == "__main__":
+	random.seed(0)
+
 	pacman_game = PacmanGameController()
 	size = pacman_game.size
 	game_renderer = GameRenderer(size[0] * unified_size, size[1] * unified_size)
@@ -694,7 +694,7 @@ if __name__ == "__main__":
 
 	for i, ghost_spawn in enumerate(pacman_game.ghost_spawns):
 		translated = translate_maze_to_screen(ghost_spawn)
-		ghost = Ghost(game_renderer, translated[0], translated[1], unified_size - 8, pacman_game, pacman_game.ghost_colors[i % 4])
+		ghost = Ghost(game_renderer, translated[0], translated[1], int(unified_size * 0.75), pacman_game, pacman_game.ghost_colors[i % 4])
 		# game_renderer.add_game_object(ghost)
 		game_renderer.add_ghost(ghost)
 
