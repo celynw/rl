@@ -343,6 +343,7 @@ def main(args: argparse.Namespace):
 				model_save_path=f"models/{run.id}",
 			),
 		]
+		wandb.watch(model.policy.features_extractor, log="all", log_graph=True)
 	callbacks += [EvalCallback(env, eval_freq=args.n_steps * 10, best_model_save_path=(Path(run.dir) / "checkpoints") if not args.nolog else None)]
 	model.learn(
 		total_timesteps=config["total_timesteps"],
