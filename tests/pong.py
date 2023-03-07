@@ -36,6 +36,7 @@ class EnvType(Enum):
 	MOUNTAINCAR = auto(),
 	PONG = auto(),
 	MSPACMAN = auto(),
+	MYPACMAN = auto(),
 # ==================================================================================================
 class FeatEx(Enum):
 	NATURECNNRGB = auto(),
@@ -477,6 +478,8 @@ def parse_args() -> argparse.Namespace:
 		envtype = EnvType.PONG
 	elif args.project == "MsPacman":
 		envtype = EnvType.MSPACMAN
+	elif args.project == "MyPacman":
+		envtype = EnvType.MYPACMAN
 
 	if args.name == "NatureCNN_RGB":
 		featex = FeatEx.NATURECNNRGB
@@ -561,6 +564,22 @@ if __name__ == "__main__":
 		gamma = 0.98
 
 		result_dim = 6
+	elif envtype is EnvType.MYPACMAN:
+		env_name = "MyPacmanRGB-v0" if featex is FeatEx.NATURECNNRGB else "MyPacmanEvents-v0"
+
+		n_steps = 128
+		n_epochs = 4
+		ent_coef = 0.01
+		lr = 2.5e-4
+		clip_range = 0.1
+		batch_size = 256
+
+		# ?
+		gae_lambda = 0.8
+		gamma = 0.98
+
+		result_dim = 6
+
 	# wrapper_class = AtariWrapper if envtype is EnvType.PONG and featex is FeatEx.NATURECNNRGB else None
 	wrapper_class = AtariWrapper if envtype in [EnvType.PONG, EnvType.MSPACMAN] else None
 
