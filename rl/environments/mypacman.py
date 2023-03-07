@@ -2,8 +2,8 @@
 import pygame
 import numpy as np
 import tcod
-import random
-from enum import Enum
+import gymnasium as gym
+from gymnasium import spaces
 
 unified_size = 8
 
@@ -692,13 +692,108 @@ if __name__ == "__main__":
 		powerup = Powerup(game_renderer, translated[0] + unified_size / 2, translated[1] + unified_size / 2)
 		game_renderer.add_powerup(powerup)
 
-	for i, ghost_spawn in enumerate(pacman_game.ghost_spawns):
-		translated = translate_maze_to_screen(ghost_spawn)
-		ghost = Ghost(game_renderer, translated[0], translated[1], int(unified_size * 0.75), pacman_game, pacman_game.ghost_colors[i % 4])
-		# game_renderer.add_game_object(ghost)
-		game_renderer.add_ghost(ghost)
+# ==================================================================================================
+class MyPacmanRGB(gym.Env):
+	metadata = {
+		"render_modes": ["human", "rgb_array"],
+		"render_fps": 120,
+	}
+	actions = [Direction.UP, Direction.RIGHT, Direction.LEFT, Direction.DOWN]
+	# ----------------------------------------------------------------------------------------------
+	def __init__(self, args: argparse.Namespace, render_mode: Optional[str] = None):
+		"""
+		RGB version of MountainCar environment.
 
-	translated = translate_maze_to_screen(pacman_game.pacman_spawn)
-	pacman = Hero(game_renderer, translated[0], translated[1], unified_size)
-	game_renderer.add_hero(pacman)
+		Args:
+			args (argparse.Namespace): Parsed arguments, depends on which specific env we're using.
+		"""
+		# Don't know why I have to do this
+		# When I look at MountainCar I don't think they do this
+		# But otherwise it complains that "pygame is not initialized" when I did call pygame.init()
+		import os
+		# import sys
+		os.environ["SDL_VIDEODRIVER"] = "dummy"
+
+		self.screen = None
+		pygame.init()
+		self.game = GameController()
+		self.renderer = Renderer(self.game)
+
+		self.render_mode = "rgb_array"
+		self.observation_space = spaces.Box(low=0, high=255, dtype=np.uint8, shape=(self.renderer.height, self.renderer.width, 3))
+		self.action_space = spaces.Discrete(len(self.actions))
+
+		self.last_score = 0
+
+	# ----------------------------------------------------------------------------------------------
+	def render(self):
+		self.game_renderer.screen.fill((0,0,0))
+		for game_object in self.game_renderer.game_objects:
+			game_object.draw()
+
+		return np.transpose(np.array(pygame.surfarray.pixels3d(self.game_renderer.screen)), axes=(1, 0, 2))
+
+	# ----------------------------------------------------------------------------------------------
+	def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
+		super().reset(seed=seed)
+
+		self.game = GameController()
+		self.game_renderer = Renderer(self.game)
+		self.last_score = 0
+
+		self.game_renderer.handle_mode_switch()
+		pygame.time.set_timer(self.game_renderer.pakupaku_event, 200) # open close mouth
+
+		return self.render(), self.get_info()
+
+	# ----------------------------------------------------------------------------------------------
+	def step(self, action: int):
+		assert self.action_space.contains(action), f"{action!r} ({type(action)}) invalid"
+
+		direction = self.actions[action]
+		assert self.game_renderer.hero is not None
+		self.game_renderer.hero.set_direction(direction)
+
+		for game_object in self.game_renderer.game_objects:
+			game_object.tick()
+		self.render()
+		self.game_renderer.clock.tick(self.metadata["render_fps"])
+		self.game_renderer.handle_events()
+
+		terminated = (self.game_renderer.lives == 0) or self.game_renderer.won
+		reward = self.game_renderer.score - self.last_score
+		self.last_score = self.game_renderer.score
+
+		return self.render(), reward, terminated, False, self.get_info()
+
+	# ----------------------------------------------------------------------------------------------
+	def close(self):
+		if self.screen is not None:
+			import pygame
+
+			pygame.display.quit()
+			pygame.quit()
+			self.isopen = False
+
+	# ----------------------------------------------------------------------------------------------
+	def get_info(self) -> dict:
+		"""
+		Return a created dictionary for the step info.
+
+		Returns:
+			dict: Key-value pairs for the step info.
+		"""
+		return {
+			# "state": self.state, # Used later for bootstrap loss
+			"state": 0, # TODO placeholder
+		}
+
+
+# ==================================================================================================
+if __name__ == "__main__":
+	random.seed(0)
+
+	game = GameController()
+	game_renderer = Renderer(game)
+
 	game_renderer.tick(120)
