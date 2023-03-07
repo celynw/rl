@@ -292,7 +292,7 @@ def main(args: argparse.Namespace):
 	callbacks += [EvalCallback(env, eval_freq=args.n_steps * 10, best_model_save_path=(Path(run.dir) / "checkpoints") / "best" if not args.nolog else None)]
 	model.learn(total_timesteps=config["total_timesteps"], callback=callbacks, tb_log_name="tensorboard")
 	if not args.nolog:
-		model.save(logdir / f"{args.project}_{args.project}.zip")
+		model.save(logdir / f"{args.project}_{args.name}.zip")
 
 
 # ==================================================================================================
@@ -457,8 +457,9 @@ def parse_args() -> argparse.Namespace:
 	global envtype
 	global featex
 	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, allow_abbrev=False)
-	parser.add_argument("project", type=str, help="Name for the wandb project", choices=["CartPole2", "Pendulum", "Pong", "MsPacman"])
-	parser.add_argument("name", type=str, help="Name for the wandb run", choices=["NatureCNN_RGB", "NatureCNN_events", "SNN", "EDeNN"])
+	parser.add_argument("project", type=str, help="Name for the wandb project", choices=["CartPole2", "Pendulum", "Pong", "MsPacman", "MyPacman"])
+	parser.add_argument("model", type=str, help="Model used. Affects which internal environment is used", choices=["NatureCNN_RGB", "NatureCNN_events", "SNN", "EDeNN"])
+	parser.add_argument("-N", "--name", type=str, help="Name for the wandb run. Uses `model` if unspecified", default=None)
 	parser.add_argument("--nolog", action="store_true", help="Don't log to wandb")
 	parser.add_argument("--novid", action="store_true", help="Don't log videos")
 	parser.add_argument("--fps", type=int, default=30)
@@ -484,18 +485,21 @@ def parse_args() -> argparse.Namespace:
 	elif args.project == "MyPacman":
 		envtype = EnvType.MYPACMAN
 
-	if args.name == "NatureCNN_RGB":
+	if args.model == "NatureCNN_RGB":
 		featex = FeatEx.NATURECNNRGB
-	elif args.name == "NatureCNN_events":
+	elif args.model == "NatureCNN_events":
 		featex = FeatEx.NATURECNNEVENTS
-	elif args.name == "SNN":
+	elif args.model == "SNN":
 		featex = FeatEx.SNN
-	elif args.name == "EDeNN":
+	elif args.model == "EDeNN":
 		featex = FeatEx.EDENN
 
-	if args.name != "EDeNN":
+	if args.model != "EDeNN":
 		args.ph = False
 		args.bs = False
+
+	if args.name is None:
+		args.name = args.model
 
 	assert not (args.ph and not args.bs)
 
