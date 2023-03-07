@@ -160,6 +160,7 @@ def main(args: argparse.Namespace):
 		vf_coef=0.5,
 		tensorboard_log=Path(run.dir) if not args.nolog else None, # Will be appended by `tb_log_name`
 		verbose=1,
+		device="cpu" if args.cpu else "auto",
 	)
 	# # print([s.shape for s in list(model.policy.parameters())])
 	# for name, param in model.policy.named_parameters():
@@ -468,6 +469,7 @@ def parse_args() -> argparse.Namespace:
 	parser.add_argument("--map_ram", action="store_true", help="Use RAM mappings rather than full RAM state")
 	parser.add_argument("--ph", action="store_true", help="Use projection head")
 	parser.add_argument("--bs", action="store_true", help="Use bootstrap loss")
+	parser.add_argument("--cpu", action="store_true", help="Force running on CPU")
 
 	args = parser.parse_args()
 
