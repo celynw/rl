@@ -272,7 +272,61 @@ def main(args: argparse.Namespace):
 
 
 
+	if args.load is not None:
+		print("Downloading model from wandb")
+		# entity, project, run_id, model_artifact_name = wandb.api.get_run_info(f"{args.project}/{args.load}")
+		print(wandb.api.default_entity)
+		# entity, project, run_id, model_artifact_name = wandb.api.get_run_info(wandb.api.default_entity, args.project, args.load)
+		info = wandb.api.get_run_info(wandb.api.default_entity, args.project, args.load)
+		print(info)
 
+		if info["args"][1] != args.model:
+			raise TypeError(f"Tried to run model '{args.model}' but loaded from '{info['args'][1]}'")
+
+		from stable_baselines3.common.save_util import load_from_zip_file
+		# path = Path("checkpoints") / "best_model.zip"
+		path = Path("checkpoints") / "best" / "best_model.zip"
+		wandb.restore(str(path), f"{args.project}/{args.load}")
+		model.set_parameters(path, device="cpu" if args.cpu else "cuda")
+
+		rollout_buffer = model.rollout_buffer
+		model = rl.models.utils.PPO.load(
+			path,
+			policy=rl.models.utils.ActorCriticPolicy,
+			policy_kwargs=dict(features_extractor_class=features_extractor_class, net_arch=[], features_extractor_kwargs=features_extractor_kwargs, detach=args.ph or args.bs),
+			env=env,
+			batch_size=batch_size, # 256, # Probably doesn't do anything, batch size is 1
+			clip_range=clip_range, # 0.1
+			ent_coef=ent_coef, # 0.01
+			gae_lambda=gae_lambda, # 0.95
+			gamma=gamma, # 0.99
+			learning_rate=lr,
+			max_grad_norm=0.5,
+			n_epochs=n_epochs, # 4
+			n_steps=n_steps, # args.n_steps,
+			vf_coef=0.5,
+			tensorboard_log=Path(run.dir) if not args.nolog else None, # Will be appended by `tb_log_name`
+			verbose=1,
+			device="cpu" if args.cpu else "auto",
+		)
+		# model.load_replay_buffer("sac_pendulum_buffer")
+		model.rollout_buffer = rollout_buffer
+
+		data, params, _ = load_from_zip_file(path, device="cpu" if args.cpu else "cuda")
+		# print(dict(model.policy.named_parameters())["features_extractor.layer1.0.bias"])
+		# print(dict(model.policy.named_parameters())["value_net.weight"])
+		# print(model.policy.optimizer.param_groups[0]["params"][0])
+
+		# model.num_timesteps = data["num_timesteps"] # WHY WASN'T THIS LOADED?
+		for name in data:
+			try:
+				setattr(model, name, data[name])
+			except Exception as e:
+				# What errors recursive_getattr could throw? KeyError, but
+				# possible something else too (e.g. if key is an int?).
+				# Catch anything for now.
+				raise ValueError(f"Key {name} is an invalid object name.") from e
+		print("Finished loading!")
 
 	callbacks = []
 	if not args.nolog:
@@ -289,8 +343,13 @@ def main(args: argparse.Namespace):
 				model_save_path=f"models/{run.id}",
 			),
 		]
-	callbacks += [EvalCallback(env, eval_freq=args.n_steps * 10, best_model_save_path=(Path(run.dir) / "checkpoints") / "best" if not args.nolog else None)]
-	model.learn(total_timesteps=config["total_timesteps"], callback=callbacks, tb_log_name="tensorboard")
+	callbacks += [EvalCallback(env, eval_freq=args.n_steps * 10, best_model_save_path=(Path(run.dir) / "checkpoints") if not args.nolog else None)]
+	model.learn(
+		total_timesteps=config["total_timesteps"],
+		callback=callbacks,
+		tb_log_name="tensorboard",
+		reset_num_timesteps=False,
+	)
 	if not args.nolog:
 		model.save(logdir / f"{args.project}_{args.name}.zip")
 
@@ -470,6 +529,7 @@ def parse_args() -> argparse.Namespace:
 	parser.add_argument("--map_ram", action="store_true", help="Use RAM mappings rather than full RAM state")
 	parser.add_argument("--ph", action="store_true", help="Use projection head")
 	parser.add_argument("--bs", action="store_true", help="Use bootstrap loss")
+	parser.add_argument("--load", type=str, metavar="WANDB_ID", help="Load checkpoint from other run", default=None)
 	parser.add_argument("--cpu", action="store_true", help="Force running on CPU")
 
 	args = parser.parse_args()
