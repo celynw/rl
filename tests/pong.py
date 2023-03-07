@@ -121,7 +121,7 @@ def main(args: argparse.Namespace):
 		features_dim=result_dim if (args.bs and not args.ph) else 512,
 		#
 		# features_dim=256,
-		projection_head=result_dim if args.ph else None,
+		# projection_head=result_dim if args.ph else None,
 		#
 		# # DEBUG
 		# features_dim=result_dim,
@@ -132,6 +132,7 @@ def main(args: argparse.Namespace):
 		features_extractor_kwargs["tsamples"] = args.tsamples
 	elif featex is FeatEx.EDENN:
 		features_extractor_kwargs["use_bootstrap"] = args.bs
+		features_extractor_kwargs["projection_head"] = result_dim if args.ph else None
 
 	# https://github.com/DLR-RM/rl-trained-agents/blob/10a9c31e806820d59b20d8b85ca67090338ea912/ppo/PongNoFrameskip-v4_1/PongNoFrameskip-v4/config.yml
 	# model = SB3_PPO(
