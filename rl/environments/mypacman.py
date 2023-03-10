@@ -54,7 +54,7 @@ def translate_maze_to_screen(coords: tuple[float, float], size: int = unified_si
 # ==================================================================================================
 class Renderer:
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, game: "GameController"):
+	def __init__(self, game: "GameController", auto: bool = False):
 		pygame.init()
 		self.game = game
 		self.width = self.game.width * unified_size
@@ -70,8 +70,7 @@ class Renderer:
 		self.cookies: list[Cookie] = []
 		self.powerups: list[Powerup] = []
 		self.ghosts: list[Ghost] = []
-		self.hero: Optional[Hero] = None
-		# self.lives = 3
+		self.hero: Optional[Hero | HeroAuto] = None
 		self.lives = 1
 		self.score = 0
 		self.kokoro_active = False # powerup, special ability
@@ -108,7 +107,8 @@ class Renderer:
 			self.add_ghost(ghost)
 
 		translated = translate_maze_to_screen(self.game.pacman_spawn)
-		self.add_hero(Hero(self, translated[0], translated[1], unified_size))
+		herotype = HeroAuto if auto else Hero
+		self.add_hero(herotype(self, translated[0], translated[1], unified_size))
 
 	# ----------------------------------------------------------------------------------------------
 	def tick(self, fps: int) -> None:
@@ -211,7 +211,7 @@ class Renderer:
 		self.walls.append(wall)
 
 	# ----------------------------------------------------------------------------------------------
-	def add_hero(self, hero: "Hero") -> None:
+	def add_hero(self, hero: "Hero | HeroAuto") -> None:
 		self.add_game_object(hero)
 		self.hero = hero
 
@@ -479,6 +479,135 @@ class Hero(MovableObject):
 		# self.image = self.open if self.mouth_open else self.closed
 		# self.image = pygame.transform.rotate(self.image, self.current_direction.value)
 		# super(Hero, self).draw()
+
+
+# ==================================================================================================
+class HeroAuto(Hero, MovableObject):
+	# ----------------------------------------------------------------------------------------------
+	def __init__(self, renderer: Renderer, x: int, y: int, size: int):
+		super().__init__(
+			renderer=renderer,
+			x=x,
+			y=y,
+			size=size,
+		)
+
+	# ----------------------------------------------------------------------------------------------
+	def reached_target(self) -> None:
+		# # DEBUG
+		# if self.next_target is None:
+		# 	# self.request_path(random.choice(self.game.reachable_spaces))
+		# 	self.request_path((random.randint(0, self.game.height), random.randint(0, self.game.width)))
+
+		if (self.x, self.y) == self.next_target:
+			self.next_target = self.get_next_location()
+		self.current_direction = self.calculate_direction_to_next_target()
+
+	# ----------------------------------------------------------------------------------------------
+	def set_new_path(self, path: list[tuple[int, int]]) -> None:
+		for item in path:
+			self.location_queue.append(item)
+		self.next_target = self.get_next_location()
+
+	# ----------------------------------------------------------------------------------------------
+	def calculate_direction_to_next_target(self) -> Direction:
+		if self.next_target is None:
+			return Direction.NONE
+
+		diff_x = self.next_target[0] - self.x
+		diff_y = self.next_target[1] - self.y
+		if diff_x == 0:
+			return Direction.DOWN if diff_y > 0 else Direction.UP
+		if diff_y == 0:
+			return Direction.LEFT if diff_x < 0 else Direction.RIGHT
+
+		return Direction.NONE
+
+	# ----------------------------------------------------------------------------------------------
+	def request_path(self, coordinate: tuple[int, int]) -> None:
+		player_position = translate_screen_to_maze(self.renderer.get_hero_position())
+		path = self.renderer.game.pathfinder.get_path(
+			player_position[1], player_position[0],
+			coordinate[1], coordinate[0]
+		)
+
+		new_path = [translate_maze_to_screen(item) for item in path]
+		self.location_queue = []
+		self.set_new_path(new_path)
+
+	# ----------------------------------------------------------------------------------------------
+	def automatic_move(self, direction: Direction) -> None:
+		if direction == Direction.UP:
+			self.set_position(self.x, self.y - 1)
+		elif direction == Direction.DOWN:
+			self.set_position(self.x, self.y + 1)
+		elif direction == Direction.LEFT:
+			self.set_position(self.x - 1, self.y)
+		elif direction == Direction.RIGHT:
+			self.set_position(self.x + 1, self.y)
+
+	# ----------------------------------------------------------------------------------------------
+	def draw(self) -> None:
+		super().draw()
+		draw_path(self.renderer, self.location_queue) # DEBUG
+
+	# ----------------------------------------------------------------------------------------------
+	def tick(self) -> None:
+		# # TELEPORT
+		# if self.x < 0:
+		# 	self.x = self.renderer.width
+
+		# if self.x > self.renderer.width:
+		# 	self.x = 0
+
+		self.reached_target()
+		self.automatic_move(self.current_direction)
+
+		self.handle_cookie_pickup()
+		self.handle_ghosts()
+
+	# ----------------------------------------------------------------------------------------------
+	def handle_cookie_pickup(self) -> None:
+		collision_rect = pygame.Rect(self.x, self.y, self.size, self.size)
+		cookies = self.renderer.cookies
+		powerups = self.renderer.powerups
+		game_objects = self.renderer.game_objects
+		cookie_to_remove = None
+		for cookie in cookies:
+			collides = collision_rect.colliderect(cookie.get_shape())
+			if collides and cookie in game_objects:
+				game_objects.remove(cookie)
+				self.renderer.add_score(ScoreType.COOKIE)
+				cookie_to_remove = cookie
+
+		if cookie_to_remove is not None:
+			cookies.remove(cookie_to_remove)
+
+		if len(self.renderer.cookies) == 0:
+			self.renderer.won = True
+
+		for powerup in powerups:
+			collides = collision_rect.colliderect(powerup.get_shape())
+			if collides and powerup in game_objects:
+				if not self.renderer.kokoro_active:
+					game_objects.remove(powerup)
+					self.renderer.add_score(ScoreType.POWERUP)
+					self.renderer.activate_kokoro()
+
+	# ----------------------------------------------------------------------------------------------
+	def handle_ghosts(self) -> None:
+		collision_rect = pygame.Rect(self.x, self.y, self.size, self.size)
+		ghosts = self.renderer.ghosts
+		game_objects = self.renderer.game_objects
+		for ghost in ghosts:
+			collides = collision_rect.colliderect(ghost.get_shape())
+			if collides and ghost in game_objects:
+				if self.renderer.kokoro_active:
+					game_objects.remove(ghost)
+					self.renderer.add_score(ScoreType.GHOST)
+				else:
+					if not self.renderer.won:
+						self.renderer.kill_pacman()
 
 
 # ==================================================================================================
@@ -801,10 +930,54 @@ class MyPacmanRGB(gym.Env):
 
 
 # ==================================================================================================
+class MyPacmanRGBpp(MyPacmanRGB):
+	# ----------------------------------------------------------------------------------------------
+	def __init__(self, args: argparse.Namespace, render_mode: Optional[str] = None):
+		super().__init__(args=args, render_mode=render_mode)
+		# self.action_space = spaces.Tuple((spaces.Box(low=0, high=self.game.width), spaces.Box(low=0, high=self.game.height)))
+		self.action_space = spaces.MultiDiscrete(np.array([self.game.height, self.game.width]))
+
+		self.renderer = Renderer(self.game, auto=True)
+
+	# ----------------------------------------------------------------------------------------------
+	def step(self, action: int) -> tuple[ObsType, SupportsFloat, bool, bool, dict[str, Any]]:
+		assert self.action_space.contains(action), f"{action!r} ({type(action)}) invalid"
+
+		assert self.renderer.hero is not None
+		self.renderer.hero.request_path(action)
+
+		for game_object in self.renderer.game_objects:
+			game_object.tick()
+		self.render()
+		self.renderer.clock.tick(self.metadata["render_fps"])
+		self.renderer.handle_events()
+
+		terminated = (self.renderer.lives == 0) or self.renderer.won
+		reward = self.renderer.score - self.last_score
+		self.last_score = self.renderer.score
+
+		return self.render(), reward, terminated, False, self.get_info()
+
+	# ----------------------------------------------------------------------------------------------
+	def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None) -> tuple[ObsType, dict[str, Any]]:
+		super().reset(seed=seed)
+
+		self.game = GameController()
+		self.renderer = Renderer(self.game, auto=True)
+		self.last_score = 0
+
+		self.renderer.handle_mode_switch()
+		pygame.time.set_timer(self.renderer.pakupaku_event, 200) # open close mouth
+
+		return self.render(), self.get_info()
+
+
+# ==================================================================================================
 if __name__ == "__main__":
 	random.seed(0)
 
 	game = GameController()
-	game_renderer = Renderer(game)
+	# game_renderer = Renderer(game)
+	game_renderer = Renderer(game, auto=True)
 
 	game_renderer.tick(120)
