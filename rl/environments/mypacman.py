@@ -42,7 +42,8 @@ class GhostBehaviour(Enum):
 
 # ==================================================================================================
 def translate_screen_to_maze(coords: tuple[int, int], size: int = unified_size) -> tuple[int, int]:
-	return int(coords[0] / size), int(coords[1] / size)
+	return int(round(coords[0] / size)), int(round(coords[1] / size))
+
 
 
 # ==================================================================================================
@@ -494,9 +495,9 @@ class HeroAuto(Hero, MovableObject):
 
 	# ----------------------------------------------------------------------------------------------
 	def reached_target(self) -> None:
-		# # DEBUG
+		# DEBUG
+		# self.request_path((random.randint(22, 23), 14))
 		# if self.next_target is None:
-		# 	# self.request_path(random.choice(self.game.reachable_spaces))
 		# 	self.request_path((random.randint(0, self.game.height), random.randint(0, self.game.width)))
 
 		if (self.x, self.y) == self.next_target:
@@ -518,8 +519,15 @@ class HeroAuto(Hero, MovableObject):
 		diff_y = self.next_target[1] - self.y
 		if diff_x == 0:
 			return Direction.DOWN if diff_y > 0 else Direction.UP
-		if diff_y == 0:
+		elif diff_y == 0:
 			return Direction.LEFT if diff_x < 0 else Direction.RIGHT
+		else:
+			# Path planner might be just around a corner, and we can only work out how to move in straight lines
+			# It's due to some quantisation between screen and map
+			# Handle this case by going to the close expected point first
+			self.location_queue.insert(0, self.next_target)
+			self.next_target = translate_maze_to_screen(translate_screen_to_maze(self.renderer.get_hero_position()))
+			return self.calculate_direction_to_next_target()
 
 		return Direction.NONE
 
@@ -759,10 +767,10 @@ class GameController:
 			"█••••••██••••██••••██••••••█",
 			"██████•█████ ██ █████•██████",
 			"██████•█████ ██ █████•██████",
-			"██████•██    G     ██•██████",
-			"██████•██ ████████ ██•██████",
+			"██████•██G G G G   ██•██████",
+			"██████•██ ███  ███ ██•██████",
 			"██████•██ █      █ ██•██████",
-			"      •   █G G G █   •      ",
+			"      •   █      █   •      ",
 			"██████•██ █      █ ██•██████",
 			"██████•██ ████████ ██•██████",
 			"██████•██          ██•██████",
