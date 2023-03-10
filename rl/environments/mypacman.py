@@ -15,6 +15,8 @@ from gymnasium.core import ObsType
 from rich import print, inspect
 
 unified_size = 8
+move_speed = 4
+assert unified_size % move_speed == 0
 
 # ==================================================================================================
 class Direction(Enum):
@@ -50,22 +52,6 @@ def translate_maze_to_screen(coords: tuple[float, float], size: int = unified_si
 
 
 # ==================================================================================================
-# Untested
-def draw_path(path_array: list[list[int]]):
-	white = (255, 255, 255)
-	for path in path_array:
-		game_renderer.add_game_object(Wall(game_renderer, path[0], path[1], unified_size, white))
-
-	# Untested
-	# _from = path_array[0]
-	# _to = path_array[-1]
-	# from_translated = translate_maze_to_screen(_from)
-	# game_renderer.add_game_object(GameObject(game_renderer, from_translated[0], from_translated[1], unified_size, red))
-	# to_translated = translate_maze_to_screen(_to)
-	# game_renderer.add_game_object(GameObject(game_renderer, to_translated[0], to_translated[1], unified_size, green))
-
-
-# ==================================================================================================
 class Renderer:
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, game: "GameController"):
@@ -73,9 +59,9 @@ class Renderer:
 		self.game = game
 		self.width = self.game.width * unified_size
 		self.height = self.game.height * unified_size
-		# self.screen = pygame.display.set_mode((self.width, self.height))
-		self.surface = pygame.Surface((self.width, self.height))
-		# pygame.display.set_caption("Pacman")
+		# self.screen = pygame.display.set_mode((self.width, self.height)) # For interactive
+		# self.surface = self.screen # For interactive
+		self.surface = pygame.Surface((self.width, self.height)) # For headless
 		self.clock = pygame.time.Clock()
 		self.done = False
 		self.won = False
@@ -118,8 +104,7 @@ class Renderer:
 
 		for i, ghost_spawn in enumerate(self.game.ghost_spawns):
 			translated = translate_maze_to_screen(ghost_spawn)
-			ghost = Ghost(self, translated[0], translated[1], int(unified_size * 0.75), self.game, self.game.ghost_colours[i % 4])
-			# game_renderer.add_game_object(ghost)
+			ghost = Ghost(self, translated[0], translated[1], int(unified_size * 0.75), self.game.ghost_colours[i % 4])
 			self.add_ghost(ghost)
 
 		translated = translate_maze_to_screen(self.game.pacman_spawn)
@@ -262,6 +247,7 @@ class GameObject:
 	def __init__(self, renderer: "Renderer", x: int, y: int, size: int, colour: tuple[int, int, int] = (255, 0, 0), is_circle: bool = False):
 		self.size = size
 		self.renderer = renderer
+		self.game = self.renderer.game
 		self.x = x
 		self.y = y
 		self.colour = colour
@@ -423,8 +409,6 @@ class Hero(MovableObject):
 			self.set_position(self.last_non_colliding_position[0], self.last_non_colliding_position[1])
 
 		self.handle_cookie_pickup()
-		# self.handle_powerup_pickup()
-		# self.handle_ghost_collision()
 		self.handle_ghosts()
 
 	# ----------------------------------------------------------------------------------------------
@@ -487,7 +471,7 @@ class Hero(MovableObject):
 		half_size = self.size / 2
 		pygame.draw.circle(self.renderer.surface, self.colour, (self.x + half_size, self.y + half_size), half_size)
 
-		# Dra collision box
+		# Draw collision box
 		# rect = pygame.Rect(self.x, self.y, self.size, self.size)
 		# pygame.draw.rect(self.surface, self.colour, rect, width=1)
 
@@ -500,8 +484,7 @@ class Hero(MovableObject):
 # ==================================================================================================
 class Ghost(MovableObject):
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, renderer: Renderer, x: int, y: int, size: int, game_controller, colour: tuple[int, int, int] = (255, 0, 0)):
-	# def __init__(self, surface, x, y, size: int, game_controller, sprite_path="images/ghost_fright.png"):
+	def __init__(self, renderer: Renderer, x: int, y: int, size: int, colour: tuple[int, int, int] = (255, 0, 0)):
 		super().__init__(
 			renderer=renderer,
 			x=x,
@@ -509,7 +492,6 @@ class Ghost(MovableObject):
 			size=size,
 			colour=colour)
 		# super().__init__(renderer, x, y, size)
-		self.game_controller: GameController = game_controller
 		# self.sprite_normal = pygame.image.load(sprite_path)
 		# self.sprite_fright = pygame.image.load("images/ghost_fright.png")
 		self.padding = unified_size // 8
@@ -530,9 +512,9 @@ class Ghost(MovableObject):
 	def calculate_direction_to_next_target(self) -> Direction:
 		if self.next_target is None:
 			if self.renderer.current_mode == GhostBehaviour.CHASE and not self.renderer.kokoro_active:
-				self.request_path_to_player(self)
+				self.request_path_to_player()
 			else:
-				self.game_controller.request_new_random_path(self)
+				self.request_new_random_path()
 			return Direction.NONE
 
 		diff_x = self.next_target[0] - self.x
@@ -543,23 +525,33 @@ class Ghost(MovableObject):
 			return Direction.LEFT if diff_x < 0 else Direction.RIGHT
 
 		if self.renderer.current_mode == GhostBehaviour.CHASE and not self.renderer.kokoro_active:
-			self.request_path_to_player(self)
+			self.request_path_to_player()
 		else:
-			self.game_controller.request_new_random_path(self)
+			self.request_new_random_path()
 
 		return Direction.NONE
 
 	# ----------------------------------------------------------------------------------------------
-	def request_path_to_player(self, ghost: "Ghost") -> None:
-		player_position = translate_screen_to_maze(ghost.renderer.get_hero_position())
-		current_maze_coord = translate_screen_to_maze(ghost.get_position())
-		path = self.game_controller.pathfinder.get_path(
+	def request_path_to_player(self) -> None:
+		player_position = translate_screen_to_maze(self.renderer.get_hero_position())
+		current_maze_coord = translate_screen_to_maze(self.get_position())
+		path = self.game.pathfinder.get_path(
 			current_maze_coord[1], current_maze_coord[0],
 			player_position[1], player_position[0]
 		)
+		screen_path = [translate_maze_to_screen(item) for item in path]
+		self.set_new_path(screen_path)
 
-		new_path = [translate_maze_to_screen(item) for item in path]
-		ghost.set_new_path(new_path)
+	# ----------------------------------------------------------------------------------------------
+	def request_new_random_path(self):
+		random_space = random.choice(self.game.reachable_spaces)
+		current_maze_coord = translate_screen_to_maze(self.get_position())
+		path = self.game.pathfinder.get_path(
+			current_maze_coord[1], current_maze_coord[0],
+			random_space[1], random_space[0]
+		)
+		screen_path = [translate_maze_to_screen(item) for item in path]
+		self.set_new_path(screen_path)
 
 	# ----------------------------------------------------------------------------------------------
 	def automatic_move(self, direction: Direction) -> None:
@@ -679,15 +671,6 @@ class GameController:
 		self.height, self.width = self.maze.shape
 
 	# ----------------------------------------------------------------------------------------------
-	def request_new_random_path(self, ghost: Ghost):
-		random_space = random.choice(self.reachable_spaces)
-		current_maze_coord = translate_screen_to_maze(ghost.get_position())
-
-		path = self.pathfinder.get_path(current_maze_coord[1], current_maze_coord[0], random_space[1], random_space[0])
-		test_path = [translate_maze_to_screen(item) for item in path]
-		ghost.set_new_path(test_path)
-
-	# ----------------------------------------------------------------------------------------------
 	def convert_maze_to_numpy(self, ascii_maze: list[str]) -> np.ndarray:
 		maze = []
 		for y, row in enumerate(ascii_maze):
@@ -709,6 +692,16 @@ class GameController:
 			maze.append(binary_row)
 
 		return np.array(maze)
+
+
+# ==================================================================================================
+def draw_path(renderer: Renderer, path_array: list[tuple[int, int]]):
+	white = (255, 255, 255)
+	half_size = unified_size / 2
+	for i in range(len(path_array) - 1):
+		start = [c + half_size for c in path_array[i]]
+		end = [c + half_size for c in path_array[i + 1]]
+		pygame.draw.line(renderer.surface, white, start, end)
 
 
 # ==================================================================================================
@@ -734,7 +727,6 @@ class MyPacmanRGB(gym.Env):
 		os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 		self.screen = None
-		pygame.init()
 		self.game = GameController()
 		self.renderer = Renderer(self.game)
 
