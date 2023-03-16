@@ -41,6 +41,13 @@ class VideoRecorder(gym_VideoRecorder):
 		else:
 			frame = self.env.render()
 
+		# Ensure dimensions are even!
+		# If they are, we'll get a YUV420 file, otherwise it's YUV444 which most things won't play
+		if frame.shape[0] % 2 != 0:
+			frame = np.concatenate((frame, np.zeros_like(frame)[:1]), axis=0)
+		if frame.shape[1] % 2 != 0:
+			frame = np.concatenate((frame, np.zeros_like(frame)[:, :1]), axis=1)
+
 		if isinstance(frame, list):
 			self.render_history += frame
 			frame = frame[-1]
