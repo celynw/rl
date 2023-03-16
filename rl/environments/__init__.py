@@ -3,6 +3,7 @@ from .pendulum import PendulumEvents
 from .mountaincar import MountainCarEvents, MountainCarRGB
 from .pong import PongEvents, PongRGB
 from .mspacman import MsPacmanEvents, MsPacmanRGB
+from .mypacman import MyPacmanEvents, MyPacmanEventspp, MyPacmanRGB, MyPacmanRGBpp
 from .freeway import FreewayEvents
 from .skiing import SkiingEvents
 
@@ -84,6 +85,26 @@ register(
 		full_action_space=False, # XXXXXX-v4
 		max_num_frames_per_episode=108_000, # XXXXXX-v4
 	),
+)
+register(
+	id=f"{MyPacmanEvents.__qualname__}-{version}",
+	entry_point=MyPacmanEvents,
+	max_episode_steps=108_000,
+)
+register(
+	id=f"{MyPacmanEventspp.__qualname__}-{version}",
+	entry_point=MyPacmanEventspp,
+	max_episode_steps=108_000,
+)
+register(
+	id=f"{MyPacmanRGB.__qualname__}-{version}",
+	entry_point=MyPacmanRGB,
+	max_episode_steps=108_000,
+)
+register(
+	id=f"{MyPacmanRGBpp.__qualname__}-{version}",
+	entry_point=MyPacmanRGBpp,
+	max_episode_steps=108_000,
 )
 register(
 	id=f"{FreewayEvents.__qualname__}-{version}",

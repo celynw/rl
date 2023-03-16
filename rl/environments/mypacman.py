@@ -14,6 +14,8 @@ from gymnasium import spaces
 from gymnasium.core import ObsType
 from rich import print, inspect
 
+from rl.environments.utils import EventEnv
+
 unified_size = 8
 move_speed = 4
 assert unified_size % move_speed == 0
@@ -110,11 +112,11 @@ class Renderer:
 		translated = translate_maze_to_screen(self.game.pacman_spawn)
 		herotype = HeroAuto if auto else Hero
 		self.add_hero(herotype(self, translated[0], translated[1], unified_size))
+		self.handle_mode_switch()
 
 	# ----------------------------------------------------------------------------------------------
 	def tick(self, fps: int) -> None:
 		black = (0, 0, 0)
-		self.handle_mode_switch()
 		pygame.time.set_timer(self.pakupaku_event, 200) # open close mouth
 		while not self.done:
 			for game_object in self.game_objects:
@@ -343,13 +345,13 @@ class MovableObject(GameObject):
 		if direction == Direction.NONE:
 			return False, desired_position
 		if direction == Direction.UP:
-			desired_position = (self.x, self.y - 1)
+			desired_position = (self.x, self.y - move_speed)
 		elif direction == Direction.DOWN:
-			desired_position = (self.x, self.y + 1)
+			desired_position = (self.x, self.y + move_speed)
 		elif direction == Direction.LEFT:
-			desired_position = (self.x - 1, self.y)
+			desired_position = (self.x - move_speed, self.y)
 		elif direction == Direction.RIGHT:
-			desired_position = (self.x + 1, self.y)
+			desired_position = (self.x + move_speed, self.y)
 
 		return self.collides_with_wall(desired_position), desired_position
 
@@ -546,18 +548,18 @@ class HeroAuto(Hero, MovableObject):
 	# ----------------------------------------------------------------------------------------------
 	def automatic_move(self, direction: Direction) -> None:
 		if direction == Direction.UP:
-			self.set_position(self.x, self.y - 1)
+			self.set_position(self.x, self.y - move_speed)
 		elif direction == Direction.DOWN:
-			self.set_position(self.x, self.y + 1)
+			self.set_position(self.x, self.y + move_speed)
 		elif direction == Direction.LEFT:
-			self.set_position(self.x - 1, self.y)
+			self.set_position(self.x - move_speed, self.y)
 		elif direction == Direction.RIGHT:
-			self.set_position(self.x + 1, self.y)
+			self.set_position(self.x + move_speed, self.y)
 
 	# ----------------------------------------------------------------------------------------------
-	def draw(self) -> None:
-		super().draw()
-		draw_path(self.renderer, self.location_queue) # DEBUG
+	# def draw(self) -> None:
+	# 	super().draw()
+	# 	draw_path(self.renderer, self.location_queue) # DEBUG
 
 	# ----------------------------------------------------------------------------------------------
 	def tick(self) -> None:
@@ -661,6 +663,7 @@ class Ghost(MovableObject):
 		if diff_y == 0:
 			return Direction.LEFT if diff_x < 0 else Direction.RIGHT
 
+		# TODO why am I doing this twice?
 		if self.renderer.current_mode == GhostBehaviour.CHASE and not self.renderer.kokoro_active:
 			self.request_path_to_player()
 		else:
@@ -693,13 +696,13 @@ class Ghost(MovableObject):
 	# ----------------------------------------------------------------------------------------------
 	def automatic_move(self, direction: Direction) -> None:
 		if direction == Direction.UP:
-			self.set_position(self.x, self.y - 1)
+			self.set_position(self.x, self.y - move_speed)
 		elif direction == Direction.DOWN:
-			self.set_position(self.x, self.y + 1)
+			self.set_position(self.x, self.y + move_speed)
 		elif direction == Direction.LEFT:
-			self.set_position(self.x - 1, self.y)
+			self.set_position(self.x - move_speed, self.y)
 		elif direction == Direction.RIGHT:
-			self.set_position(self.x + 1, self.y)
+			self.set_position(self.x + move_speed, self.y)
 
 	# ----------------------------------------------------------------------------------------------
 	def draw(self):
@@ -885,11 +888,13 @@ class MyPacmanRGB(gym.Env):
 	def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None) -> tuple[ObsType, dict[str, Any]]:
 		super().reset(seed=seed)
 
+		# TODO these may be left over from a weird memory corruption bug
+		del self.game
+		del self.renderer
 		self.game = GameController()
 		self.renderer = Renderer(self.game)
 		self.last_score = 0
 
-		self.renderer.handle_mode_switch()
 		pygame.time.set_timer(self.renderer.pakupaku_event, 200) # open close mouth
 
 		return self.render(), self.get_info()
@@ -908,7 +913,7 @@ class MyPacmanRGB(gym.Env):
 		self.renderer.clock.tick(self.metadata["render_fps"])
 		self.renderer.handle_events()
 
-		terminated = (self.renderer.lives == 0) or self.renderer.won
+		terminated = (self.renderer.lives <= 0) or self.renderer.won
 		reward = self.renderer.score - self.last_score
 		self.last_score = self.renderer.score
 
@@ -952,7 +957,7 @@ class MyPacmanRGBpp(MyPacmanRGB):
 		assert self.action_space.contains(action), f"{action!r} ({type(action)}) invalid"
 
 		assert self.renderer.hero is not None
-		self.renderer.hero.request_path(action)
+		self.renderer.hero.request_path(tuple(action))
 
 		for game_object in self.renderer.game_objects:
 			game_object.tick()
@@ -960,7 +965,7 @@ class MyPacmanRGBpp(MyPacmanRGB):
 		self.renderer.clock.tick(self.metadata["render_fps"])
 		self.renderer.handle_events()
 
-		terminated = (self.renderer.lives == 0) or self.renderer.won
+		terminated = (self.renderer.lives <= 0) or self.renderer.won
 		reward = self.renderer.score - self.last_score
 		self.last_score = self.renderer.score
 
@@ -970,14 +975,152 @@ class MyPacmanRGBpp(MyPacmanRGB):
 	def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None) -> tuple[ObsType, dict[str, Any]]:
 		super().reset(seed=seed)
 
+		# TODO these may be left over from a weird memory corruption bug
+		del self.game
+		del self.renderer
 		self.game = GameController()
 		self.renderer = Renderer(self.game, auto=True)
 		self.last_score = 0
 
-		self.renderer.handle_mode_switch()
 		pygame.time.set_timer(self.renderer.pakupaku_event, 200) # open close mouth
 
 		return self.render(), self.get_info()
+
+
+# ==================================================================================================
+class MyPacmanEvents(EventEnv, MyPacmanRGB):
+	# ----------------------------------------------------------------------------------------------
+	def __init__(self, args: argparse.Namespace, event_image: bool = False):
+		"""
+		Event version of MountainCar environment.
+
+		Args:
+			args (argparse.Namespace): Parsed arguments, depends on which specific env we're using.
+			event_image (bool, optional): Accuumlates events into an event image. Defaults to False.
+		"""
+		self.updatedPolicy = False # Used for logging whenever the policy is updated
+		self.render_events = False
+		MyPacmanRGB.__init__(self, args, render_mode="rgb_array")
+		EventEnv.__init__(self, self.renderer.width, self.renderer.height, args, event_image) # type: ignore
+
+	# ----------------------------------------------------------------------------------------------
+	@staticmethod
+	def add_argparse_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+		parser = EventEnv.add_argparse_args(parser)
+		# https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/hyperparams/ppo.yml#L45
+		# parser.set_defaults(steps=1e6)
+		parser.set_defaults(n_envs=16) # n_envs = 16, rollout buffer size is n_steps * n_envs
+		parser.set_defaults(n_steps=16) # n_envs = 16, rollout buffer size is n_steps * n_envs
+		parser.set_defaults(gae_lambda=0.95)
+		parser.set_defaults(gamma=0.99)
+		parser.set_defaults(n_epochs=4)
+		parser.set_defaults(ent_coef=0.0)
+
+		return parser
+
+	# ----------------------------------------------------------------------------------------------
+	def step(self, action: int) -> tuple[np.ndarray, float, bool, bool, dict]:
+		"""
+		Perform a single environment step.
+
+		Args:
+			action (int): Which action to perform this step.
+
+		Returns:
+			tuple[np.ndarray, float, bool, bool, dict]: Step returns.
+		"""
+		_, reward, terminated, truncated, _ = super().step(action) # type: ignore
+		events = self.observe()
+
+		if terminated: # Monitor only writes a line when an episode is terminated
+			self.updatedPolicy = False
+
+		return events.numpy(), reward, terminated, truncated, self.get_info()
+
+	# ----------------------------------------------------------------------------------------------
+	def resize(self, rgb: np.ndarray) -> np.ndarray:
+		return rgb
+
+	# ----------------------------------------------------------------------------------------------
+	def get_info(self) -> dict[str, Any]:
+		"""
+		Return a created dictionary for the step info.
+
+		Returns:
+			dict: Key-value pairs for the step info.
+		"""
+		return {
+			# "state": self.state, # Used later for bootstrap loss
+			"state": 0, # TODO placeholder
+		}
+
+
+# ==================================================================================================
+class MyPacmanEventspp(EventEnv, MyPacmanRGBpp):
+	# ----------------------------------------------------------------------------------------------
+	def __init__(self, args: argparse.Namespace, event_image: bool = False):
+		"""
+		Event version of MountainCar environment.
+
+		Args:
+			args (argparse.Namespace): Parsed arguments, depends on which specific env we're using.
+			event_image (bool, optional): Accuumlates events into an event image. Defaults to False.
+		"""
+		self.updatedPolicy = False # Used for logging whenever the policy is updated
+		self.render_events = False
+		MyPacmanRGBpp.__init__(self, args, render_mode="rgb_array")
+		EventEnv.__init__(self, self.renderer.width, self.renderer.height, args, event_image) # type: ignore
+
+	# ----------------------------------------------------------------------------------------------
+	@staticmethod
+	def add_argparse_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+		parser = EventEnv.add_argparse_args(parser)
+		# https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/hyperparams/ppo.yml#L45
+		# parser.set_defaults(steps=1e6)
+		parser.set_defaults(n_envs=16) # n_envs = 16, rollout buffer size is n_steps * n_envs
+		parser.set_defaults(n_steps=16) # n_envs = 16, rollout buffer size is n_steps * n_envs
+		parser.set_defaults(gae_lambda=0.95)
+		parser.set_defaults(gamma=0.99)
+		parser.set_defaults(n_epochs=4)
+		parser.set_defaults(ent_coef=0.0)
+
+		return parser
+
+	# ----------------------------------------------------------------------------------------------
+	def step(self, action: int) -> tuple[np.ndarray, float, bool, bool, dict]:
+		"""
+		Perform a single environment step.
+
+		Args:
+			action (int): Which action to perform this step.
+
+		Returns:
+			tuple[np.ndarray, float, bool, bool, dict]: Step returns.
+		"""
+		_, reward, terminated, truncated, _ = super().step(action) # type: ignore
+		events = self.observe()
+
+		if terminated: # Monitor only writes a line when an episode is terminated
+			self.updatedPolicy = False
+
+		return events.numpy(), reward, terminated, truncated, self.get_info()
+
+	# ----------------------------------------------------------------------------------------------
+	def resize(self, rgb: np.ndarray) -> np.ndarray:
+		return rgb
+
+	# ----------------------------------------------------------------------------------------------
+	def get_info(self) -> dict[str, Any]:
+		"""
+		Return a created dictionary for the step info.
+
+		Returns:
+			dict: Key-value pairs for the step info.
+		"""
+		return {
+			# "state": self.state, # Used later for bootstrap loss
+			"state": 0, # TODO placeholder
+		}
 
 
 # ==================================================================================================
