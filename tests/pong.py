@@ -52,7 +52,7 @@ def main(args: argparse.Namespace):
 		"env_name": env_name,
 		"num_envs": args.n_envs,
 		"total_timesteps": int(10e6),
-		"seed": 4089164106,
+		# "seed": 4089164106,
 	}
 
 	if not args.nolog:
