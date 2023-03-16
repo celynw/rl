@@ -24,3 +24,4 @@ rl/environments/spacerobot_v1/
 videos/
 tests/wandb/
 wandb/
+build/
