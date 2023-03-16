@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
@@ -31,6 +32,20 @@ class MsPacmanEvents(AtariEventEnv):
 		# self.output_height -= (35 + 15) # For `self.resize()`
 		# Originally 160x210
 		super().__init__(*args, game="ms_pacman", output_width=160, output_height=171, **kwargs)
+		# NOTE these don't seem to do anything
+		# self.ale.setInt("random_seed", args.seed)
+		# self.ale.setInt("max_num_frames_per_episode", args.max_episode_length)
+		# self.ale.setFloat("repeat_action_probability", 0)
+		# self.ale.setInt("frame_skip", 4)
+		# self.ale.setBool("color_averaging", True)
+
+		# DEBUG replace ghosts with sprites. But it doesn't work very well
+		# self.sprite_blinky = cv2.cvtColor(cv2.imread(str(Path(__file__).parent / "sprites" / "blinky.png"), cv2.IMREAD_UNCHANGED), cv2.COLOR_RGBA2BGRA)
+		# self.sprite_pinky = cv2.cvtColor(cv2.imread(str(Path(__file__).parent / "sprites" / "pinky.png"), cv2.IMREAD_UNCHANGED), cv2.COLOR_RGBA2BGRA)
+		# self.sprite_inky = cv2.cvtColor(cv2.imread(str(Path(__file__).parent / "sprites" / "inky.png"), cv2.IMREAD_UNCHANGED), cv2.COLOR_RGBA2BGRA)
+		# self.sprite_sue = cv2.cvtColor(cv2.imread(str(Path(__file__).parent / "sprites" / "sue.png"), cv2.IMREAD_UNCHANGED), cv2.COLOR_RGBA2BGRA)
+		# self.sprite_offset_x = -12
+		# self.sprite_offset_y = 1
 
 	# ----------------------------------------------------------------------------------------------
 	@staticmethod
@@ -80,6 +95,54 @@ class MsPacmanEvents(AtariEventEnv):
 
 		return frame
 
+	# ----------------------------------------------------------------------------------------------
+	# DEBUG replace ghosts with sprites. But it doesn't work very well
+	# def render(self):
+	# 	bgr = super().render()
+	# 	state = ram2label("mspacman", self.ale.getRAM())
+	# 	bgr = add_transparent_image(bgr, self.sprite_blinky, state["enemy_blinky_x"] + self.sprite_offset_x, state["enemy_blinky_y"] + self.sprite_offset_y)
+	# 	bgr = add_transparent_image(bgr, self.sprite_pinky, state["enemy_pinky_x"] + self.sprite_offset_x, state["enemy_pinky_y"] + self.sprite_offset_y)
+	# 	bgr = add_transparent_image(bgr, self.sprite_inky, state["enemy_inky_x"] + self.sprite_offset_x, state["enemy_inky_y"] + self.sprite_offset_y)
+	# 	bgr = add_transparent_image(bgr, self.sprite_sue, state["enemy_sue_x"] + self.sprite_offset_x, state["enemy_sue_y"] + self.sprite_offset_y)
+
+	# 	return bgr
+
+
+# ==================================================================================================
+def add_transparent_image(background, foreground, x_offset: int = 0, y_offset: int = 0):
+	bg_h, bg_w, bg_channels = background.shape
+	fg_h, fg_w, fg_channels = foreground.shape
+
+	assert bg_channels == 3, f"Background image should have exactly 3 channels (RGB). found: {bg_channels}"
+	assert fg_channels == 4, f"Foreground image should have exactly 4 channels (RGBA). found: {fg_channels}"
+
+	w = min(fg_w, bg_w, fg_w + x_offset, bg_w - x_offset)
+	h = min(fg_h, bg_h, fg_h + y_offset, bg_h - y_offset)
+	if w < 1 or h < 1: return
+
+	# Clip foreground and background images to the overlapping regions
+	bg_x = max(0, x_offset)
+	bg_y = max(0, y_offset)
+	fg_x = max(0, x_offset * -1)
+	fg_y = max(0, y_offset * -1)
+	foreground = foreground[fg_y:fg_y + h, fg_x:fg_x + w]
+	background_subsection = background[bg_y:bg_y + h, bg_x:bg_x + w]
+
+	# Separate alpha and color channels from the foreground image
+	foreground_colors = foreground[:, :, :3]
+	alpha_channel = foreground[:, :, 3] / 255 # 0 - 255 => 0.0 - 1.0
+
+	# Construct an alpha_mask that matches the image shape
+	# alpha_mask = np.dstack((alpha_channel, alpha_channel, alpha_channel))
+	alpha_mask = alpha_channel[:, :, np.newaxis]
+
+	# Combine the background with the overlay image weighted by alpha
+	composite = background_subsection * (1 - alpha_mask) + foreground_colors * alpha_mask
+
+	# Overwrite the section of the background image that has been updated
+	background[bg_y:bg_y + h, bg_x:bg_x + w] = composite
+
+	return background
 
 
 # ==================================================================================================
@@ -153,6 +216,13 @@ class MsPacmanRGB(SB3_AtariEnv):
 		else:
 			self.state = torch.tensor(ram)
 		self.state = (self.state / 128.0) - 1
+
+		# NOTE these don't seem to do anything
+		# self.ale.setInt("random_seed", args.seed)
+		# self.ale.setInt("max_num_frames_per_episode", args.max_episode_length)
+		# self.ale.setFloat("repeat_action_probability", 0)
+		# self.ale.setInt("frame_skip", 4)
+		# self.ale.setBool("color_averaging", True)
 
 	# ----------------------------------------------------------------------------------------------
 	@staticmethod
