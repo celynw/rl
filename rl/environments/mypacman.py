@@ -8,13 +8,12 @@ from typing import Optional, Any, SupportsFloat
 
 import pygame
 import numpy as np
-import tcod
 import gymnasium as gym
 from gymnasium import spaces
 from gymnasium.core import ObsType
 from rich import print, inspect
 
-from rl.environments.utils import EventEnv
+from rl.environments.utils import PathPlanner, EventEnv
 
 unified_size = 8
 move_speed = 4
@@ -536,10 +535,7 @@ class HeroAuto(Hero, MovableObject):
 	# ----------------------------------------------------------------------------------------------
 	def request_path(self, coordinate: tuple[int, int]) -> None:
 		player_position = translate_screen_to_maze(self.renderer.get_hero_position())
-		path = self.renderer.game.pathfinder.get_path(
-			player_position[1], player_position[0],
-			coordinate[1], coordinate[0]
-		)
+		path = self.renderer.game.pathfinder.get_path(player_position, coordinate)
 
 		new_path = [translate_maze_to_screen(item) for item in path]
 		self.location_queue = []
@@ -675,10 +671,7 @@ class Ghost(MovableObject):
 	def request_path_to_player(self) -> None:
 		player_position = translate_screen_to_maze(self.renderer.get_hero_position())
 		current_maze_coord = translate_screen_to_maze(self.get_position())
-		path = self.game.pathfinder.get_path(
-			current_maze_coord[1], current_maze_coord[0],
-			player_position[1], player_position[0]
-		)
+		path = self.game.pathfinder.get_path(current_maze_coord, player_position)
 		screen_path = [translate_maze_to_screen(item) for item in path]
 		self.set_new_path(screen_path)
 
@@ -686,10 +679,7 @@ class Ghost(MovableObject):
 	def request_new_random_path(self):
 		random_space = random.choice(self.game.reachable_spaces)
 		current_maze_coord = translate_screen_to_maze(self.get_position())
-		path = self.game.pathfinder.get_path(
-			current_maze_coord[1], current_maze_coord[0],
-			random_space[1], random_space[0]
-		)
+		path = self.game.pathfinder.get_path(current_maze_coord, random_space)
 		screen_path = [translate_maze_to_screen(item) for item in path]
 		self.set_new_path(screen_path)
 
@@ -739,18 +729,6 @@ class Powerup(GameObject):
 			colour=(255, 185, 175),
 			is_circle=True
 		)
-
-
-# ==================================================================================================
-class Pathfinder:
-	# ----------------------------------------------------------------------------------------------
-	def __init__(self, arr: np.ndarray):
-		cost = np.array(arr, dtype=np.bool_).tolist()
-		self.pf = tcod.path.AStar(cost=cost, diagonal=0)
-
-	# ----------------------------------------------------------------------------------------------
-	def get_path(self, from_x: int, from_y: int, to_x: int, to_y: int) -> list[tuple[int, int]]:
-		return [(sub[1], sub[0]) for sub in self.pf.get_path(from_x, from_y, to_x, to_y)]
 
 
 # ==================================================================================================
@@ -807,7 +785,7 @@ class GameController:
 			# "images/ghost_blue.png",
 		]
 		self.maze = self.convert_maze_to_numpy(self.ascii_maze)
-		self.pathfinder = Pathfinder(self.maze)
+		self.pathfinder = PathPlanner(self.maze)
 		self.height, self.width = self.maze.shape
 
 	# ----------------------------------------------------------------------------------------------

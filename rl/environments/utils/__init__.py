@@ -5,3 +5,4 @@ from .atari_event_env import AtariEventEnv
 from .skip_cutscenes import SkipCutscenesPong
 from .video_recorder import VideoRecorder
 from .vec_video_recorder import VecVideoRecorder
+from .path_planner import PathPlanner
