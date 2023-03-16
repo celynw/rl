@@ -2,6 +2,7 @@ import numpy as np
 
 # ==================================================================================================
 def get_base_envs(env, avoidList: bool = False) -> list:
+	# env.unwrapped doesn't get past DummyVecEnv
 	if hasattr(env, "envs"):
 		return [get_base_envs(e, avoidList=True) for e in env.envs]
 	else:
