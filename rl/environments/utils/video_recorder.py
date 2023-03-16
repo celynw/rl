@@ -30,13 +30,14 @@ class VideoRecorder(gym_VideoRecorder):
 		if self.render_events:
 			if isinstance(self.env, DummyVecEnv):
 				if self.sum_events:
-					images = [np.transpose(add_event_image_channel(np.asarray(env.events.sum(1)) * 255), (1, 2, 0)) for env in self.env.envs]
+					images = [add_event_image_channel(env.events.sum(1).numpy()) for env in self.env.envs]
 				else:
-					images = [np.transpose(add_event_image_channel(np.asarray(env.events) * 255), (1, 2, 0)) for env in self.env.envs]
+					images = [add_event_image_channel(env.events.numpy()) for env in self.env.envs]
+				images = np.transpose(((np.asarray(images) != 0).astype(np.uint8) * 255), (0, 2, 3, 1))
 				# Create a big image by tiling images from subprocesses
 				frame = tile_images(images)
 			else:
-				frame = self.env.events.sum(1) # Hope this is being set in the last env.observe()
+				frame = self.env.events.sum(1).numpy() # Hope this is being set in the last env.observe()
 		else:
 			frame = self.env.render()
 
