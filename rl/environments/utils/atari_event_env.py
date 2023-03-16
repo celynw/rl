@@ -7,6 +7,9 @@ from typing import Optional
 import numpy as np
 import torch
 from gymnasium import spaces
+import gymnasium as gym
+import sys
+sys.modules["gym"] = gym # Needed here because ale_py is expecting gym, not gymnasium
 from ale_py.env.gym import AtariEnv as SB3_AtariEnv
 from atariari.benchmark.wrapper import ram2label
 import cv2
@@ -44,6 +47,7 @@ class AtariEventEnv(EventEnv, SB3_AtariEnv):
 			full_action_space=full_action_space,
 			max_num_frames_per_episode=max_num_frames_per_episode,
 		)
+		self.state_space = spaces.Box(low=0, high=255, dtype=np.uint8, shape=(self.ale.getRAMSize(),))
 		self.render_mode = self._render_mode # Stupid compatibility
 		try:
 			EventEnv.__init__(self, self.output_width, self.output_height, args, event_image) # type: ignore
