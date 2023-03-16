@@ -25,6 +25,7 @@ class PendulumEvents(EventEnv, PendulumEnv):
 		EventEnv.__init__(self, self.output_width, self.output_height, args, event_image) # type: ignore
 		self.state_space = spaces.Box(low=-16.2736044, high=0, shape=(2,), dtype=np.float32) # FIX It's wrong in EventEnv I think, check other environments
 		# self.iter = 0
+		# self.dt = 0.02 £ DEBUG change framerate TODO args.fps?
 
 	# ----------------------------------------------------------------------------------------------
 	@staticmethod
@@ -124,6 +125,7 @@ class PendulumEvents(EventEnv, PendulumEnv):
 
 		rod_length = 1 * scale
 		rod_width = 0.2 * scale
+		# rod_width = 0.05 * scale # DEBUG
 		l, r, t, b = 0, rod_length, rod_width / 2, -rod_width / 2
 		coords = [(l, b), (l, t), (r, t), (r, b)]
 		transformed_coords = []
