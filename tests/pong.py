@@ -64,6 +64,8 @@ def main(args: argparse.Namespace):
 			monitor_gym=True, # Auto-upload the videos of agents playing the game
 			save_code=True, # Save the code to W&B
 			dir=logdir,
+			resume="allow" if args.resume else "never",
+			id=args.load if args.resume else None,
 		)
 		run.log_code(Path(__file__).parent.resolve())
 		run.log_code((Path(__file__).parent.parent / "rl").resolve())
@@ -103,6 +105,7 @@ def main(args: argparse.Namespace):
 		if featex is FeatEx.NATURECNNEVENTS: # event images
 			env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 200000 == 0, video_length=video_length, render_events=True, sum_events=False, name_prefix="events-video.1")
 		env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 200000 == 0, video_length=video_length, name_prefix="rgb-video.2") # RGB
+		# TODO add visualisation videos, maybe in separate test script though
 
 	if featex is FeatEx.NATURECNNRGB:
 	# if envtype is EnvType.PONG:
@@ -280,18 +283,19 @@ def main(args: argparse.Namespace):
 		info = wandb.api.get_run_info(wandb.api.default_entity, args.project, args.load)
 		print(info)
 
+		args.name += "_cntd" # Note: Need to modify existing wandb.run object
+
 		if info["args"][1] != args.model:
 			raise TypeError(f"Tried to run model '{args.model}' but loaded from '{info['args'][1]}'")
 
 		from stable_baselines3.common.save_util import load_from_zip_file
-		# path = Path("checkpoints") / "best_model.zip"
-		path = Path("checkpoints") / "best" / "best_model.zip"
+		path = Path("checkpoints") / "best_model.zip"
 		wandb.restore(str(path), f"{args.project}/{args.load}")
-		model.set_parameters(path, device="cpu" if args.cpu else "cuda")
+		model.set_parameters(str(path), device="cpu" if args.cpu else "cuda")
 
 		rollout_buffer = model.rollout_buffer
 		model = rl.models.utils.PPO.load(
-			path,
+			str(path),
 			policy=rl.models.utils.ActorCriticPolicy,
 			policy_kwargs=dict(features_extractor_class=features_extractor_class, net_arch=[], features_extractor_kwargs=features_extractor_kwargs, detach=args.ph or args.bs),
 			env=env,
@@ -308,25 +312,30 @@ def main(args: argparse.Namespace):
 			tensorboard_log=Path(run.dir) if not args.nolog else None, # Will be appended by `tb_log_name`
 			verbose=1,
 			device="cpu" if args.cpu else "auto",
+			print_system_info=True,
 		)
 		# model.load_replay_buffer("sac_pendulum_buffer")
 		model.rollout_buffer = rollout_buffer
 
-		data, params, _ = load_from_zip_file(path, device="cpu" if args.cpu else "cuda")
-		# print(dict(model.policy.named_parameters())["features_extractor.layer1.0.bias"])
-		# print(dict(model.policy.named_parameters())["value_net.weight"])
-		# print(model.policy.optimizer.param_groups[0]["params"][0])
+		data, _, _ = load_from_zip_file(str(path), device="cpu" if args.cpu else "cuda")
 
-		# model.num_timesteps = data["num_timesteps"] # WHY WASN'T THIS LOADED?
+		# Some attrs not being loaded, I'll do it myself
 		for name in data:
 			try:
 				setattr(model, name, data[name])
 			except Exception as e:
-				# What errors recursive_getattr could throw? KeyError, but
-				# possible something else too (e.g. if key is an int?).
-				# Catch anything for now.
-				raise ValueError(f"Key {name} is an invalid object name.") from e
+				# What errors recursive_getattr could throw? KeyError, but possible something else too (e.g. if key is an int?)
+				# Catch anything for now
+				raise ValueError(f"Key {name} is an invalid object name") from e
+			finally:
+				print(f"  loaded '{name}' ({data[name]})")
 		print("Finished loading!")
+
+		if not args.nolog:
+			run.name = args.name
+
+
+	env.reset() # FIX not being forced as above?
 
 	callbacks = []
 	if not args.nolog:
@@ -532,6 +541,7 @@ def parse_args() -> argparse.Namespace:
 	parser.add_argument("--bs", action="store_true", help="Use bootstrap loss")
 	parser.add_argument("--load", type=str, metavar="WANDB_ID", help="Load checkpoint from other run", default=None)
 	parser.add_argument("--cpu", action="store_true", help="Force running on CPU")
+	parser.add_argument("--resume", action="store_true", help="Resume a run!")
 
 	args = parser.parse_args()
 
