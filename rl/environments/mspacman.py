@@ -29,7 +29,8 @@ class MsPacmanEvents(AtariEventEnv):
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, *args, **kwargs):
 		# self.output_height -= (35 + 15) # For `self.resize()`
-		super().__init__(*args, game="ms_pacman", output_width=84, output_height=84, **kwargs)
+		# Originally 160x210
+		super().__init__(*args, game="ms_pacman", output_width=160, output_height=171, **kwargs)
 
 	# ----------------------------------------------------------------------------------------------
 	@staticmethod
@@ -68,23 +69,14 @@ class MsPacmanEvents(AtariEventEnv):
 		"""
 		# frame = super().resize(frame)
 
-		# SIMON - Crop
-		# frame = frame[35:-15, :, :]
-		# SIMON - Naively convert to greyscale (shit way to do it but don't want extra imports)
-		frame[:, :, 0] = frame[:, :, 0] / 3 + frame[:, :, 1] / 3 + frame[:, :, 2] / 3
-		# SIMON - Make it 3 channel again
-		frame[:, :, 1] = frame[:, :, 0]
-		frame[:, :, 2] = frame[:, :, 0]
-		# # SIMON - rescale contrast
-		# frame = frame - np.min(frame)
-		# frame = np.clip(frame * (255 / np.max(frame)), 0, 255).astype("uint8")
-		# SIMON - rescale contrast
-		frame = frame - 57
-		frame = np.clip(frame * (255 / 89), 0, 255).astype("uint8")
+		# Crop - 160x171
+		frame = frame[2:-37, :, :]
 
-		# frame = np.transpose(frame, (1, 2, 0))
+		# FIX WOW! ANY MULTIPLICATION LIKE THIS BREAKS THE EVENT SIMULATION!
 		# frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY) # For MsPacmanNoFrameSkip but not MsPacmanRGB?
-		frame = cv2.resize(frame, (self.output_width, self.output_height), interpolation=cv2.INTER_AREA)
+		# frame = (frame[:, :, 0:1] * 0.299) + (frame[:, :, 1:2] * 0.587) + (frame[:, :, 2:3] * 0.114)
+		# frame = frame.astype(np.uint8)
+		frame = frame[:, :, :1]
 
 		return frame
 
@@ -117,8 +109,8 @@ class MsPacmanRGB(SB3_AtariEnv):
 		max_num_frames_per_episode: Optional[int] = 108_000, # XXXXXX-v4
 		# output_width: int = 160, # self.ale.getScreenDims()[1]
 		# output_height: int = 210, # self.ale.getScreenDims()[0]
-		output_width: int = 84,
-		output_height: int = 84,
+		output_width: int = 160,
+		output_height: int = 171,
 	):
 		if args.fps is not None:
 			self.metadata["render_fps"] = args.fps
@@ -197,8 +189,7 @@ class MsPacmanRGB(SB3_AtariEnv):
 		Returns:
 			np.ndarray: Resized image.
 		"""
-		# SIMON - Crop
-		# rgb = rgb[35:-15, :, :]
+		frame = frame[2:-37, :, :]
 		# # SIMON - Naively convert to greyscale (shit way to do it but don't want extra imports)
 		# rgb[:, :, 0] = rgb[:, :, 0] / 3 + rgb[:, :, 1] / 3 + rgb[:, :, 2] / 3
 		# # SIMON - Make it 3 channel again
@@ -212,7 +203,7 @@ class MsPacmanRGB(SB3_AtariEnv):
 		# rgb = np.clip(rgb * (255 / 89), 0, 255).astype("uint8")
 
 		frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-		frame = cv2.resize(frame, (self.output_width, self.output_height), interpolation=cv2.INTER_AREA)
+		# frame = cv2.resize(frame, (self.output_width, self.output_height), interpolation=cv2.INTER_AREA)
 		frame = frame[..., None] # Put channel dimension back
 
 		return frame
