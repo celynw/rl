@@ -15,5 +15,5 @@ def get_base_envs(env, avoidList: bool = False) -> list:
 				return [env]
 
 # ==================================================================================================
-def add_event_image_channel(img):
-	return np.concatenate((img, np.zeros_like(img)[:1]), axis=0)
+def add_event_image_channel(img, axis: int = 0):
+	return np.concatenate((img, np.zeros_like(img)[:1]), axis=axis)
