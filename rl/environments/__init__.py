@@ -3,7 +3,7 @@ from .pendulum import PendulumEvents
 from .mountaincar import MountainCarEvents, MountainCarRGB
 from .pong import PongEvents, PongRGB
 from .mspacman import MsPacmanEvents, MsPacmanRGB
-from .mypacman import MyPacmanEvents, MyPacmanEventspp, MyPacmanRGB, MyPacmanRGBpp
+from .mypacman import MyPacmanEvents, MyPacmanEventspp, MyPacmanRGB, MyPacmanRGBpp, MyPacmanRGBmulti
 from .freeway import FreewayEvents
 from .skiing import SkiingEvents
 
@@ -104,6 +104,11 @@ register(
 register(
 	id=f"{MyPacmanRGBpp.__qualname__}-{version}",
 	entry_point=MyPacmanRGBpp,
+	max_episode_steps=108_000,
+)
+register(
+	id=f"{MyPacmanRGBmulti.__qualname__}-{version}",
+	entry_point=MyPacmanRGBmulti,
 	max_episode_steps=108_000,
 )
 register(

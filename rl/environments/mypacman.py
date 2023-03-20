@@ -55,10 +55,11 @@ def translate_maze_to_screen(coords: tuple[float, float], size: int = unified_si
 
 # ==================================================================================================
 class Renderer:
-	hero: "Hero | HeroAuto"
+	hero: "Hero | HeroAuto | HeroMulti"
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, game: "GameController", herotype: "Hero | HeroAuto"):
+	def __init__(self, game: "GameController", herotype: "Hero | HeroAuto | HeroMulti"):
 		pygame.init()
+		pygame.font.init()
 		self.game = game
 		self.width = self.game.width * unified_size
 		self.height = self.game.height * unified_size
@@ -73,7 +74,6 @@ class Renderer:
 		self.cookies: list[Cookie] = []
 		self.powerups: list[Powerup] = []
 		self.ghosts: list[Ghost] = []
-		self.hero: Optional[Hero | HeroAuto] = None
 		self.lives = 1
 		self.score = 0
 		self.kokoro_active = False # powerup, special ability
@@ -200,12 +200,6 @@ class Renderer:
 		# self.hero.set_direction(Direction.NONE)
 		# if self.lives == 0:
 		# 	self.end_game()
-
-	# # ----------------------------------------------------------------------------------------------
-	# def display_text(self, text, position=(32, 0), size=30):
-	# 	font = pygame.font.SysFont("Arial", size)
-	# 	text_surface = font.render(text, False, (255, 255, 255))
-	# 	self.screen.blit(text_surface, position)
 
 	# ----------------------------------------------------------------------------------------------
 	def add_wall(self, wall: "Wall") -> None:
@@ -534,6 +528,18 @@ class HeroAuto(Hero, MovableObject):
 		if self.next_target is None:
 			return Direction.NONE
 
+		# Handle edge case where we are between the target and the first location
+		# This came up when I replaced tcod path planner
+		if len(self.location_queue) > 0:
+			if ((self.next_target[0] < self.x < self.location_queue[0][0] and self.y == self.next_target[1])
+				or (self.location_queue[0][0] < self.x < self.next_target[0] and self.y == self.next_target[1])
+				or (self.x == self.next_target[0] and self.next_target[1] < self.y < self.location_queue[0][1])
+				or (self.x == self.next_target[0] and self.location_queue[0][1] < self.y < self.next_target[1])):
+				self.next_target = self.get_next_location()
+				if self.next_target is None:
+					# print("self.next_target is None")
+					return Direction.NONE
+
 		diff_x = self.next_target[0] - self.x
 		diff_y = self.next_target[1] - self.y
 		if diff_x == 0:
@@ -555,9 +561,9 @@ class HeroAuto(Hero, MovableObject):
 		player_position = translate_screen_to_maze(self.renderer.get_hero_position())
 		path = self.renderer.game.pathfinder.get_path(player_position, coordinate)
 
-		new_path = [translate_maze_to_screen(item) for item in path]
+		screen_path = [translate_maze_to_screen(item) for item in path]
 		self.location_queue = []
-		self.set_new_path(new_path)
+		self.set_new_path(screen_path)
 
 	# ----------------------------------------------------------------------------------------------
 	def automatic_move(self, direction: Direction) -> None:
@@ -633,6 +639,46 @@ class HeroAuto(Hero, MovableObject):
 				else:
 					if not self.renderer.won:
 						self.renderer.kill_pacman()
+
+
+# ==================================================================================================
+class HeroMulti(HeroAuto):
+	# ----------------------------------------------------------------------------------------------
+	def __init__(self, renderer: Renderer, x: int, y: int, size: int):
+		super().__init__(
+			renderer=renderer,
+			x=x,
+			y=y,
+			size=size,
+		)
+		self.auto: bool = False
+
+	# ----------------------------------------------------------------------------------------------
+	def set_direction(self, direction: Direction) -> None:
+		super().set_direction(direction)
+		self.auto = False
+
+	# ----------------------------------------------------------------------------------------------
+	def request_path(self, coordinate: tuple[int, int]) -> None:
+		super().request_path(coordinate)
+		self.auto = True
+
+	# ----------------------------------------------------------------------------------------------
+	def tick(self) -> None:
+		if self.auto:
+			HeroAuto.tick(self)
+		else:
+			self.location_queue = []
+			Hero.tick(self)
+
+	# ----------------------------------------------------------------------------------------------
+	def draw(self, direction: bool = False, path: bool = False, mode: bool = False) -> None:
+		if self.auto:
+			super().draw(path=path)
+		else:
+			Hero.draw(self, direction=direction)
+		if mode:
+			draw_text(self.renderer, "Auto" if self.auto else "Manual", (0, 0))
 
 
 # ==================================================================================================
@@ -840,6 +886,12 @@ def draw_path(renderer: Renderer, path_array: list[tuple[int, int]]):
 		end = [c + half_size for c in path_array[i + 1]]
 		pygame.draw.line(renderer.surface, white, start, end)
 
+# ==================================================================================================
+def draw_text(renderer: Renderer, text, position=(0, 0), size=unified_size * 2, colour: tuple[int, int, int] = (255, 255, 255)):
+	font = pygame.font.SysFont("Comic Sans MS", size)
+	text_surface = font.render(text, False, colour)
+	renderer.surface.blit(text_surface, position)
+
 
 # ==================================================================================================
 class MyPacmanRGB(gym.Env):
@@ -954,8 +1006,9 @@ class MyPacmanRGBpp(MyPacmanRGB):
 		self.action_space = spaces.MultiDiscrete(np.array([self.game.height, self.game.width]))
 
 	# ----------------------------------------------------------------------------------------------
-	def step(self, action: list[int]) -> tuple[ObsType, SupportsFloat, bool, bool, dict[str, Any]]:
-		assert self.action_space.contains(action), f"{action!r} ({type(action)}) invalid"
+	def step(self, action: list[int], suppress_action_space: bool = False) -> tuple[ObsType, SupportsFloat, bool, bool, dict[str, Any]]:
+		if not suppress_action_space:
+			assert self.action_space.contains(action), f"{action!r} ({type(action)}) invalid"
 
 		assert self.renderer.hero is not None
 		self.renderer.hero.request_path(tuple(action))
@@ -971,20 +1024,31 @@ class MyPacmanRGBpp(MyPacmanRGB):
 
 		return self.render(), reward, terminated, False, self.get_info()
 
+
+# ==================================================================================================
+class MyPacmanRGBmulti(MyPacmanRGBpp, MyPacmanRGB):
+	herotype = HeroMulti
 	# ----------------------------------------------------------------------------------------------
-	def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None) -> tuple[ObsType, dict[str, Any]]:
-		super().reset(seed=seed)
+	def __init__(self, args: argparse.Namespace, render_mode: Optional[str] = None):
+		MyPacmanRGBpp.__init__(self, args=args, render_mode=render_mode)
+		self.action_space = spaces.Discrete(n=(self.game.height * self.game.width) + len(Direction))
 
-		# TODO these may be left over from a weird memory corruption bug
-		del self.game
-		del self.renderer
-		self.game = GameController()
-		self.renderer = Renderer(self.game, auto=True)
-		self.last_score = 0
+	# ----------------------------------------------------------------------------------------------
+	def cell_to_coord(self, cell_number: int) -> tuple[int, int]:
+		row = cell_number // self.game.width
+		col = cell_number % self.game.width
 
-		pygame.time.set_timer(self.renderer.pakupaku_event, 200) # open close mouth
+		return row, col
 
-		return self.render(), self.get_info()
+	# ----------------------------------------------------------------------------------------------
+	def step(self, action: int) -> tuple[ObsType, SupportsFloat, bool, bool, dict[str, Any]]:
+		assert self.action_space.contains(action), f"{action!r} ({type(action)}) invalid"
+
+		assert self.renderer.hero is not None
+		if action < len(Direction):
+			return MyPacmanRGB.step(self, action)
+		else:
+			return MyPacmanRGBpp.step(self, self.cell_to_coord(action - len(Direction)), suppress_action_space=True)
 
 
 # ==================================================================================================

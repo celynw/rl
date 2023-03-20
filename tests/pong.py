@@ -573,8 +573,10 @@ def parse_args() -> argparse.Namespace:
 	parser.add_argument("--bs", action="store_true", help="Use bootstrap loss")
 	parser.add_argument("--load", type=str, metavar="WANDB_ID", help="Load checkpoint from other run", default=None)
 	parser.add_argument("--cpu", action="store_true", help="Force running on CPU")
-	parser.add_argument("--pp", action="store_true", help="Use path planner-type env")
 	parser.add_argument("--resume", action="store_true", help="Resume a run!")
+	group = parser.add_mutually_exclusive_group()
+	group.add_argument("--pp", action="store_true", help="Use path planner-type env")
+	group.add_argument("--multi", action="store_true", help="Use path planner-type env")
 
 	args = parser.parse_args()
 
@@ -680,6 +682,8 @@ if __name__ == "__main__":
 	elif envtype is EnvType.MYPACMAN:
 		if args.pp:
 			env_name = "MyPacmanRGBpp-v0" if featex is FeatEx.NATURECNNRGB else "MyPacmanEventspp-v0"
+		elif args.multi:
+			env_name = "MyPacmanRGBmulti-v0" if featex is FeatEx.NATURECNNRGB else "MyPacmanEventsmulti-v0"
 		else:
 			env_name = "MyPacmanRGB-v0" if featex is FeatEx.NATURECNNRGB else "MyPacmanEvents-v0"
 
