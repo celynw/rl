@@ -393,6 +393,9 @@ class Hero(MovableObject):
 		if self.x > self.renderer.width:
 			self.x = 0
 
+		if self.y < 0 or self.y >= self.renderer.height:
+			print(f"WARNING: Position ({self.x}, {self.y}) is out of bounds")
+
 		self.last_non_colliding_position = self.get_position()
 
 		if self.check_collision_direction(self.direction_buffer)[0]:
@@ -590,6 +593,8 @@ class HeroAuto(Hero, MovableObject):
 
 		# if self.x > self.renderer.width:
 		# 	self.x = 0
+		if self.x < 0 or self.x >= self.renderer.width or self.y < 0 or self.y >= self.renderer.height:
+			print(f"WARNING: Position ({self.x}, {self.y}) is out of bounds")
 
 		self.reached_target()
 		self.automatic_move(self.current_direction)
