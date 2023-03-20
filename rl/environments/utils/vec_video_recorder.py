@@ -1,5 +1,5 @@
 import os
-from typing import Callable
+from typing import Callable, Any
 
 from stable_baselines3.common.vec_env import VecVideoRecorder as SB3_VecVideoRecorder
 from stable_baselines3.common.vec_env.base_vec_env import VecEnv, VecEnvWrapper
@@ -35,6 +35,7 @@ class VecVideoRecorder(SB3_VecVideoRecorder):
 		name_prefix: str = "rl-video",
 		render_events: bool = False,
 		sum_events: bool = True,
+		render_kwargs: dict[str, Any] = {},
 	):
 		# super().__init__(*args, **kwargs)
 		VecEnvWrapper.__init__(self, venv)
@@ -77,6 +78,7 @@ class VecVideoRecorder(SB3_VecVideoRecorder):
 		self.sum_events = sum_events
 		if render_events:
 			self.name_prefix += "-events"
+		self.render_kwargs = render_kwargs
 
 	# ----------------------------------------------------------------------------------------------
 	def start_video_recorder(self) -> None:
@@ -85,7 +87,12 @@ class VecVideoRecorder(SB3_VecVideoRecorder):
 		video_name = f"{self.name_prefix}-step-{self.step_id}-to-step-{self.step_id + self.video_length}"
 		base_path = os.path.join(self.video_folder, video_name)
 		self.video_recorder = VideoRecorder(
-			env=self.env, base_path=base_path, metadata={"step_id": self.step_id}, render_events=self.render_events, sum_events=self.sum_events,
+			env=self.env,
+			base_path=base_path,
+			metadata={"step_id": self.step_id},
+			render_events=self.render_events,
+			sum_events=self.sum_events,
+			render_kwargs=self.render_kwargs,
 		)
 
 		self.video_recorder.capture_frame()

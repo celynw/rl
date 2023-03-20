@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Any
 
 from gymnasium.wrappers.monitoring.video_recorder import VideoRecorder as gym_VideoRecorder
 from gymnasium import logger
@@ -6,12 +6,13 @@ from stable_baselines3.common.vec_env.dummy_vec_env import DummyVecEnv
 from stable_baselines3.common.vec_env.base_vec_env import tile_images
 import numpy as np
 
-from rl.environments.utils import add_event_image_channel
+from rl.environments.utils import add_event_image_channel, get_base_envs
 
 # ==================================================================================================
 class VideoRecorder(gym_VideoRecorder):
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self,
+	def __init__(
+		self,
 		env,
 		path: Optional[str] = None,
 		metadata: Optional[dict] = None,
@@ -20,10 +21,13 @@ class VideoRecorder(gym_VideoRecorder):
 		disable_logger: bool = False,
 		render_events: bool = False,
 		sum_events: bool = True,
+		render_kwargs: dict[str, Any] = {},
 	):
 		super().__init__(env, path, metadata, enabled, base_path, disable_logger)
 		self.render_events = render_events
 		self.sum_events = sum_events
+		self.render_kwargs = render_kwargs
+
 	# ----------------------------------------------------------------------------------------------
 	def capture_frame(self):
 		"""Render the given `env` and add the resulting frame to the video."""
@@ -39,7 +43,11 @@ class VideoRecorder(gym_VideoRecorder):
 			else:
 				frame = self.env.events.sum(1).numpy() # Hope this is being set in the last env.observe()
 		else:
-			frame = self.env.render()
+			try:
+				images = [env.render_video(**self.render_kwargs) for env in get_base_envs(self.env)]
+			except AttributeError:
+				images = [env.render(**self.render_kwargs) for env in get_base_envs(self.env)]
+			frame = tile_images(images) if len(images) > 1 else images[0]
 
 		# Ensure dimensions are even!
 		# If they are, we'll get a YUV420 file, otherwise it's YUV444 which most things won't play

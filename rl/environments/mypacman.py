@@ -55,8 +55,9 @@ def translate_maze_to_screen(coords: tuple[float, float], size: int = unified_si
 
 # ==================================================================================================
 class Renderer:
+	hero: "Hero | HeroAuto"
 	# ----------------------------------------------------------------------------------------------
-	def __init__(self, game: "GameController", auto: bool = False):
+	def __init__(self, game: "GameController", herotype: "Hero | HeroAuto"):
 		pygame.init()
 		self.game = game
 		self.width = self.game.width * unified_size
@@ -109,7 +110,6 @@ class Renderer:
 			self.add_ghost(ghost)
 
 		translated = translate_maze_to_screen(self.game.pacman_spawn)
-		herotype = HeroAuto if auto else Hero
 		self.add_hero(herotype(self, translated[0], translated[1], unified_size))
 		self.handle_mode_switch()
 
@@ -469,9 +469,27 @@ class Hero(MovableObject):
 						self.renderer.kill_pacman()
 
 	# ----------------------------------------------------------------------------------------------
-	def draw(self) -> None:
+	def draw(self, direction: bool = False) -> None:
 		half_size = self.size / 2
 		pygame.draw.circle(self.renderer.surface, self.colour, (self.x + half_size, self.y + half_size), half_size)
+
+		start = (self.renderer.width // 2, self.renderer.height // 2)
+		length = unified_size * 2
+		red = (255, 0, 0)
+		if direction:
+			match self.current_direction:
+				case Direction.UP:
+					end = (start[0], start[1] - length)
+				case Direction.DOWN:
+					end = (start[0], start[1] + length)
+				case Direction.LEFT:
+					end = (start[0] - length, start[1])
+				case Direction.RIGHT:
+					end = (start[0] + length, start[1])
+				case _:
+					end = None
+			if end is not None:
+				pygame.draw.line(self.renderer.surface, red, start, end)
 
 		# Draw collision box
 		# rect = pygame.Rect(self.x, self.y, self.size, self.size)
@@ -553,9 +571,10 @@ class HeroAuto(Hero, MovableObject):
 			self.set_position(self.x + move_speed, self.y)
 
 	# ----------------------------------------------------------------------------------------------
-	# def draw(self) -> None:
-	# 	super().draw()
-	# 	draw_path(self.renderer, self.location_queue) # DEBUG
+	def draw(self, path: bool = False) -> None:
+		super().draw()
+		if path:
+			draw_path(self.renderer, self.location_queue) # DEBUG
 
 	# ----------------------------------------------------------------------------------------------
 	def tick(self) -> None:
@@ -824,11 +843,11 @@ def draw_path(renderer: Renderer, path_array: list[tuple[int, int]]):
 
 # ==================================================================================================
 class MyPacmanRGB(gym.Env):
-	metadata = {
+	metadata = { # TODO do I need this? Copied from stable baselines...
 		"render_modes": ["human", "rgb_array"],
-		"render_fps": 120,
 	}
-	actions = [Direction.UP, Direction.RIGHT, Direction.LEFT, Direction.DOWN]
+	actions = [d for d in Direction]
+	herotype = Hero
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, args: argparse.Namespace, render_mode: Optional[str] = None):
 		"""
@@ -837,6 +856,7 @@ class MyPacmanRGB(gym.Env):
 		Args:
 			args (argparse.Namespace): Parsed arguments, depends on which specific env we're using.
 		"""
+		self.metadata["render_fps"] = args.fps
 		# Don't know why I have to do this
 		# When I look at MountainCar I don't think they do this
 		# But otherwise it complains that "pygame is not initialized" when I did call pygame.init()
@@ -846,7 +866,7 @@ class MyPacmanRGB(gym.Env):
 
 		self.screen = None
 		self.game = GameController()
-		self.renderer = Renderer(self.game)
+		self.renderer = Renderer(self.game, self.herotype)
 
 		self.render_mode = "rgb_array"
 		self.observation_space = spaces.Box(low=0, high=255, dtype=np.uint8, shape=(self.renderer.height, self.renderer.width, 3))
@@ -855,9 +875,16 @@ class MyPacmanRGB(gym.Env):
 		self.last_score = 0
 
 	# ----------------------------------------------------------------------------------------------
-	def render(self) -> np.ndarray:
+	def render_video(self, **kwargs) -> np.ndarray:
+		return self.render(**kwargs)
+
+	# ----------------------------------------------------------------------------------------------
+	def render(self, **kwargs) -> np.ndarray:
 		self.renderer.surface.fill((0, 0, 0))
 		for game_object in self.renderer.game_objects:
+			if isinstance(game_object, (Hero, HeroAuto, HeroMulti)):
+				game_object.draw(**kwargs)
+				continue
 			game_object.draw()
 
 		return np.transpose(np.array(pygame.surfarray.pixels3d(self.renderer.surface)), axes=(1, 0, 2))
@@ -870,7 +897,7 @@ class MyPacmanRGB(gym.Env):
 		del self.game
 		del self.renderer
 		self.game = GameController()
-		self.renderer = Renderer(self.game)
+		self.renderer = Renderer(self.game, self.herotype)
 		self.last_score = 0
 
 		pygame.time.set_timer(self.renderer.pakupaku_event, 200) # open close mouth
@@ -887,7 +914,6 @@ class MyPacmanRGB(gym.Env):
 
 		for game_object in self.renderer.game_objects:
 			game_object.tick()
-		self.render()
 		self.renderer.clock.tick(self.metadata["render_fps"])
 		self.renderer.handle_events()
 
@@ -901,7 +927,6 @@ class MyPacmanRGB(gym.Env):
 	def close(self) -> None:
 		if self.screen is not None:
 			import pygame
-
 			pygame.display.quit()
 			pygame.quit()
 			self.isopen = False
@@ -922,16 +947,14 @@ class MyPacmanRGB(gym.Env):
 
 # ==================================================================================================
 class MyPacmanRGBpp(MyPacmanRGB):
+	herotype = HeroAuto
 	# ----------------------------------------------------------------------------------------------
 	def __init__(self, args: argparse.Namespace, render_mode: Optional[str] = None):
 		super().__init__(args=args, render_mode=render_mode)
-		# self.action_space = spaces.Tuple((spaces.Box(low=0, high=self.game.width), spaces.Box(low=0, high=self.game.height)))
 		self.action_space = spaces.MultiDiscrete(np.array([self.game.height, self.game.width]))
 
-		self.renderer = Renderer(self.game, auto=True)
-
 	# ----------------------------------------------------------------------------------------------
-	def step(self, action: int) -> tuple[ObsType, SupportsFloat, bool, bool, dict[str, Any]]:
+	def step(self, action: list[int]) -> tuple[ObsType, SupportsFloat, bool, bool, dict[str, Any]]:
 		assert self.action_space.contains(action), f"{action!r} ({type(action)}) invalid"
 
 		assert self.renderer.hero is not None
@@ -939,7 +962,6 @@ class MyPacmanRGBpp(MyPacmanRGB):
 
 		for game_object in self.renderer.game_objects:
 			game_object.tick()
-		self.render()
 		self.renderer.clock.tick(self.metadata["render_fps"])
 		self.renderer.handle_events()
 

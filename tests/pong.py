@@ -97,16 +97,6 @@ def main(args: argparse.Namespace):
 	# # assert isinstance(envs.action_space, gym.spaces.Discrete), "only discrete action space is supported"
 	# env = wrapper_class(env)
 
-	if not args.nolog and not args.novid:
-		# FIX: I think I want this to only run on the evaluation
-		# With multiple videos, name_prefix needs to match r".+(video\.\d+).+", otherwise they would all conflict under the key "videos" in wandb
-		if featex not in [FeatEx.NATURECNNRGB, FeatEx.NATURECNNEVENTS]: # events
-			env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 200000 == 0, video_length=video_length, render_events=True, name_prefix="events-video.1")
-		if featex is FeatEx.NATURECNNEVENTS: # event images
-			env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 200000 == 0, video_length=video_length, render_events=True, sum_events=False, name_prefix="events-video.1")
-		env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 200000 == 0, video_length=video_length, name_prefix="rgb-video.2") # RGB
-		# TODO add visualisation videos, maybe in separate test script though
-
 	if featex is FeatEx.NATURECNNRGB:
 	# if envtype is EnvType.PONG:
 		# env = SkipCutscenesPong(env)
@@ -353,7 +343,47 @@ def main(args: argparse.Namespace):
 			),
 		]
 		wandb.watch(model.policy.features_extractor, log="all", log_graph=True)
-	callbacks += [EvalCallback(env, eval_freq=args.n_steps * 10, best_model_save_path=(Path(run.dir) / "checkpoints") if not args.nolog else None)]
+
+	if not args.nolog and not args.novid:
+		# With multiple videos, name_prefix needs to match r".+(video\.\d+).+", otherwise they would all conflict under the key "videos" in wandb
+		if featex not in [FeatEx.NATURECNNRGB, FeatEx.NATURECNNEVENTS]: # events
+			env = VecVideoRecorder(
+				env,
+				f"videos/{run.id}",
+				record_video_trigger=lambda x: x % 1 == 0,
+				video_length=video_length,
+				render_events=True,
+				name_prefix="events-video.1"
+			)
+		if featex is FeatEx.NATURECNNEVENTS: # event images
+			env = VecVideoRecorder(
+				env,
+				f"videos/{run.id}",
+				record_video_trigger=lambda x: x % 1 == 0,
+				video_length=video_length,
+				render_events=True,
+				sum_events=False,
+				name_prefix="events-video.1"
+			)
+		# RGB
+		render_kwargs = {}
+		if envtype is EnvType.MYPACMAN:
+			if args.pp or args.multi:
+				render_kwargs["path"] = True
+			if (not args.pp) or args.multi:
+				render_kwargs["direction"] = True
+			if args.multi:
+				render_kwargs["mode"] = True
+		env = VecVideoRecorder(
+			env,
+			f"videos/{run.id}",
+			record_video_trigger=lambda x: x % 1 == 0,
+			video_length=video_length,
+			name_prefix="rgb-video.2",
+			render_kwargs=render_kwargs,
+		)
+
+	callbacks += [EvalCallback(env, eval_freq=args.n_steps * 50, best_model_save_path=(Path(run.dir) / "checkpoints") if not args.nolog else None)]
 	model.learn(
 		total_timesteps=config["total_timesteps"],
 		callback=callbacks,
