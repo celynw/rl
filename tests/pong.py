@@ -8,7 +8,6 @@ import wandb
 from wandb.integration.sb3 import WandbCallback
 from stable_baselines3.common.env_util import make_atari_env
 from stable_baselines3.common.vec_env import VecFrameStack, VecTransposeImage#, VecVideoRecorder
-from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.torch_layers import NatureCNN
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.atari_wrappers import NoopResetEnv, MaxAndSkipEnv, EpisodicLifeEnv, WarpFrame, ClipRewardEnv
@@ -330,12 +329,13 @@ def main(args: argparse.Namespace):
 	callbacks = []
 	if not args.nolog:
 		callbacks += [
-			CheckpointCallback(
-				save_freq=10000,
+			rl.utils.CheckpointCallback(
+				save_freq=args.n_steps * 50,
 				save_path=Path(run.dir) / "checkpoints",
 				name_prefix=config["env_name"],
 				save_replay_buffer=True,
 				save_vecnormalize=True,
+				keep_n=3,
 			),
 			WandbCallback(
 				gradient_save_freq=1000,
