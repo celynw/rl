@@ -266,20 +266,22 @@ def main(args: argparse.Namespace):
 
 	if args.load is not None:
 		print("Downloading model from wandb")
-		# entity, project, run_id, model_artifact_name = wandb.api.get_run_info(f"{args.project}/{args.load}")
-		print(wandb.api.default_entity)
-		# entity, project, run_id, model_artifact_name = wandb.api.get_run_info(wandb.api.default_entity, args.project, args.load)
 		info = wandb.api.get_run_info(wandb.api.default_entity, args.project, args.load)
 		print(info)
 
-		args.name += "_cntd" # Note: Need to modify existing wandb.run object
+		if not args.resume:
+			args.name += "_cntd" # Note: Need to modify existing wandb.run object
 
 		if info["args"][1] != args.model:
 			raise TypeError(f"Tried to run model '{args.model}' but loaded from '{info['args'][1]}'")
 
 		from stable_baselines3.common.save_util import load_from_zip_file
-		path = Path("checkpoints") / "best_model.zip"
+		# path = Path("checkpoints") / "best_model.zip"
+		path = Path("checkpoints") / "latest.zip"
 		wandb.restore(str(path), f"{args.project}/{args.load}")
+		import time
+		time.sleep(3)
+		path = Path(run.dir) / path
 		model.set_parameters(str(path), device="cpu" if args.cpu else "cuda")
 
 		rollout_buffer = model.rollout_buffer
