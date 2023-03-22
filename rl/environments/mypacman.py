@@ -881,9 +881,11 @@ class GameController:
 			binary_row = []
 			for x, column in enumerate(row):
 				if column == "G":
-					self.ghost_spawns.append((x + 0.5, y))
+					# self.ghost_spawns.append((x + 0.5, y))
+					pass
 				elif column == "P":
-					self.pacman_spawn = (x + 0.5, y)
+					# self.pacman_spawn = (x + 0.5, y)
+					pass
 				elif column == "•":
 					self.cookie_spaces.append((x, y))
 				elif column == "O":
@@ -894,6 +896,12 @@ class GameController:
 					binary_row.append(1)
 					self.reachable_spaces.append((x, y))
 			maze.append(binary_row)
+
+		# Randomise starting positions
+		spawns = np.random.choice(range(len(self.reachable_spaces)), size=5, replace=False).tolist()
+		self.pacman_spawn = self.reachable_spaces[spawns.pop()]
+		for _ in range(4):
+			self.ghost_spawns.append(self.reachable_spaces[spawns.pop()])
 
 		return np.array(maze)
 
