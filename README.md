@@ -7,54 +7,53 @@ sudo apt install ffmpeg freeglut3-dev xvfb
 ```
 
 ```bash
-conda create -p venv python=3.10 pip
+conda create -yp venv python=3.10 pip
 conda activate ./venv/
-conda install -y pytorch torchvision pytorch-cuda=11.7 -c pytorch -c nvidia
-conda install -y swig
-pip install \
-pydocstyle \
-mypy \
-pycodestyle \
-colored_traceback \
+
+conda install -yc pytorch -c nvidia \
+pytorch \
+torchvision \
+pytorch-cuda=11.7
+
+conda install -y \
+swig \
 pytorch-lightning \
-optuna \
 rich \
 gitpython \
 setproctitle \
-opencv-python \
 gymnasium[accept-rom-license] \
+tensorboard
+
+conda install -yc conda-forge \
 stable-baselines3 \
-msgpack \
 rospkg \
 wandb \
 ale-py \
-pyglet \
-tensorboard \
 moviepy \
 pygame \
-envpool
+pyglet \
+opencv \
+pydocstyle \
+mypy \
+pycodestyle \
+colored-traceback \
+optuna \
+msgpack-python
+
+pip install tcod
+
+pip install git+https://github.com/mila-iqia/atari-representation-learning
+
 cd submodules/slayerPytorch
 python setup.py install
-cd -
-# git+git://github.com/mila-iqia/atari-representation-learning.git \
-pip install atari-representation-learning/
-pip install -e .
-```
 
-gclr git@github.com:carlosluis/stable-baselines3.git
-cd stable-baselines3/
-gch fix_tests
-	gch 5c32861
-
+pip uninstall stable-baselines3
+pip install git+https://github.com/DLR-RM/stable-baselines3@feat/gymnasium-support
+pip install git+https://github.com/Stable-Baselines-Team/stable-baselines3-contrib@feat/gymnasium-support
 pip uninstall gym
 
-Replace gym with gymnasium in the venv
-- `import gym\n` -> `import gymnasium as gym\n`
-- `from gym import ` -> `from gymnasium import `
-- `from gym.` -> `from gymnasium.`
-
-Fix wandb gym lazy imports `venv/lib/python3.10/site-packages/wandb/integration/gym/__init__.py`
-
+pip install -e .
+```
 
 ## ROS setup
 
