@@ -375,7 +375,8 @@ def main(args: argparse.Namespace):
 			if (not args.pp) or args.multi:
 				render_kwargs["direction"] = True
 			if args.multi:
-				render_kwargs["mode"] = True
+				render_kwargs["nav_mode"] = True
+			render_kwargs["ghost_mode"] = True
 		env = VecVideoRecorder(
 			env,
 			f"videos/{run.id}",

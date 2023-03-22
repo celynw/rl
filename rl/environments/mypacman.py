@@ -470,7 +470,7 @@ class Hero(MovableObject):
 						self.renderer.kill_pacman()
 
 	# ----------------------------------------------------------------------------------------------
-	def draw(self, direction: bool = False) -> None:
+	def draw(self, direction: bool = False, ghost_mode: bool = False) -> None:
 		half_size = self.size / 2
 		pygame.draw.circle(self.renderer.surface, self.colour, (self.x + half_size, self.y + half_size), half_size)
 
@@ -491,6 +491,8 @@ class Hero(MovableObject):
 					end = None
 			if end is not None:
 				pygame.draw.line(self.renderer.surface, red, start, end)
+		if ghost_mode:
+			draw_text(self.renderer, self.renderer.current_mode.name.lower(), (unified_size * 10, 0))
 
 		# Draw collision box
 		# rect = pygame.Rect(self.x, self.y, self.size, self.size)
@@ -584,10 +586,12 @@ class HeroAuto(Hero, MovableObject):
 			self.set_position(self.x + move_speed, self.y)
 
 	# ----------------------------------------------------------------------------------------------
-	def draw(self, path: bool = False) -> None:
+	def draw(self, path: bool = False, ghost_mode: bool = False) -> None:
 		super().draw()
 		if path:
 			draw_path(self.renderer, self.location_queue) # DEBUG
+		if ghost_mode:
+			draw_text(self.renderer, self.renderer.current_mode.name.lower(), (unified_size * 10, 0))
 
 	# ----------------------------------------------------------------------------------------------
 	def tick(self) -> None:
@@ -681,13 +685,21 @@ class HeroMulti(HeroAuto):
 			Hero.tick(self)
 
 	# ----------------------------------------------------------------------------------------------
-	def draw(self, direction: bool = False, path: bool = False, mode: bool = False) -> None:
+	def draw(
+		self,
+		direction: bool = False,
+		path: bool = False,
+		nav_mode: bool = False,
+		ghost_mode: bool = False,
+	) -> None:
 		if self.auto:
 			super().draw(path=path)
 		else:
 			Hero.draw(self, direction=direction)
-		if mode:
+		if nav_mode:
 			draw_text(self.renderer, "Auto" if self.auto else "Manual", (0, 0))
+		if ghost_mode:
+			draw_text(self.renderer, self.renderer.current_mode.name.lower(), (unified_size * 10, 0))
 
 
 # ==================================================================================================
