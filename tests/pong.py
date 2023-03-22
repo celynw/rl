@@ -352,7 +352,7 @@ def main(args: argparse.Namespace):
 			env = VecVideoRecorder(
 				env,
 				f"videos/{run.id}",
-				record_video_trigger=lambda x: x % 1 == 0,
+				record_video_trigger=lambda x: x % video_length == 0,
 				video_length=video_length,
 				render_events=True,
 				name_prefix="events-video.1"
@@ -361,7 +361,7 @@ def main(args: argparse.Namespace):
 			env = VecVideoRecorder(
 				env,
 				f"videos/{run.id}",
-				record_video_trigger=lambda x: x % 1 == 0,
+				record_video_trigger=lambda x: x % video_length == 0,
 				video_length=video_length,
 				render_events=True,
 				sum_events=False,
@@ -380,13 +380,14 @@ def main(args: argparse.Namespace):
 		env = VecVideoRecorder(
 			env,
 			f"videos/{run.id}",
-			record_video_trigger=lambda x: x % 1 == 0,
+			record_video_trigger=lambda x: x % video_length == 0,
 			video_length=video_length,
 			name_prefix="rgb-video.2",
 			render_kwargs=render_kwargs,
 		)
 
 	callbacks += [EvalCallback(env, eval_freq=args.n_steps * 50, best_model_save_path=(Path(run.dir) / "checkpoints") if not args.nolog else None)]
+	# callbacks += [EvalCallback(env, eval_freq=1, best_model_save_path=(Path(run.dir) / "checkpoints") if not args.nolog else None)] # DEBUG
 	model.learn(
 		total_timesteps=config["total_timesteps"],
 		callback=callbacks,
