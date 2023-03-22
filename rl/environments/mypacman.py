@@ -77,7 +77,7 @@ class Renderer:
 		self.lives = 1
 		self.score = 0
 		self.kokoro_active = False # powerup, special ability
-		self.current_mode = GhostBehaviour.SCATTER
+		self.current_mode = None # Will set to SCATTER on first check
 		self.mode_switch_event = pygame.USEREVENT + 1 # custom event
 		self.kokoro_end_event = pygame.USEREVENT + 2
 		self.pakupaku_event = pygame.USEREVENT + 3
@@ -141,11 +141,15 @@ class Renderer:
 		scatter_timing = current_phase_timings[0]
 		chase_timing = current_phase_timings[1]
 
-		if self.current_mode == GhostBehaviour.CHASE:
-			self.current_phase += 1
+		if self.current_mode is None:
 			self.current_mode = GhostBehaviour.SCATTER
-		else:
+		elif self.current_mode == GhostBehaviour.CHASE:
+			self.current_mode = GhostBehaviour.SCATTER
+			self.current_phase += 1 # Move to next element in self.modes
+		elif self.current_mode == GhostBehaviour.SCATTER:
 			self.current_mode = GhostBehaviour.CHASE
+		else:
+			raise RuntimeError(f"Unhandled mode type '{self.current_mode}'")
 
 		used_timing = scatter_timing if self.current_mode == GhostBehaviour.SCATTER else chase_timing
 		pygame.time.set_timer(self.mode_switch_event, used_timing * 1000)
